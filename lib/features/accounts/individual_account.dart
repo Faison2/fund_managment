@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../auth/login/login.dart';
+import '../accounts/api_service/bank_controller.dart';
+//import 'lib/features/accounts/api_service/bank_controller.dart'; // Adjust the path as necessary
 
 class IndividualAccountScreen extends StatefulWidget {
   const IndividualAccountScreen({Key? key}) : super(key: key);
@@ -9,6 +11,8 @@ class IndividualAccountScreen extends StatefulWidget {
 }
 
 class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
+  final BankController _bankController = BankController();
+
   // Controllers for all form fields
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _dateOfBirthController = TextEditingController();
@@ -95,6 +99,21 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     'Asset Allocation',
     'Final Details',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBanks();
+  }
+
+  Future<void> _loadBanks() async {
+    try {
+      await _bankController.loadBanks();
+      setState(() {});
+    } catch (e) {
+      _showSnackBar('Failed to load banks: $e');
+    }
+  }
 
   Future<void> _selectDate(TextEditingController controller) async {
     final DateTime? picked = await showDatePicker(
@@ -184,8 +203,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
           _showSnackBar('Please enter your account number');
           return false;
         }
-        if (_bankNameController.text.isEmpty) {
-          _showSnackBar('Please enter your bank name');
+        if (_bankController.selectedBank == null) {
+          _showSnackBar('Please select your bank');
           return false;
         }
         break;
@@ -459,7 +478,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
   Widget _buildBankInformationStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+      children: <Widget>[
         _buildTextField(
           controller: _accountNumberController,
           hintText: 'Account Number',
@@ -470,10 +489,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
           hintText: 'Account Holder Name',
         ),
         SizedBox(height: 16),
-        _buildTextField(
-          controller: _bankNameController,
-          hintText: 'Bank Name',
-        ),
+        _buildBankDropdown(),
         SizedBox(height: 16),
         _buildTextField(
           controller: _branchController,
@@ -485,6 +501,57 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
           hintText: 'Swift Code',
         ),
       ],
+    );
+  }
+
+  Widget _buildBankDropdown() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: DropdownButtonFormField<String>(
+          value: _bankController.selectedBank,
+          decoration: InputDecoration(
+            labelText: 'Bank Name',
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+            labelStyle: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 16,
+            ),
+            suffixIcon: _bankController.isLoading
+                ? Padding(
+              padding: EdgeInsets.all(8.0),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+                : null,
+          ),
+          items: _bankController.banks.map((bank) {
+            return DropdownMenuItem<String>(
+              value: bank.bankName,
+              child: Text(
+                bank.bankName,
+                style: TextStyle(fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: (String? value) {
+            setState(() {
+              _bankController.selectBank(value);
+              _bankNameController.text = value ?? '';
+            });
+          },
+          isExpanded: true,
+          icon: Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
+          hint: _bankController.isLoading
+              ? Text('Loading banks...')
+              : Text('Select Bank'),
+        ),
+      ),
     );
   }
 
