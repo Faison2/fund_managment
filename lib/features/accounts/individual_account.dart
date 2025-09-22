@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../auth/login/login.dart';
 import '../accounts/api_service/bank_controller.dart';
-//import 'lib/features/accounts/api_service/bank_controller.dart'; // Adjust the path as necessary
 
 class IndividualAccountScreen extends StatefulWidget {
   const IndividualAccountScreen({Key? key}) : super(key: key);
@@ -12,9 +13,16 @@ class IndividualAccountScreen extends StatefulWidget {
 
 class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
   final BankController _bankController = BankController();
+  final String _apiUrl = "http://192.168.3.204/TSLFMSAPI/home/CreateAccount";
+  final String _getBanksUrl = "http://192.168.3.204/TSLFMSAPI/home/GetBanks";
+  final String _apiUsername = "User2";
+  final String _apiPassword = "CBZ1234#2";
 
   // Controllers for all form fields
-  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController(text: "Mr");
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _surnameController = TextEditingController();
+  final TextEditingController _otherNamesController = TextEditingController();
   final TextEditingController _dateOfBirthController = TextEditingController();
   final TextEditingController _placeOfBirthController = TextEditingController();
   final TextEditingController _occupationController = TextEditingController();
@@ -40,10 +48,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
 
   // Investment Controllers
   final TextEditingController _initialAmountController = TextEditingController();
-  final TextEditingController _cashEquivalentController = TextEditingController();
-  final TextEditingController _callAccountController = TextEditingController();
-  final TextEditingController _collectiveInvestmentController = TextEditingController();
-  final TextEditingController _othersController = TextEditingController();
   final TextEditingController _feePercentageController = TextEditingController();
 
   // Form state
@@ -55,6 +59,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
   String _selectedServiceCategory = 'Discretionary Portfolio Services';
   String _selectedTimeHorizon = 'Short time (Less than 1 Year)';
   String _selectedRiskTolerance = 'Low';
+  String _selectedGender = 'Male';
+  String _selectedAccountType = 'Individual';
+  String _selectedInvestmentAccountType = 'Unit Trust';
+  String _selectedInvestorType = 'Retail';
+  String _selectedBankType = 'Savings';
+  String _selectedAmountCurrency = 'USD';
+  String? _cdsNumber; // To store the CDS number from API response
 
   final List<String> _identificationTypes = [
     'National ID',
@@ -62,6 +73,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     'Driver\'s License',
     'Voter\'s ID',
   ];
+
+  final List<String> _genders = ['Male', 'Female'];
+  final List<String> _titles = ['Mr', 'Mrs', 'Miss', 'Dr', 'Prof'];
 
   final List<String> _paymentMethods = [
     'Cash',
@@ -88,6 +102,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     'High',
   ];
 
+  final List<String> _bankTypes = ['Savings', 'Current', 'Corporate'];
+  final List<String> _currencies = ['USD', 'ZWL', 'EUR', 'GBP'];
+
   final List<String> _stepTitles = [
     'Personal Information',
     'Identification',
@@ -106,12 +123,28 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     _loadBanks();
   }
 
+
   Future<void> _loadBanks() async {
+    setState(() {
+      _bankController.isLoading = true;
+    });
+
     try {
-      await _bankController.loadBanks();
-      setState(() {});
+      await _bankController.loadBanks(
+        apiUrl: _getBanksUrl,
+        username: _apiUsername,
+        password: _apiPassword,
+      );
+      setState(() {
+        // Update UI after successful load
+      });
     } catch (e) {
-      _showSnackBar('Failed to load banks: $e');
+      print('Error loading banks: $e');
+      _showSnackBar('Failed to load banks. Please try again.');
+    } finally {
+      setState(() {
+        _bankController.isLoading = false;
+      });
     }
   }
 
@@ -120,7 +153,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
+      lastDate: DateTime(2100),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -134,7 +167,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
       },
     );
     if (picked != null) {
-      controller.text = "${picked.day}/${picked.month}/${picked.year}";
+      controller.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
     }
   }
 
@@ -161,8 +194,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
   bool _validateCurrentStep() {
     switch (_currentStep) {
       case 0: // Personal Information
-        if (_fullNameController.text.isEmpty) {
-          _showSnackBar('Please enter your full name');
+        if (_firstNameController.text.isEmpty) {
+          _showSnackBar('Please enter your first name');
+          return false;
+        }
+        if (_surnameController.text.isEmpty) {
+          _showSnackBar('Please enter your surname');
           return false;
         }
         if (_dateOfBirthController.text.isEmpty) {
@@ -223,14 +260,81 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
       _isLoading = true;
     });
 
-    // Simulate API call
-    await Future.delayed(Duration(seconds: 3));
+    try {
+      // Prepare the request body
+      final Map<String, dynamic> requestBody = {
+        "APIUsername": _apiUsername,
+        "APIPassword": _apiPassword,
+        "AccountType": _selectedAccountType,
+        "Title": _titleController.text,
+        "JointName": "",
+        "FirstName": _firstNameController.text,
+        "Surname": _surnameController.text,
+        "OtherNames": _otherNamesController.text,
+        "DOB": _dateOfBirthController.text,
+        "BirthPlace": _placeOfBirthController.text,
+        "Gender": _selectedGender,
+        "Occupation": _occupationController.text,
+        "Nationality": _nationalityController.text,
+        "IdentificatinType": _selectedIdType,
+        "ID": _identificationNumberController.text,
+        "IdentificationExpiryDate": _validityDateController.text,
+        "IssuingAuthority": _issuingAuthorityController.text,
+        "City": _cityController.text,
+        "PhysicalAddress": _physicalAddressController.text,
+        "Country": _countryController.text,
+        "Email": _emailController.text,
+        "MobileNumber": _phoneController.text,
+        "InvestmentPurpose": _investmentPurposeController.text,
+        "IncomeSource": _fundsSourceController.text,
+        "InvestmentAccountType": _selectedInvestmentAccountType,
+        "InvestorType": _selectedInvestorType,
+        "Disclosure": _isPoliticallyExposed ? "Politically exposed person" : "No conflicts of interest",
+        "PositionHeld": _positionController.text,
+        "BankType": _selectedBankType,
+        "BankAccountNumber": _accountNumberController.text,
+        "BankAccountName": _accountHolderNameController.text,
+        "BankName": _bankNameController.text,
+        "BankBranch": _branchController.text,
+        "BankSwiftCode": _swiftCodeController.text,
+        "BankAddress": _physicalAddressController.text, // Using physical address as bank address
+        "InitialAmountInvested": _initialAmountController.text,
+        "AmountSuppliedIn": _selectedAmountCurrency,
+        "ServiceRequired": _selectedServiceCategory,
+        "InvestmentPeriod": _selectedTimeHorizon,
+        "RiskTolerance": _selectedRiskTolerance,
+        "Charge": _feePercentageController.text.isEmpty ? "0" : _feePercentageController.text,
+      };
 
-    setState(() {
-      _isLoading = false;
-    });
+      // Make API call
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(requestBody),
+      );
 
-    _showSuccessDialog();
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['status'] == 200) {
+          setState(() {
+            _cdsNumber = responseData['data']['CDSNumber'];
+          });
+          _showSuccessDialog();
+        } else {
+          _showSnackBar('API Error: ${responseData['statusDesc']}');
+        }
+      } else {
+        _showSnackBar('HTTP Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showSnackBar('Failed to submit application: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _showSuccessDialog() {
@@ -259,9 +363,31 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
               ),
             ],
           ),
-          content: Text(
-            "Your individual account application has been submitted successfully. You will receive a confirmation email shortly.",
-            textAlign: TextAlign.center,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Your individual account application has been submitted successfully.",
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16),
+              if (_cdsNumber != null)
+                Text(
+                  "CDS Number: $_cdsNumber",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              SizedBox(height: 8),
+              Text(
+                "Please save this CDS number for future reference.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
           ),
           actions: [
             SizedBox(
@@ -370,16 +496,36 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        GestureDetector(
+          onTap: () => _showDropdownPicker(
+            'Select Title',
+            _titles,
+            _titleController.text,
+                (value) => setState(() => _titleController.text = value),
+          ),
+          child: _buildDropdownField(_titleController.text),
+        ),
+        SizedBox(height: 16),
         _buildTextField(
-          controller: _fullNameController,
-          hintText: 'Full Name (state any former or other names)',
+          controller: _firstNameController,
+          hintText: 'First Name',
+        ),
+        SizedBox(height: 16),
+        _buildTextField(
+          controller: _surnameController,
+          hintText: 'Surname',
+        ),
+        SizedBox(height: 16),
+        _buildTextField(
+          controller: _otherNamesController,
+          hintText: 'Other Names',
         ),
         SizedBox(height: 16),
         GestureDetector(
           onTap: () => _selectDate(_dateOfBirthController),
           child: _buildTextField(
             controller: _dateOfBirthController,
-            hintText: 'Date of Birth',
+            hintText: 'Date of Birth (YYYY-MM-DD)',
             enabled: false,
             suffixIcon: Icons.calendar_today,
           ),
@@ -388,6 +534,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
         _buildTextField(
           controller: _placeOfBirthController,
           hintText: 'Place of Birth/Registration',
+        ),
+        SizedBox(height: 16),
+        GestureDetector(
+          onTap: () => _showDropdownPicker(
+            'Select Gender',
+            _genders,
+            _selectedGender,
+                (value) => setState(() => _selectedGender = value),
+          ),
+          child: _buildDropdownField(_selectedGender),
         ),
         SizedBox(height: 16),
         _buildTextField(
@@ -426,7 +582,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
           onTap: () => _selectDate(_validityDateController),
           child: _buildTextField(
             controller: _validityDateController,
-            hintText: 'Validity/Expiry Date',
+            hintText: 'Validity/Expiry Date (YYYY-MM-DD)',
             enabled: false,
             suffixIcon: Icons.calendar_today,
           ),
@@ -479,6 +635,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        GestureDetector(
+          onTap: () => _showDropdownPicker(
+            'Select Bank Type',
+            _bankTypes,
+            _selectedBankType,
+                (value) => setState(() => _selectedBankType = value),
+          ),
+          child: _buildDropdownField(_selectedBankType),
+        ),
+        SizedBox(height: 16),
         _buildTextField(
           controller: _accountNumberController,
           hintText: 'Account Number',
@@ -555,6 +721,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     );
   }
 
+
   Widget _buildInvestmentMandateStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,6 +730,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
           controller: _initialAmountController,
           hintText: 'Initial Amount Invested',
           keyboardType: TextInputType.number,
+        ),
+        SizedBox(height: 16),
+        GestureDetector(
+          onTap: () => _showDropdownPicker(
+            'Select Currency',
+            _currencies,
+            _selectedAmountCurrency,
+                (value) => setState(() => _selectedAmountCurrency = value),
+          ),
+          child: _buildDropdownField(_selectedAmountCurrency),
         ),
         SizedBox(height: 24),
         Text(
@@ -772,39 +949,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Asset Allocation',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        SizedBox(height: 16),
-        _buildTextField(
-          controller: _cashEquivalentController,
-          hintText: 'Cash Equivalent (Fixed Deposits) - Amount',
-          keyboardType: TextInputType.number,
-        ),
-        SizedBox(height: 16),
-        _buildTextField(
-          controller: _callAccountController,
-          hintText: 'Call Account - Amount',
-          keyboardType: TextInputType.number,
-        ),
-        SizedBox(height: 16),
-        _buildTextField(
-          controller: _collectiveInvestmentController,
-          hintText: 'Collective Investment Schemes - Amount',
-          keyboardType: TextInputType.number,
-        ),
-        SizedBox(height: 16),
-        _buildTextField(
-          controller: _othersController,
-          hintText: 'Others - Amount',
-          keyboardType: TextInputType.number,
-        ),
-        SizedBox(height: 24),
         Text(
           'Fees',
           style: TextStyle(
@@ -1201,7 +1345,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _titleController.dispose();
+    _firstNameController.dispose();
+    _surnameController.dispose();
+    _otherNamesController.dispose();
     _dateOfBirthController.dispose();
     _placeOfBirthController.dispose();
     _occupationController.dispose();
@@ -1223,10 +1370,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     _branchController.dispose();
     _swiftCodeController.dispose();
     _initialAmountController.dispose();
-    _cashEquivalentController.dispose();
-    _callAccountController.dispose();
-    _collectiveInvestmentController.dispose();
-    _othersController.dispose();
     _feePercentageController.dispose();
     super.dispose();
   }
