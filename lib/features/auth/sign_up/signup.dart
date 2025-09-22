@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:tsl/constants/constants.dart';
 import 'dart:convert';
 import '../../accounts/individual_account.dart';
 import '../login/login.dart';
@@ -44,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('http://192.168.3.204/TSLFMSAPI/home/UserSignUp'),
+        Uri.parse('$cSharpApi/UserSignUp'),
         headers: {
           'Content-Type': 'application/json',
         },

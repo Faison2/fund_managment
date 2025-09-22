@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:tsl/constants/constants.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.3.204/TSLFMSAPI/home';
+  static const String baseUrl = '$cSharpApi/home';
   static const String apiUsername = 'User2';
   static const String apiPassword = 'CBZ1234#2';
 

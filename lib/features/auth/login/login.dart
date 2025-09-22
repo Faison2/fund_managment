@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/constants.dart';
 import 'package:tsl/features/auth/sign_up/signup.dart';
 import '../../dashboard/dashboard.dart';
 import '../forgot_password/forgot-password.dart';
@@ -21,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   // API configuration
-  static const String apiUrl = 'http://192.168.3.204/TSLFMSAPI/home/Userlogin';
+  static const String apiUrl = '$cSharpApi/Userlogin';
   static const String apiUsername = 'User2';
   static const String apiPassword = 'CBZ1234#2';
 
@@ -54,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Save user data
+      // Save user dataA
       await prefs.setString('cdsNumber', cdsNumber);
       await prefs.setString('accountStatus', accountStatus);
       await prefs.setString('username', username);

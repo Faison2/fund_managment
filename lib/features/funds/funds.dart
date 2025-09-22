@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:tsl/constants/constants.dart';
 
 class FundsScreen extends StatefulWidget {
   const FundsScreen({Key? key}) : super(key: key);
@@ -13,7 +14,7 @@ class _FundsScreenState extends State<FundsScreen> {
   late Future<List<dynamic>> _fundsFuture;
 
   Future<List<dynamic>> fetchFunds() async {
-    const url = "http://192.168.3.204/TSLFMSAPI/home/GetFunds";
+    const url = "$cSharpApi/GetFunds";
     final response = await http.post(
       Uri.parse(url),
       headers: {"Content-Type": "application/json"},

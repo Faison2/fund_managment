@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart'; // Add this import
+import 'package:tsl/constants/constants.dart';
 import '../auth/login/login.dart';
 import '../accounts/api_service/bank_controller.dart';
 
@@ -14,8 +15,8 @@ class IndividualAccountScreen extends StatefulWidget {
 
 class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
   final BankController _bankController = BankController();
-  final String _apiUrl = "http://192.168.3.204/TSLFMSAPI/home/CreateAccount";
-  final String _getBanksUrl = "http://192.168.3.204/TSLFMSAPI/home/GetBanks";
+  final String _apiUrl = "$cSharpApi/CreateAccount";
+  final String _getBanksUrl = "$cSharpApi/GetBanks";
   final String _apiUsername = "User2";
   final String _apiPassword = "CBZ1234#2";
 

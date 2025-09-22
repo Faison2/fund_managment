@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/features/funds/funds.dart';
 import '../portifolio/portfolio.dart';
 import '../profile/profile.dart';
-
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -81,6 +81,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isBalanceVisible = true;
+  String _cdsNumber = '';
 
   final List<Map<String, dynamic>> _transactions = [
     {
@@ -104,6 +105,27 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadCDSNumber();
+  }
+
+  Future<void> _loadCDSNumber() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _cdsNumber = prefs.getString('cdsNumber') ?? 'Not available';
+      });
+      print('Loaded CDS Number: $_cdsNumber'); // Debug print
+    } catch (e) {
+      print('Error loading CDS number: $e');
+      setState(() {
+        _cdsNumber = 'Error loading';
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Column(
@@ -119,13 +141,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Icon(Icons.person, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'Hi, Victor Masoke',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Hi, Welcome',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'CDS: $_cdsNumber',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
                 ),
                 const Spacer(),
                 Container(
@@ -160,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
+          // Rest of your existing HomeScreen code remains the same...
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 10),
