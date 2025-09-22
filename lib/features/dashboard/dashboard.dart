@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:tsl/features/funds/funds.dart';
 import '../portifolio/portfolio.dart';
 import '../profile/profile.dart';
-import '../settings/settings.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -16,7 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // List of pages/screens
   final List<Widget> _pages = [
-    const SettingsScreen(),
+    const FundsScreen(),
     const HomeScreen(),
     const PortfolioScreen(),
     const ProfileScreen(),
@@ -50,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),
-              label: 'Settings',
+              label: 'Funds',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.home),
