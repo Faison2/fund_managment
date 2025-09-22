@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:tsl/features/auth/sign_up/signup.dart';
 import '../../dashboard/dashboard.dart';
 import '../forgot_password/forgot-password.dart';
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,7 +17,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _obscurePassword = true;
-  bool _isLoading = false; // Added loading state
+  bool _isLoading = false;
+
+  // API configuration
+  static const String apiUrl = 'http://192.168.3.204/TSLFMSAPI/home/Userlogin';
+  static const String apiUsername = 'User2';
+  static const String apiPassword = 'CBZ1234#2';
 
   @override
   void dispose() {
@@ -25,24 +31,28 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() async {
+  void _showSnackBar(String message, Color backgroundColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _login() async {
     print('Login pressed');
-    print('Email: ${_emailController.text}');
+    print('Email/Phone: ${_emailController.text}');
     print('Password: ${_passwordController.text}');
     print('Remember me: $_rememberMe');
 
-    // Basic validation (optional)
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please enter both email and password'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+    // Basic validation - only check if fields are not empty
+    if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
+      _showSnackBar('Please enter both email/phone number and password', Colors.red);
       return;
     }
 
@@ -50,18 +60,60 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // Simulate API call delay (replace with actual authentication)
-    await Future.delayed(Duration(seconds: 2));
+    try {
+      // Prepare the request body
+      Map<String, String> requestBody = {
+        'APIUsername': apiUsername,
+        'APIPassword': apiPassword,
+        'Username': _emailController.text.trim(),
+        'Password': _passwordController.text,
+      };
 
-    setState(() {
-      _isLoading = false;
-    });
+      print('Request body: $requestBody');
 
-    // Navigate to Dashboard
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const DashboardScreen()),
-    );
+      // Make the API call
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode(requestBody),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+
+        if (responseData['status'] == 200 && responseData['statusDesc'] == 'success') {
+          // Login successful
+          _showSnackBar('Login successful!', Colors.green);
+
+          // Navigate to Dashboard
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          );
+        } else {
+          // Login failed - API returned error
+          _showSnackBar('Login failed: ${responseData['statusDesc'] ?? 'Unknown error'}', Colors.red);
+        }
+      } else {
+        // HTTP error
+        _showSnackBar('Login failed: Server error (${response.statusCode})', Colors.red);
+      }
+    } catch (e) {
+      print('Login error: $e');
+      _showSnackBar('Login failed: Network error. Please check your connection.', Colors.red);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _signUp() {
@@ -124,7 +176,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Image.asset("assets/logo.png", width: 150, height: 150),
                         const Text(
                           'Login',
                           style: TextStyle(
@@ -154,6 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           child: TextField(
                             controller: _emailController,
+                            keyboardType: TextInputType.text, // Changed from emailAddress to text
                             decoration: const InputDecoration(
                               hintText: 'Phone number/ Email',
                               hintStyle: TextStyle(color: Colors.black54),
@@ -269,7 +321,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             child: _isLoading
-                                ? SizedBox(
+                                ? const SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
@@ -287,8 +339,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Expanded(
                               child: Divider(
                                 color: Colors.white,

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../accounts/individual_account.dart';
 import '../login/login.dart';
 
@@ -10,26 +12,15 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _secondNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
   bool _agreeToTerms = false;
   bool _isLoading = false;
-
-  String _selectedCountryCode = '+255'; // Tanzania default
-
-  final List<Map<String, String>> _countryCodes = [
-    {'name': 'Tanzania', 'code': '+255', 'flag': '🇹🇿'},
-    {'name': 'Kenya', 'code': '+254', 'flag': '🇰🇪'},
-    {'name': 'Uganda', 'code': '+256', 'flag': '🇺🇬'},
-    {'name': 'USA', 'code': '+1', 'flag': '🇺🇸'},
-    {'name': 'UK', 'code': '+44', 'flag': '🇬🇧'},
-  ];
 
   Future<void> _register() async {
     if (!_validateForm()) {
@@ -45,15 +36,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
-    // Simulate API call
-    await Future.delayed(Duration(seconds: 2));
+    try {
+      // Format phone number (remove leading 0 if present)
+      String formattedPhone = _phoneController.text.trim();
+      if (formattedPhone.startsWith('0')) {
+        formattedPhone = formattedPhone.substring(1);
+      }
 
-    setState(() {
-      _isLoading = false;
-    });
+      final response = await http.post(
+        Uri.parse('http://192.168.3.204/TSLFMSAPI/home/UserSignUp'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "APIUsername": "User2",
+          "APIPassword": "CBZ1234#2",
+          "Email": _emailController.text.trim(),
+          "PhoneNumber": formattedPhone,
+          "Password": _passwordController.text,
+          "Source": "Mobile"
+        }),
+      );
 
-    // Show success dialog with options
-    _showSuccessDialog();
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['status'] == 'success') {
+          // Show success dialog with options
+          _showSuccessDialog();
+        } else {
+          _showSnackBar(responseData['statusDesc'] ?? 'Registration failed');
+        }
+      } else {
+        _showSnackBar('Network error. Please try again.');
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      _showSnackBar('An error occurred. Please check your internet connection.');
+    }
   }
 
   void _showSuccessDialog() {
@@ -158,14 +184,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   bool _validateForm() {
-    if (_firstNameController.text.isEmpty) {
-      _showSnackBar('Please enter your first name');
-      return false;
-    }
-    if (_lastNameController.text.isEmpty) {
-      _showSnackBar('Please enter your last name');
-      return false;
-    }
     if (_emailController.text.isEmpty || !_emailController.text.contains('@')) {
       _showSnackBar('Please enter a valid email');
       return false;
@@ -176,6 +194,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     if (_passwordController.text.isEmpty || _passwordController.text.length < 6) {
       _showSnackBar('Password must be at least 6 characters');
+      return false;
+    }
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showSnackBar('Passwords do not match');
       return false;
     }
     return true;
@@ -190,55 +212,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           borderRadius: BorderRadius.circular(10),
         ),
       ),
-    );
-  }
-
-  void _showCountryPicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Select Country Code',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 20),
-              ..._countryCodes.map((country) {
-                return ListTile(
-                  leading: Text(
-                    country['flag']!,
-                    style: TextStyle(fontSize: 24),
-                  ),
-                  title: Text(country['name']!),
-                  trailing: Text(
-                    country['code']!,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                  onTap: () {
-                    setState(() {
-                      _selectedCountryCode = country['code']!;
-                    });
-                    Navigator.pop(context);
-                  },
-                );
-              }).toList(),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -309,83 +282,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 // Form Fields
                 _buildTextField(
-                  controller: _firstNameController,
-                  hintText: 'First Name',
-                ),
-                SizedBox(height: 16),
-
-                _buildTextField(
-                  controller: _secondNameController,
-                  hintText: 'Second Name',
-                ),
-                SizedBox(height: 16),
-
-                _buildTextField(
-                  controller: _lastNameController,
-                  hintText: 'Last Name',
-                ),
-                SizedBox(height: 16),
-
-                _buildTextField(
                   controller: _emailController,
                   hintText: 'Email',
                   keyboardType: TextInputType.emailAddress,
                 ),
                 SizedBox(height: 16),
 
-                // Phone Number Field with Country Code
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: _showCountryPicker,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              right: BorderSide(color: Colors.grey[300]!),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                '🇹🇿',
-                                style: TextStyle(fontSize: 20),
-                              ),
-                              SizedBox(width: 5),
-                              Icon(
-                                Icons.arrow_drop_down,
-                                color: Colors.grey[600],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            hintText: 'Phone Number',
-                            hintStyle: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 16,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 18,
-                            ),
-                          ),
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
+                // Phone Number Field (without country code)
+                _buildTextField(
+                  controller: _phoneController,
+                  hintText: 'Phone Number',
+                  keyboardType: TextInputType.phone,
                 ),
                 SizedBox(height: 16),
 
@@ -426,41 +333,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(fontSize: 16),
                   ),
                 ),
-                SizedBox(height: 30),
+                SizedBox(height: 16),
 
-                // Register Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                // Confirm Password Field
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: TextField(
+                    controller: _confirmPasswordController,
+                    obscureText: !_isConfirmPasswordVisible,
+                    decoration: InputDecoration(
+                      hintText: 'Confirm Password',
+                      hintStyle: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 16,
                       ),
-                      elevation: 2,
+                      suffixIcon: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                          });
+                        },
+                        child: Icon(
+                          _isConfirmPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 18,
+                      ),
                     ),
-                    child: _isLoading
-                        ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                        : Text(
-                      'Sign Up',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                    style: TextStyle(fontSize: 16),
                   ),
                 ),
-                SizedBox(height: 40),
+                SizedBox(height: 30),
 
                 // Terms and Conditions Checkbox
                 Row(
@@ -510,6 +422,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
+                SizedBox(height: 20),
+
+                // Register Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _register,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                        : Text(
+                      'Sign Up',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
               ],
             ),
           ),
@@ -550,12 +497,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _firstNameController.dispose();
-    _secondNameController.dispose();
-    _lastNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 }
