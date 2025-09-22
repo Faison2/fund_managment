@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart'; // Add this import
 import '../auth/login/login.dart';
 import '../accounts/api_service/bank_controller.dart';
 
@@ -123,6 +124,49 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
     _loadBanks();
   }
 
+  // Add this method to save CDS number to SharedPreferences
+  Future<void> _saveCDSNumber(String cdsNumber) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('cds_number', cdsNumber);
+
+      // Optional: Also save other user data that might be useful later
+      await prefs.setString('user_email', _emailController.text);
+      await prefs.setString('user_phone', _phoneController.text);
+      await prefs.setString('user_first_name', _firstNameController.text);
+      await prefs.setString('user_surname', _surnameController.text);
+
+      print('CDS Number saved successfully: $cdsNumber');
+    } catch (e) {
+      print('Error saving CDS number: $e');
+    }
+  }
+
+  // Add this method to retrieve CDS number from SharedPreferences (for future use)
+  Future<String?> _getCDSNumber() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      return prefs.getString('cds_number');
+    } catch (e) {
+      print('Error getting CDS number: $e');
+      return null;
+    }
+  }
+
+  // Add this method to clear stored data if needed (for logout or reset)
+  Future<void> _clearStoredData() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cds_number');
+      await prefs.remove('user_email');
+      await prefs.remove('user_phone');
+      await prefs.remove('user_first_name');
+      await prefs.remove('user_surname');
+      print('Stored data cleared successfully');
+    } catch (e) {
+      print('Error clearing stored data: $e');
+    }
+  }
 
   Future<void> _loadBanks() async {
     setState(() {
@@ -251,6 +295,20 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
           return false;
         }
         break;
+      case 8: // Final Details - Add this case for political exposure validation
+        if (_isPoliticallyExposed && _positionController.text.isEmpty) {
+          _showSnackBar('Please specify the position held as you indicated you are politically exposed');
+          return false;
+        }
+        if (_investmentPurposeController.text.isEmpty) {
+          _showSnackBar('Please enter the purpose of your investment');
+          return false;
+        }
+        if (_fundsSourceController.text.isEmpty) {
+          _showSnackBar('Please enter the source of funds');
+          return false;
+        }
+        break;
     }
     return true;
   }
@@ -321,6 +379,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
           setState(() {
             _cdsNumber = responseData['data']['CDSNumber'];
           });
+
+          // Save CDS number to SharedPreferences
+          if (_cdsNumber != null) {
+            await _saveCDSNumber(_cdsNumber!);
+          }
+
           _showSuccessDialog();
         } else {
           _showSnackBar('API Error: ${responseData['statusDesc']}');
@@ -383,7 +447,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
                 ),
               SizedBox(height: 8),
               Text(
-                "Please save this CDS number for future reference.",
+                "Your CDS number has been saved and can be accessed later.",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
@@ -466,6 +530,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen> {
       },
     );
   }
+
+  // Rest of your existing methods remain the same...
+  // (I'm keeping the rest of the code unchanged to maintain the original structure)
 
   Widget _buildCurrentStep() {
     switch (_currentStep) {

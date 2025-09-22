@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/features/auth/sign_up/signup.dart';
 import '../../dashboard/dashboard.dart';
 import '../forgot_password/forgot-password.dart';
@@ -42,6 +43,64 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  // Method to save user data to SharedPreferences
+  Future<void> _saveUserData({
+    required String cdsNumber,
+    required String accountStatus,
+    required String username,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Save user data
+      await prefs.setString('cdsNumber', cdsNumber);
+      await prefs.setString('accountStatus', accountStatus);
+      await prefs.setString('username', username);
+      await prefs.setBool('isLoggedIn', true);
+
+      // Save remember me preference if checked
+      if (_rememberMe) {
+        await prefs.setString('savedUsername', username);
+        await prefs.setBool('rememberMe', true);
+      } else {
+        await prefs.remove('savedUsername');
+        await prefs.setBool('rememberMe', false);
+      }
+
+      print('User data saved to SharedPreferences');
+      print('CDS Number: $cdsNumber');
+      print('Account Status: $accountStatus');
+    } catch (e) {
+      print('Error saving user data: $e');
+    }
+  }
+
+  // Method to load saved credentials (call this in initState if needed)
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rememberMe = prefs.getBool('rememberMe') ?? false;
+
+      if (rememberMe) {
+        final savedUsername = prefs.getString('savedUsername');
+        if (savedUsername != null) {
+          setState(() {
+            _emailController.text = savedUsername;
+            _rememberMe = rememberMe;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading saved credentials: $e');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials(); // Load saved credentials when screen initializes
   }
 
   Future<void> _login() async {
@@ -87,11 +146,53 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
 
-        if (responseData['status'] == 200 && responseData['statusDesc'] == 'success') {
-          // Login successful
+        // Check for the new response format
+        if (responseData['status'] == 'success' && responseData['statusDesc'] == 'Logged in') {
+          // Extract data from the response
+          final data = responseData['data'] as Map<String, dynamic>?;
+
+          if (data != null) {
+            final cdsNumber = data['CDSNumber'] as String? ?? '';
+            final accountStatus = data['accountStatus'] as String? ?? '';
+
+            // Save user data to SharedPreferences
+            await _saveUserData(
+              cdsNumber: cdsNumber,
+              accountStatus: accountStatus,
+              username: _emailController.text.trim(),
+            );
+
+            // Show success message
+            _showSnackBar('Login successful!', Colors.green);
+
+            // Check account status and handle accordingly
+            if (accountStatus.toLowerCase().contains('pending')) {
+              _showSnackBar('Account is pending authorization', Colors.orange);
+              // You might want to navigate to a pending status screen instead
+              // Or show additional information to the user
+            }
+
+            // Navigate to Dashboard
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            );
+          } else {
+            _showSnackBar('Login failed: Invalid response data', Colors.red);
+          }
+        }
+        // Keep backward compatibility with old response format
+        else if (responseData['status'] == 200 && responseData['statusDesc'] == 'success') {
+          // Handle old response format
           _showSnackBar('Login successful!', Colors.green);
 
-          // Navigate to Dashboard
+          // Save basic user data for old format
+          await _saveUserData(
+            cdsNumber: '', // Not available in old format
+            accountStatus: 'Active', // Assume active for old format
+            username: _emailController.text.trim(),
+          );
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const DashboardScreen()),
@@ -113,6 +214,36 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // Method to get user data from SharedPreferences (utility method)
+  static Future<Map<String, String?>> getUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return {
+        'cdsNumber': prefs.getString('cdsNumber'),
+        'accountStatus': prefs.getString('accountStatus'),
+        'username': prefs.getString('username'),
+        'isLoggedIn': prefs.getBool('isLoggedIn')?.toString(),
+      };
+    } catch (e) {
+      print('Error getting user data: $e');
+      return {};
+    }
+  }
+
+  // Method to clear user data (for logout)
+  static Future<void> clearUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cdsNumber');
+      await prefs.remove('accountStatus');
+      await prefs.remove('username');
+      await prefs.setBool('isLoggedIn', false);
+      print('User data cleared from SharedPreferences');
+    } catch (e) {
+      print('Error clearing user data: $e');
     }
   }
 
@@ -184,7 +315,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.black87,
                           ),
                         ),
-
                         const SizedBox(height: 8),
                         const Text(
                           'Enter your email/phone number and password to login',
@@ -194,9 +324,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.grey,
                           ),
                         ),
-
                         const SizedBox(height: 32),
-
                         // Email/Phone Input
                         Container(
                           decoration: BoxDecoration(
@@ -205,7 +333,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           child: TextField(
                             controller: _emailController,
-                            keyboardType: TextInputType.text, // Changed from emailAddress to text
+                            keyboardType: TextInputType.text,
                             decoration: const InputDecoration(
                               hintText: 'Phone number/ Email',
                               hintStyle: TextStyle(color: Colors.black54),
@@ -217,9 +345,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
                         // Password Input
                         Container(
                           decoration: BoxDecoration(
@@ -256,9 +382,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
                         // Remember me and Forgot password
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -303,9 +427,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 24),
-
                         // Login Button with Loading State
                         SizedBox(
                           width: double.infinity,
@@ -364,7 +486,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 8),
                         Center(
                           child: TextButton(
