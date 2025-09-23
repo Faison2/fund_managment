@@ -48,7 +48,7 @@ class _FundsScreenState extends State<FundsScreen> {
       backgroundColor: const Color(0xFFB8E6D3),
       appBar: AppBar(
         title: const Text("Available Funds", style: TextStyle(color: Colors.white),),
-        backgroundColor: const Color(0xFF4CAF50),
+        backgroundColor: const Color(0xFF4A6741),
       ),
       body: SafeArea(
         child: FutureBuilder<List<dynamic>>(
@@ -117,7 +117,7 @@ class _FundsScreenState extends State<FundsScreen> {
                                 fund["status"] ?? "",
                                 style: const TextStyle(color: Colors.white),
                               ),
-                              backgroundColor: Colors.green.shade700,
+                              backgroundColor: Colors.green.shade100,
                             ),
                             Text(
                               "${fund['Units']} Units",
