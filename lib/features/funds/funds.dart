@@ -36,6 +36,29 @@ class _FundsScreenState extends State<FundsScreen> {
     }
   }
 
+  Color _getStatusColor(String? status) {
+    if (status == null) return Colors.grey;
+
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'available':
+      case 'open':
+        return Colors.green.shade600;
+      case 'pending':
+      case 'processing':
+        return Colors.orange.shade700;
+      case 'closed':
+      case 'inactive':
+      case 'suspended':
+        return Colors.red.shade600;
+      case 'paused':
+      case 'maintenance':
+        return Colors.blue.shade600;
+      default:
+        return Colors.grey.shade600;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,8 +70,14 @@ class _FundsScreenState extends State<FundsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFB8E6D3),
       appBar: AppBar(
-        title: const Text("Available Funds", style: TextStyle(color: Colors.white),),
-        backgroundColor: const Color(0xFF4A6741),
+        title: const Text(
+          "Available Funds",
+          style: TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: const Color(0xFFB8E6D3),
       ),
       body: SafeArea(
         child: FutureBuilder<List<dynamic>>(
@@ -68,6 +97,8 @@ class _FundsScreenState extends State<FundsScreen> {
               itemCount: funds.length,
               itemBuilder: (context, index) {
                 final fund = funds[index];
+                final status = fund["status"] ?? "Unknown";
+
                 return Card(
                   elevation: 5,
                   shape: RoundedRectangleBorder(
@@ -112,19 +143,54 @@ class _FundsScreenState extends State<FundsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Chip(
-                              label: Text(
-                                fund["status"] ?? "",
-                                style: const TextStyle(color: Colors.white),
+                            // Status Display - Not clickable, just informational
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: _getStatusColor(status),
+                                  width: 1.5,
+                                ),
                               ),
-                              backgroundColor: Colors.green.shade100,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(status),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    status,
+                                    style: TextStyle(
+                                      color: _getStatusColor(status),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            Text(
-                              "${fund['Units']} Units",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                            // Units Display
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                "${fund['Units']} Units",
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ],
