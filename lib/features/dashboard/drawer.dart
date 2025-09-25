@@ -5,6 +5,7 @@ import 'package:tsl/features/withdrawal/view/withdrawal_page.dart';
 
 import '../auth/login/login.dart';
 import '../deposits/view/deposits.dart';
+import '../multicurrency/multicurency.dart';
 import '../payments/payment_confamation.dart';
 import '../payments/view/payment.dart';
 
@@ -94,11 +95,11 @@ class AppDrawer extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, color: Color(0xFF4A6741), size: 35),
-                  ),
+                  // CircleAvatar(
+                  //   radius: 30,
+                  //   backgroundColor: Colors.white,
+                  //   child: Icon(Icons.person, color: Color(0xFF4A6741), size: 35),
+                  // ),
                   SizedBox(height: 15),
                   Text(
                     'Welcome',
@@ -209,6 +210,18 @@ class AppDrawer extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const ClientStatementPage()),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context: context,
+                  icon: Icons.account_balance_wallet,
+                  title: 'Multicurrency',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MultiCurrencyWalletPage()),
                     );
                   },
                 ),
