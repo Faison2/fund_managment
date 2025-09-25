@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:tsl/features/funds/funds.dart';
+import '../funds/view/fund.dart';
 import '../portifolio/portfolio.dart';
 import '../profile/profile.dart';
 import 'drawer.dart';
@@ -16,15 +16,14 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _currentIndex = 1; // Home tab selected by default
+  int _currentIndex = 1;
   String _cdsNumber = '';
-  String _userName = 'Loading...'; // Default loading state
+  String _userName = 'Loading...';
   String _userEmail = '';
   String _userMobile = '';
   String _userAddress = '';
   bool _isLoadingUserData = true;
 
-  // List of pages/screens
   final List<Widget> _pages = [
     const FundsScreen(),
     const HomeScreen(),
@@ -89,7 +88,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
         body: json.encode(requestBody),
       ).timeout(
-        const Duration(seconds: 10), // 10 second timeout
+        const Duration(seconds: 10),
         onTimeout: () {
           throw Exception('Request timeout');
         },
@@ -112,7 +111,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _isLoadingUserData = false;
           });
 
-          // Optional: Save user data to SharedPreferences for offline access
           await _saveUserDataLocally(userData);
 
           print('User data loaded successfully: $_userName');
@@ -125,7 +123,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (e) {
       print('Error fetching user details: $e');
 
-      // Try to load cached data if API fails
       await _loadCachedUserData();
 
       setState(() {
@@ -220,7 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         title: GestureDetector(
-          onTap: _refreshUserData, // Tap to refresh user data
+          onTap: _refreshUserData,
           child: Row(
             children: [
               Expanded(
