@@ -4,8 +4,10 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/constants/constants.dart';
 import 'package:tsl/features/auth/sign_up/signup.dart';
+import '../../accounts/individual_account.dart';
 import '../../dashboard/dashboard.dart';
 import '../forgot_password/forgot-password.dart';
+// Update path as needed
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,62 +48,46 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Method to save user data to SharedPreferences
-  Future<void> _saveUserData({
-    required String cdsNumber,
-    required String accountStatus,
-    required String username,
-  }) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Save user dataA
-      await prefs.setString('cdsNumber', cdsNumber);
-      await prefs.setString('accountStatus', accountStatus);
-      await prefs.setString('username', username);
-      await prefs.setBool('isLoggedIn', true);
-
-      // Save remember me preference if checked
-      if (_rememberMe) {
-        await prefs.setString('savedUsername', username);
-        await prefs.setBool('rememberMe', true);
-      } else {
-        await prefs.remove('savedUsername');
-        await prefs.setBool('rememberMe', false);
-      }
-
-      print('User data saved to SharedPreferences');
-      print('CDS Number: $cdsNumber');
-      print('Account Status: $accountStatus');
-    } catch (e) {
-      print('Error saving user data: $e');
-    }
-  }
-
-  // Method to load saved credentials (call this in initState if needed)
-  Future<void> _loadSavedCredentials() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final rememberMe = prefs.getBool('rememberMe') ?? false;
-
-      if (rememberMe) {
-        final savedUsername = prefs.getString('savedUsername');
-        if (savedUsername != null) {
-          setState(() {
-            _emailController.text = savedUsername;
-            _rememberMe = rememberMe;
-          });
-        }
-      }
-    } catch (e) {
-      print('Error loading saved credentials: $e');
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSavedCredentials(); // Load saved credentials when screen initializes
+  void _showNoCdsNumberDialog(String username) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Complete Account Setup',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.green[900],
+            ),
+          ),
+          content: const Text(
+            'Please finish up creating your individual account to continue.',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => IndividualAccountScreen(),
+                  ),
+                );
+              },
+              child: Text(
+                'Continue Setup',
+                style: TextStyle(
+                  color: Colors.green[900],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _login() async {
@@ -110,7 +96,6 @@ class _LoginScreenState extends State<LoginScreen> {
     print('Password: ${_passwordController.text}');
     print('Remember me: $_rememberMe');
 
-    // Basic validation - only check if fields are not empty
     if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
       _showSnackBar('Please enter both email/phone number and password', Colors.red);
       return;
@@ -155,29 +140,36 @@ class _LoginScreenState extends State<LoginScreen> {
           if (data != null) {
             final cdsNumber = data['CDSNumber'] as String? ?? '';
             final accountStatus = data['accountStatus'] as String? ?? '';
+            final username = _emailController.text.trim();
 
             // Save user data to SharedPreferences
             await _saveUserData(
               cdsNumber: cdsNumber,
               accountStatus: accountStatus,
-              username: _emailController.text.trim(),
+              username: username,
             );
 
-            // Show success message
-            _showSnackBar('Login successful!', Colors.green);
+            // Check if user has no CDS number - redirect directly without success message
+            if (cdsNumber.isEmpty) {
+              // Show dialog to finish account setup and redirect
+              _showNoCdsNumberDialog(username);
+            } else {
+              // User has CDS number - show success message and proceed
+              _showSnackBar('Login successful!', Colors.green);
 
-            // Check account status and handle accordingly
-            if (accountStatus.toLowerCase().contains('pending')) {
-              _showSnackBar('Account is pending authorization', Colors.orange);
-              // You might want to navigate to a pending status screen instead
-              // Or show additional information to the user
+              // Check account status and handle accordingly
+              if (accountStatus.toLowerCase().contains('pending')) {
+                _showSnackBar('Account is pending authorization', Colors.orange);
+                // You might want to navigate to a pending status screen instead
+                // Or show additional information to the user
+              }
+
+              // Navigate to Dashboard (user has CDS number)
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const DashboardScreen()),
+              );
             }
-
-            // Navigate to Dashboard
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const DashboardScreen()),
-            );
           } else {
             _showSnackBar('Login failed: Invalid response data', Colors.red);
           }
@@ -185,19 +177,17 @@ class _LoginScreenState extends State<LoginScreen> {
         // Keep backward compatibility with old response format
         else if (responseData['status'] == 200 && responseData['statusDesc'] == 'success') {
           // Handle old response format
-          _showSnackBar('Login successful!', Colors.green);
+          final username = _emailController.text.trim();
 
           // Save basic user data for old format
           await _saveUserData(
             cdsNumber: '', // Not available in old format
             accountStatus: 'Active', // Assume active for old format
-            username: _emailController.text.trim(),
+            username: username,
           );
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
-          );
+          // For old format, assume no CDS number and redirect to account setup
+          _showNoCdsNumberDialog(username);
         } else {
           // Login failed - API returned error
           _showSnackBar('Login failed: ${responseData['statusDesc'] ?? 'Unknown error'}', Colors.red);
@@ -217,6 +207,61 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
+
+  Future<void> _saveUserData({
+    required String cdsNumber,
+    required String accountStatus,
+    required String username,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+
+      await prefs.setString('cdsNumber', cdsNumber);
+      await prefs.setString('accountStatus', accountStatus);
+      await prefs.setString('username', username);
+      await prefs.setBool('isLoggedIn', true);
+      if (_rememberMe) {
+        await prefs.setString('savedUsername', username);
+        await prefs.setBool('rememberMe', true);
+      } else {
+        await prefs.remove('savedUsername');
+        await prefs.setBool('rememberMe', false);
+      }
+
+      print('User data saved to SharedPreferences');
+      print('CDS Number: $cdsNumber');
+      print('Account Status: $accountStatus');
+    } catch (e) {
+      print('Error saving user data: $e');
+    }
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rememberMe = prefs.getBool('rememberMe') ?? false;
+
+      if (rememberMe) {
+        final savedUsername = prefs.getString('savedUsername');
+        if (savedUsername != null) {
+          setState(() {
+            _emailController.text = savedUsername;
+            _rememberMe = rememberMe;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading saved credentials: $e');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials(); // Load saved credentials when screen initializes
+  }
+
 
   // Method to get user data from SharedPreferences (utility method)
   static Future<Map<String, String?>> getUserData() async {
