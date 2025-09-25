@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:tsl/constants/constants.dart';
 import 'dart:convert';
 import '../../accounts/individual_account.dart';
-import '../login/login.dart';
+import '../login/view/login.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);

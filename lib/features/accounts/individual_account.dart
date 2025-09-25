@@ -3,8 +3,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart'; // Add this import
 import 'package:tsl/constants/constants.dart';
-import '../auth/login/login.dart';
+
 import '../accounts/api_service/bank_controller.dart';
+import '../auth/login/view/login.dart';
 
 class IndividualAccountScreen extends StatefulWidget {
   const IndividualAccountScreen({Key? key}) : super(key: key);
