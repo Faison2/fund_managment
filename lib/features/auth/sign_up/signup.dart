@@ -23,6 +23,172 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _agreeToTerms = false;
   bool _isLoading = false;
 
+  // Show Terms and Conditions Dialog
+  void _showTermsAndConditions() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            padding: EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Terms & Conditions',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                  ],
+                ),
+                Divider(thickness: 1),
+                SizedBox(height: 10),
+
+                // Scrollable Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTermsSection(
+                          'Welcome',
+                          'By accessing and using this application, you accept and agree to be bound by the terms and provision of this agreement.',
+                        ),
+                        _buildTermsSection(
+                          '1. Account Registration',
+                          'You must provide accurate and complete information during registration. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.',
+                        ),
+                        _buildTermsSection(
+                          '2. User Responsibilities',
+                          'You agree to use the service only for lawful purposes and in accordance with these Terms. You must not use the service in any way that could damage, disable, or impair the service.',
+                        ),
+                        _buildTermsSection(
+                          '3. Privacy',
+                          'Your privacy is important to us. We collect and use your personal information in accordance with our Privacy Policy. By using our service, you consent to the collection and use of your information as described.',
+                        ),
+                        _buildTermsSection(
+                          '4. Data Security',
+                          'We implement appropriate security measures to protect your personal information. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.',
+                        ),
+                        _buildTermsSection(
+                          '5. Service Availability',
+                          'We strive to provide uninterrupted service, but we do not guarantee that the service will be available at all times. We may suspend or terminate the service for maintenance or other reasons.',
+                        ),
+                        _buildTermsSection(
+                          '6. Intellectual Property',
+                          'All content, features, and functionality of the service are owned by us and are protected by international copyright, trademark, and other intellectual property laws.',
+                        ),
+                        _buildTermsSection(
+                          '7. Limitation of Liability',
+                          'To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the service.',
+                        ),
+                        _buildTermsSection(
+                          '8. Changes to Terms',
+                          'We reserve the right to modify these terms at any time. We will notify users of any material changes. Your continued use of the service after changes constitutes acceptance of the new terms.',
+                        ),
+                        _buildTermsSection(
+                          '9. Termination',
+                          'We may terminate or suspend your account and access to the service immediately, without prior notice, for any breach of these Terms.',
+                        ),
+                        _buildTermsSection(
+                          '10. Contact Information',
+                          'If you have any questions about these Terms, please contact our support team through the app or via our official channels.',
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          'Last Updated: ${DateTime.now().year}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: 15),
+
+                // Accept Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _agreeToTerms = true;
+                      });
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'I Accept',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTermsSection(String title, String content) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            content,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _register() async {
     if (!_validateForm()) {
       return;
@@ -38,7 +204,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      // Format phone number (remove leading 0 if present)
       String formattedPhone = _phoneController.text.trim();
       if (formattedPhone.startsWith('0')) {
         formattedPhone = formattedPhone.substring(1);
@@ -67,7 +232,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         final responseData = jsonDecode(response.body);
 
         if (responseData['status'] == 'success') {
-          // Show success dialog with options
           _showSuccessDialog();
         } else {
           _showSnackBar(responseData['statusDesc'] ?? 'Registration failed');
@@ -86,7 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _showSuccessDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap button to close
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -119,8 +283,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(fontSize: 16),
               ),
               SizedBox(height: 20),
-
-              // Create Individual Account Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -137,8 +299,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     padding: EdgeInsets.symmetric(vertical: 12),
                   ),
                   onPressed: () {
-                    Navigator.of(context).pop(); // Close dialog
-                    // Navigate to Individual Account Screen
+                    Navigator.of(context).pop();
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
@@ -148,10 +309,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
               ),
-
               SizedBox(height: 10),
-
-              // Go to Login Button
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -168,8 +326,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     padding: EdgeInsets.symmetric(vertical: 12),
                   ),
                   onPressed: () {
-                    Navigator.of(context).pop(); // Close dialog
-                    // Navigate to LoginScreen
+                    Navigator.of(context).pop();
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) => LoginScreen()),
@@ -259,10 +416,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ),
-
                 SizedBox(height: 40),
-
-                // Title
                 Text(
                   'Sign Up',
                   style: TextStyle(
@@ -280,24 +434,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 SizedBox(height: 40),
-
-                // Form Fields
                 _buildTextField(
                   controller: _emailController,
                   hintText: 'Email',
                   keyboardType: TextInputType.emailAddress,
                 ),
                 SizedBox(height: 16),
-
-                // Phone Number Field (without country code)
                 _buildTextField(
                   controller: _phoneController,
                   hintText: 'Phone Number',
                   keyboardType: TextInputType.phone,
                 ),
                 SizedBox(height: 16),
-
-                // Password Field
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
@@ -335,8 +483,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 SizedBox(height: 16),
-
-                // Confirm Password Field
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
@@ -374,8 +520,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 SizedBox(height: 30),
-
-                // Terms and Conditions Checkbox
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -392,31 +536,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _agreeToTerms = !_agreeToTerms;
-                          });
-                        },
-                        child: Padding(
-                          padding: EdgeInsets.only(top: 12),
-                          child: RichText(
-                            text: TextSpan(
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[700],
-                              ),
-                              children: [
-                                TextSpan(text: 'I agree to the '),
-                                TextSpan(
-                                  text: 'Terms & Conditions',
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.w600,
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 12),
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[700],
+                            ),
+                            children: [
+                              TextSpan(text: 'I agree to the '),
+                              WidgetSpan(
+                                child: GestureDetector(
+                                  onTap: _showTermsAndConditions,
+                                  child: Text(
+                                    'Terms & Conditions',
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.underline,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -424,8 +568,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
                 SizedBox(height: 20),
-
-                // Register Button
                 SizedBox(
                   width: double.infinity,
                   height: 55,
