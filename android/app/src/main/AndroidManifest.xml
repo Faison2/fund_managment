@@ -21,7 +21,7 @@
     </queries>
 
     <application
-        android:label="tsl"
+        android:label="Invest Mkononi"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 

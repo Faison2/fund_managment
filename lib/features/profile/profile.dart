@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/constants.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -46,7 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       // Prepare API request
-      final url = Uri.parse('http://192.168.3.204/TSLFMSAPI/home/UserBasicDetails');
+      final url = Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails');
       final headers = {
         'Content-Type': 'application/json',
       };

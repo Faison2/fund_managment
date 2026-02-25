@@ -57,17 +57,17 @@ class _SplashScreenState extends State<SplashScreen> {
                 _buildPageContent(
                   title: "Welcome to TSL",
                   description:
-                  "TSL is your trusted partner in financial growth. We provide comprehensive investment solutions tailored to your needs.",
+                  "TSL is your trusted partner in securities brokerage, fund management and investment advisory. We provide comprehensive investment solutions tailored to your needs.",
                 ),
                 _buildPageContent(
                   title: "Secure & Licensed",
                   description:
-                  "Licensed by the Capital Markets and Securities Authority (CMSA) and Bank of Tanzania. Your investments are protected with world-class security measures.",
+                  "Licensed by the Capital Markets and Securities Authority (CMSA), Dar es salaam Stock Exchange (DSE) and Bank of Tanzania.",
                 ),
                 _buildPageContent(
                   title: "Start Your Journey",
                   description:
-                  "Join thousands of satisfied clients who trust TSL for their financial future. Experience seamless trading and expert financial guidance.",
+                  "Join thousands of satisfied clients who trust TSL for their financial future.",
                 ),
               ],
             ),
