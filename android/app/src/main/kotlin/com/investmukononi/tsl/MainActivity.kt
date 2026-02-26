@@ -1,4 +1,4 @@
-package com.example.tsl
+package com.investmukononi.tsl
 
 import io.flutter.embedding.android.FlutterActivity
 
