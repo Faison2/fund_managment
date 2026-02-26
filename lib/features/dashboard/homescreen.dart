@@ -1,4 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../deposits/view/deposits.dart';
+import '../funds/view/fund.dart';
+import '../withdrawal/view/withdrawal_page.dart';
+import '../payments/view/payment.dart' as payment_view;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -12,27 +18,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentFundIndex = 0;
   final PageController _fundPageController = PageController();
 
-  // ── Per-fund data ──────────────────────────────────────────────────────────
-  final List<Map<String, dynamic>> _funds = [
-    {
-      'name': 'Umoja Fund',
-      'currency': 'TZS',
-      'units': '98,800.00',
-      'value': '9,456,400.00',
-    },
-    {
-      'name': 'Jikimu Fund',
-      'currency': 'TZS',
-      'units': '45,250.00',
-      'value': '5,122,750.00',
-    },
-    {
-      'name': 'Wekeza Maisha Fund',
-      'currency': 'TZS',
-      'units': '120,000.00',
-      'value': '18,300,000.00',
-    },
-  ];
+  // ── API state ──────────────────────────────────────────────────────────────
+  List<Map<String, dynamic>> _funds = [];
+  bool _isLoadingFunds = true;
+  String? _fundsError;
 
   // ── Action buttons ─────────────────────────────────────────────────────────
   final List<Map<String, dynamic>> _actions = [
@@ -49,42 +38,160 @@ class _HomeScreenState extends State<HomeScreen> {
     {
       'type': 'Unit Transfer',
       'amount': 'TZS - 12,400.00',
-      'date': '09 September 2024 – 15:03 PM',
+      'date': '09 September 2025 – 15:03 PM',
       'status': 'Success',
     },
     {
       'type': 'Unit Transfer',
       'amount': 'TZS - 2,400.00',
-      'date': '09 September 2024 – 15:03 PM',
+      'date': '09 September 2025 – 15:03 PM',
       'status': 'Success',
     },
     {
       'type': 'Unit Transfer',
       'amount': 'TZS - 9,000.00',
-      'date': '09 September 2024 – 15:03 PM',
+      'date': '09 September 2025  – 15:03 PM',
       'status': 'Success',
     },
   ];
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  String _mask(String value) => '•' * 9;
-
-  void _onActionTap(String label) {
-    // TODO: wire up navigation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label tapped'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+  @override
+  void initState() {
+    super.initState();
+    _fetchFunds();
   }
 
   @override
   void dispose() {
     _fundPageController.dispose();
     super.dispose();
+  }
+
+  // ── API call ───────────────────────────────────────────────────────────────
+  Future<void> _fetchFunds() async {
+    setState(() {
+      _isLoadingFunds = true;
+      _fundsError = null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/Home/GetFunds'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'APIUsername': 'User2',
+          'APIPassword': 'CBZ1234#2',
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+
+        if (json['status'] == 'success') {
+          final List<dynamic> data = json['data'] as List<dynamic>;
+
+          setState(() {
+            _funds = data.map((item) {
+              // Format the Units number with commas for display
+              final rawUnits = item['Units']?.toString() ?? '0';
+              final formattedUnits = _formatNumber(rawUnits);
+
+              return {
+                'name': item['fundingName'] ?? 'Unknown Fund',
+                'currency': 'TZS',
+                'units': formattedUnits,
+                'description': item['description'] ?? '',
+                'fundingCode': item['fundingCode'] ?? '',
+                'status': item['status'] ?? '',
+                // Value is not returned by the API — show placeholder or fetch separately
+                'value': 'N/A',
+              };
+            }).toList();
+
+            _isLoadingFunds = false;
+          });
+        } else {
+          setState(() {
+            _fundsError = json['statusDesc'] ?? 'Failed to load funds.';
+            _isLoadingFunds = false;
+          });
+        }
+      } else {
+        setState(() {
+          _fundsError = 'Server error: ${response.statusCode}';
+          _isLoadingFunds = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _fundsError = 'Connection error. Please try again.';
+        _isLoadingFunds = false;
+      });
+    }
+  }
+
+  /// Formats a numeric string with comma separators (e.g. "100000000" → "100,000,000.00")
+  String _formatNumber(String raw) {
+    try {
+      final double value = double.parse(raw);
+      // Simple comma formatting
+      final parts = value.toStringAsFixed(2).split('.');
+      final intPart = parts[0];
+      final decPart = parts[1];
+      final formatted = intPart.replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+$)'),
+            (m) => '${m[1]},',
+      );
+      return '$formatted.$decPart';
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  String _mask(String value) => '•' * 9;
+
+  void _onActionTap(String label) {
+    Widget? targetPage;
+
+    switch (label) {
+      case 'Deposit':
+        targetPage = const DepositPage();
+        break;
+      case 'Unit Prices':
+        targetPage = const FundsScreen();
+        break;
+      case 'Withdrawal':
+        targetPage = const WithdrawalPage();
+        break;
+      case 'Transfers':
+        // TODO: Implement Transfers page or reuse an existing page
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Transfers page coming soon'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        return;
+      case 'Fund\nSubscription':
+        targetPage = const FundsScreen();
+        break;
+      case 'Payment\nMethods':
+        targetPage = const payment_view.PaymentMethodsPage();
+        break;
+    }
+
+    if (targetPage != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (context) => targetPage!),
+      );
+    }
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -100,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
             colors: [
               Color(0xFFB8E6D3),
               Color(0xFF98D8C8),
-              Color(0xFFF7DC6F),
+             // Color(0xFFF7DC6F),
               Color(0xFFFFE5B4),
             ],
           ),
@@ -108,49 +215,39 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Column(
           children: [
-            // ── Fund card + actions ─────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(15, 20, 15, 0),
               child: Column(
                 children: [
-                  // ── Fund PageView ─────────────────────────────────────────
+                  // ── Fund PageView / Loading / Error ───────────────────────
                   SizedBox(
                     height: 160,
-                    child: PageView.builder(
-                      controller: _fundPageController,
-                      itemCount: _funds.length,
-                      onPageChanged: (i) =>
-                          setState(() => _currentFundIndex = i),
-                      itemBuilder: (context, index) {
-                        final fund = _funds[index];
-                        return _buildFundCard(fund);
-                      },
-                    ),
+                    child: _buildFundSection(),
                   ),
 
                   const SizedBox(height: 14),
 
-                  // ── Page dots ─────────────────────────────────────────────
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(_funds.length, (i) {
-                      final active = i == _currentFundIndex;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: active ? 20 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: active ? Colors.green[700] : Colors.black26,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      );
-                    }),
-                  ),
+                  // ── Page dots (only when funds loaded) ────────────────────
+                  if (!_isLoadingFunds && _fundsError == null && _funds.isNotEmpty)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(_funds.length, (i) {
+                        final active = i == _currentFundIndex;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: active ? 20 : 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: active ? Colors.green[700] : Colors.black26,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        );
+                      }),
+                    ),
 
                   const SizedBox(height: 22),
 
-                  // ── Action buttons (2 rows × 3) ───────────────────────────
                   _buildActionGrid(),
 
                   const SizedBox(height: 18),
@@ -162,9 +259,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(24),
                     topRight: Radius.circular(24),
                   ),
@@ -210,6 +307,81 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ── Fund section (loading / error / data) ──────────────────────────────────
+  Widget _buildFundSection() {
+    if (_isLoadingFunds) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.35),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.6), width: 1.5),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Colors.green),
+              SizedBox(height: 12),
+              Text('Loading funds…', style: TextStyle(color: Colors.black54)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_fundsError != null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.35),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.6), width: 1.5),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.cloud_off_outlined, color: Colors.red, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                _fundsError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red, fontSize: 13),
+              ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: _fetchFunds,
+                child: Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.green[700],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Success – show PageView
+    return PageView.builder(
+      controller: _fundPageController,
+      itemCount: _funds.length,
+      onPageChanged: (i) => setState(() => _currentFundIndex = i),
+      itemBuilder: (context, index) => _buildFundCard(_funds[index]),
+    );
+  }
+
   // ── Fund card ──────────────────────────────────────────────────────────────
   Widget _buildFundCard(Map<String, dynamic> fund) {
     return Container(
@@ -227,12 +399,15 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                fund['name'],
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+              Expanded(
+                child: Text(
+                  fund['name'],
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               GestureDetector(
@@ -249,17 +424,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
 
+          // Description badge
+          if ((fund['description'] as String).isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              fund['description'],
+              style: TextStyle(fontSize: 11, color: Colors.green[700]),
+            ),
+          ],
+
           const Spacer(),
 
           // Units | Value — side by side
           Row(
             children: [
-              // Units
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Units',
                       style: TextStyle(
                         fontSize: 12,
@@ -269,9 +452,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _isBalanceVisible ? fund['units'] : _mask(fund['units']),
+                      _isBalanceVisible
+                          ? fund['units']
+                          : _mask(fund['units']),
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
@@ -280,7 +465,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Divider
               Container(
                 height: 36,
                 width: 1,
@@ -288,7 +472,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 12),
               ),
 
-              // Value
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,7 +486,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _isBalanceVisible ? fund['value'] : _mask(fund['value']),
+                      _isBalanceVisible
+                          ? fund['value']
+                          : _mask(fund['value']),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -392,7 +577,7 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
