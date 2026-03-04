@@ -541,7 +541,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                                 // Footer
                                 Text(
-                                  '© 2024 TSL. All rights reserved.',
+                                  '© 2026 TSL. All rights reserved.',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.black.withOpacity(0.35),

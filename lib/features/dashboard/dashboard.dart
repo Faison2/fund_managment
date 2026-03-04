@@ -127,7 +127,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       setState(() {
         if (_userName == 'Loading...') {
-          _userName = 'Error loading name';
+          _userName = ' name';
         }
         _isLoadingUserData = false;
       });
