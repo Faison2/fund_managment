@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:fl_chart/fl_chart.dart';
 import '../deposits/view/deposits.dart';
 import '../funds/view/fund.dart';
 import '../withdrawal/view/withdrawal_page.dart';
@@ -34,23 +36,48 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   // ── Recent transactions ────────────────────────────────────────────────────
+  // Each entry has: type ('Deposit' | 'Withdrawal'), amount (double), label, date
   final List<Map<String, dynamic>> _transactions = [
     {
-      'type': 'Unit Transfer',
-      'amount': 'TZS - 12,400.00',
-      'date': '09 September 2025 – 15:03 PM',
+      'type': 'Withdrawal',
+      'amount': 12400.00,
+      'label': 'Unit Transfer',
+      'date': '09 Sep',
       'status': 'Success',
     },
     {
-      'type': 'Unit Transfer',
-      'amount': 'TZS - 2,400.00',
-      'date': '09 September 2025 – 15:03 PM',
+      'type': 'Deposit',
+      'amount': 50000.00,
+      'label': 'Fund Deposit',
+      'date': '10 Sep',
       'status': 'Success',
     },
     {
-      'type': 'Unit Transfer',
-      'amount': 'TZS - 9,000.00',
-      'date': '09 September 2025  – 15:03 PM',
+      'type': 'Withdrawal',
+      'amount': 2400.00,
+      'label': 'Unit Transfer',
+      'date': '11 Sep',
+      'status': 'Success',
+    },
+    {
+      'type': 'Deposit',
+      'amount': 30000.00,
+      'label': 'Fund Deposit',
+      'date': '12 Sep',
+      'status': 'Success',
+    },
+    {
+      'type': 'Withdrawal',
+      'amount': 9000.00,
+      'label': 'Unit Transfer',
+      'date': '13 Sep',
+      'status': 'Success',
+    },
+    {
+      'type': 'Deposit',
+      'amount': 15000.00,
+      'label': 'Fund Deposit',
+      'date': '14 Sep',
       'status': 'Success',
     },
   ];
@@ -96,7 +123,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
           setState(() {
             _funds = data.map((item) {
-              // Format the Units number with commas for display
               final rawUnits = item['Units']?.toString() ?? '0';
               final formattedUnits = _formatNumber(rawUnits);
 
@@ -107,7 +133,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 'description': item['description'] ?? '',
                 'fundingCode': item['fundingCode'] ?? '',
                 'status': item['status'] ?? '',
-                // Value is not returned by the API — show placeholder or fetch separately
                 'value': 'N/A',
               };
             }).toList();
@@ -134,11 +159,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Formats a numeric string with comma separators (e.g. "100000000" → "100,000,000.00")
   String _formatNumber(String raw) {
     try {
       final double value = double.parse(raw);
-      // Simple comma formatting
       final parts = value.toStringAsFixed(2).split('.');
       final intPart = parts[0];
       final decPart = parts[1];
@@ -152,7 +175,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   String _mask(String value) => '•' * 9;
 
   void _onActionTap(String label) {
@@ -169,7 +191,6 @@ class _HomeScreenState extends State<HomeScreen> {
         targetPage = const WithdrawalPage();
         break;
       case 'Transfers':
-        // TODO: Implement Transfers page or reuse an existing page
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Transfers page coming soon'),
@@ -194,12 +215,36 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ── Chart helpers ──────────────────────────────────────────────────────────
+
+  /// Total deposits amount
+  double get _totalDeposits => _transactions
+      .where((t) => t['type'] == 'Deposit')
+      .fold(0.0, (sum, t) => sum + (t['amount'] as double));
+
+  /// Total withdrawals amount
+  double get _totalWithdrawals => _transactions
+      .where((t) => t['type'] == 'Withdrawal')
+      .fold(0.0, (sum, t) => sum + (t['amount'] as double));
+
+  /// Line chart spots — one point per transaction (x = index, y = amount)
+  List<FlSpot> get _lineSpots => List.generate(
+    _transactions.length,
+        (i) => FlSpot(i.toDouble(), _transactions[i]['amount'] as double),
+  );
+
+  /// Max y value for line chart scaling
+  double get _maxY {
+    final amounts = _transactions.map((t) => t['amount'] as double).toList();
+    return (amounts.reduce(max) * 1.3).ceilToDouble();
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10),
+        margin: const EdgeInsets.symmetric(horizontal: 1),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
@@ -207,107 +252,529 @@ class _HomeScreenState extends State<HomeScreen> {
             colors: [
               Color(0xFFB8E6D3),
               Color(0xFF98D8C8),
-             // Color(0xFFF7DC6F),
               Color(0xFFFFE5B4),
             ],
           ),
-          borderRadius: BorderRadius.circular(25),
+         // borderRadius: BorderRadius.circular(25),
         ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(15, 20, 15, 0),
-              child: Column(
-                children: [
-                  // ── Fund PageView / Loading / Error ───────────────────────
-                  SizedBox(
-                    height: 160,
-                    child: _buildFundSection(),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // ── Page dots (only when funds loaded) ────────────────────
-                  if (!_isLoadingFunds && _fundsError == null && _funds.isNotEmpty)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(_funds.length, (i) {
-                        final active = i == _currentFundIndex;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: active ? 20 : 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: active ? Colors.green[700] : Colors.black26,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        );
-                      }),
-                    ),
-
-                  const SizedBox(height: 22),
-
-                  _buildActionGrid(),
-
-                  const SizedBox(height: 18),
-                ],
-              ),
-            ),
-
-            // ── Recent Transactions ─────────────────────────────────────────
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(15, 20, 15, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Fund PageView / Loading / Error ─────────────────────────
+                SizedBox(
+                  height: 150,
+                  child: _buildFundSection(),
                 ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Recent Transactions',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+
+                const SizedBox(height: 10),
+
+                // ── Page dots ───────────────────────────────────────────────
+                if (!_isLoadingFunds && _fundsError == null && _funds.isNotEmpty)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(_funds.length, (i) {
+                      final active = i == _currentFundIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: active ? 20 : 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: active ? Colors.green[700] : Colors.black26,
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        Text(
-                          'See All',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.green[700],
-                            fontWeight: FontWeight.w600,
-                          ),
+                      );
+                    }),
+                  ),
+
+                const SizedBox(height: 10),
+
+                _buildActionGrid(),
+
+                const SizedBox(height: 18),
+
+                // ── Recent Transactions section ──────────────────────────────
+                Container(
+                  padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+                  decoration: BoxDecoration(
+                   // color: Colors.white.withValues(alpha: 0.15),
+                   // borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Recent Transactions',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              'See All',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.green[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: _transactions.length,
-                        itemBuilder: (context, index) =>
-                            _buildTransactionTile(_transactions[index]),
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 16),
+
+                      // ── Two chart cards side by side ───────────────────────
+                      SizedBox(
+                        height: 340,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: _buildLineChartCard()),
+                            const SizedBox(width: 10),
+                            Expanded(child: _buildPieChartCard()),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // ── Fund section (loading / error / data) ──────────────────────────────────
+  // ── Line chart card ────────────────────────────────────────────────────────
+  Widget _buildLineChartCard() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 14, 10, 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Card header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.green[700]!.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Icon(Icons.show_chart_rounded,
+                    color: Colors.green[700], size: 14),
+              ),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'Trend',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              Text(
+                '${_transactions.length} txns',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.green[700],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          // Line chart — fixed height
+          SizedBox(
+            height: 150,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: _maxY,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: _maxY / 3,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: Colors.black.withOpacity(0.07),
+                    strokeWidth: 1,
+                    dashArray: [4, 4],
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 34,
+                      interval: _maxY / 3,
+                      getTitlesWidget: (value, _) => Text(
+                        _shortAmount(value),
+                        style: const TextStyle(
+                            fontSize: 8, color: Colors.black45),
+                      ),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 2,
+                      getTitlesWidget: (value, _) {
+                        final idx = value.toInt();
+                        if (idx < 0 ||
+                            idx >= _transactions.length ||
+                            idx % 2 != 0) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            (_transactions[idx]['date'] as String)
+                                .split(' ')
+                                .first,
+                            style: const TextStyle(
+                                fontSize: 8, color: Colors.black45),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                ),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => Colors.green[800]!,
+                    getTooltipItems: (spots) => spots
+                        .map(
+                          (s) => LineTooltipItem(
+                        _shortAmount(s.y),
+                        const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                        .toList(),
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: _transactions
+                        .asMap()
+                        .entries
+                        .where((e) => e.value['type'] == 'Deposit')
+                        .map((e) => FlSpot(
+                      e.key.toDouble(),
+                      e.value['amount'] as double,
+                    ))
+                        .toList(),
+                    isCurved: true,
+                    color: Colors.green[600],
+                    barWidth: 2,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
+                        radius: 3,
+                        color: Colors.white,
+                        strokeColor: Colors.green[600]!,
+                        strokeWidth: 1.5,
+                      ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.green[400]!.withOpacity(0.22),
+                          Colors.green[400]!.withOpacity(0.0),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                  LineChartBarData(
+                    spots: _transactions
+                        .asMap()
+                        .entries
+                        .where((e) => e.value['type'] == 'Withdrawal')
+                        .map((e) => FlSpot(
+                      e.key.toDouble(),
+                      e.value['amount'] as double,
+                    ))
+                        .toList(),
+                    isCurved: true,
+                    color: Colors.red[400],
+                    barWidth: 2,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
+                        radius: 3,
+                        color: Colors.white,
+                        strokeColor: Colors.red[400]!,
+                        strokeWidth: 1.5,
+                      ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.red[300]!.withOpacity(0.15),
+                          Colors.red[300]!.withOpacity(0.0),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // Legend
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _legendDot(Colors.green[600]!, 'In'),
+              const SizedBox(width: 12),
+              _legendDot(Colors.red[400]!, 'Out'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Pie chart card ─────────────────────────────────────────────────────────
+  Widget _buildPieChartCard() {
+    final total = _totalDeposits + _totalWithdrawals;
+    final depositPct = total == 0 ? 0.0 : (_totalDeposits / total * 100);
+    final withdrawalPct = total == 0 ? 0.0 : (_totalWithdrawals / total * 100);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Card header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.blue[700]!.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Icon(Icons.pie_chart_outline_rounded,
+                    color: Colors.blue[700], size: 14),
+              ),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'Breakdown',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // Pie chart — fixed height so it never overflows
+          SizedBox(
+            height: 120,
+            child: PieChart(
+              PieChartData(
+                startDegreeOffset: -90,
+                sectionsSpace: 3,
+                centerSpaceRadius: 24,
+                sections: [
+                  PieChartSectionData(
+                    value: _totalDeposits,
+                    color: Colors.green[500],
+                    radius: 30,
+                    title: '${depositPct.toStringAsFixed(0)}%',
+                    titlePositionPercentageOffset: 0.6,
+                    titleStyle: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  PieChartSectionData(
+                    value: _totalWithdrawals,
+                    color: Colors.red[400],
+                    radius: 30,
+                    title: '${withdrawalPct.toStringAsFixed(0)}%',
+                    titlePositionPercentageOffset: 0.6,
+                    titleStyle: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+                pieTouchData: PieTouchData(enabled: true),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // Stats — stacked below pie
+          _pieStat(
+            label: 'Deposits',
+            amount: _totalDeposits,
+            count: _transactions.where((t) => t['type'] == 'Deposit').length,
+            color: Colors.green[500]!,
+          ),
+          const SizedBox(height: 8),
+          _pieStat(
+            label: 'Withdrawals',
+            amount: _totalWithdrawals,
+            count:
+            _transactions.where((t) => t['type'] == 'Withdrawal').length,
+            color: Colors.red[400]!,
+          ),
+          const SizedBox(height: 10),
+
+          // Net bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: total == 0
+                  ? 0
+                  : (_totalDeposits / total).clamp(0.0, 1.0),
+              minHeight: 5,
+              backgroundColor: Colors.red[100],
+              valueColor:
+              AlwaysStoppedAnimation<Color>(Colors.green[500]!),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Legend dot ─────────────────────────────────────────────────────────────
+  Widget _legendDot(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
+        Text(label,
+            style: const TextStyle(fontSize: 11, color: Colors.black54)),
+      ],
+    );
+  }
+
+  // ── Pie stat row ───────────────────────────────────────────────────────────
+  Widget _pieStat({
+    required String label,
+    required double amount,
+    required int count,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500)),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(
+          'TZS ${_formatNumber(amount.toStringAsFixed(0))}',
+          style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87),
+        ),
+        Text(
+          '$count transaction${count == 1 ? '' : 's'}',
+          style: const TextStyle(fontSize: 10, color: Colors.black38),
+        ),
+      ],
+    );
+  }
+
+  // ── Short amount label (e.g. 50000 → "50K") ───────────────────────────────
+  String _shortAmount(double value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(0)}K';
+    return value.toStringAsFixed(0);
+  }
+
+  // ── Fund section ───────────────────────────────────────────────────────────
   Widget _buildFundSection() {
     if (_isLoadingFunds) {
       return Container(
@@ -373,7 +840,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Success – show PageView
     return PageView.builder(
       controller: _fundPageController,
       itemCount: _funds.length,
@@ -395,7 +861,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Fund name + visibility toggle
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -423,8 +888,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-
-          // Description badge
           if ((fund['description'] as String).isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
@@ -432,10 +895,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 11, color: Colors.green[700]),
             ),
           ],
-
           const Spacer(),
-
-          // Units | Value — side by side
           Row(
             children: [
               Expanded(
@@ -445,10 +905,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Text(
                       'Units',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
+                          fontSize: 12,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -456,22 +915,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? fund['units']
                           : _mask(fund['units']),
                       style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87),
                     ),
                   ],
                 ),
               ),
-
               Container(
                 height: 36,
                 width: 1,
                 color: Colors.black12,
                 margin: const EdgeInsets.symmetric(horizontal: 12),
               ),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,10 +935,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       'Value (${fund['currency']})',
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
+                          fontSize: 12,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -490,10 +945,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? fund['value']
                           : _mask(fund['value']),
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87),
                     ),
                   ],
                 ),
@@ -505,7 +959,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── 2 × 3 action grid ─────────────────────────────────────────────────────
+  // ── Action grid ────────────────────────────────────────────────────────────
   Widget _buildActionGrid() {
     return GridView.builder(
       shrinkWrap: true,
@@ -528,7 +982,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Single action button ───────────────────────────────────────────────────
   Widget _buildActionButton({
     required IconData icon,
     required String label,
@@ -567,85 +1020,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ── Transaction tile ───────────────────────────────────────────────────────
-  Widget _buildTransactionTile(Map<String, dynamic> tx) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.swap_horiz_outlined,
-                color: Colors.grey[600], size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tx['type'],
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  tx['date'],
-                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                tx['amount'],
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    tx['status'],
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
