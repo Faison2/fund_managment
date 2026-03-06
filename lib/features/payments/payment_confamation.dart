@@ -1,54 +1,144 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
-class PaymentConfirmationPage extends StatefulWidget {
-  final Map<String, dynamic> transactionData;
-
-  const PaymentConfirmationPage({
-    Key? key,
-    required this.transactionData,
-  }) : super(key: key);
+class MyOrdersPage extends StatefulWidget {
+  const MyOrdersPage({Key? key, required Map transactionData}) : super(key: key);
 
   @override
-  State<PaymentConfirmationPage> createState() => _PaymentConfirmationPageState();
+  State<MyOrdersPage> createState() => _MyOrdersPageState();
 }
 
-class _PaymentConfirmationPageState extends State<PaymentConfirmationPage>
+class _MyOrdersPageState extends State<MyOrdersPage>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+  late TabController _tabController;
+  String _selectedFilter = 'All';
+
+  final List<String> _filters = ['All', 'Buy', 'Sell'];
+
+  // ── Mock orders data ────────────────────────────────────────────────────────
+  final List<Map<String, dynamic>> _orders = [
+    {
+      'orderId': 'ORD-2024-001',
+      'type': 'Buy',
+      'security': 'NMB',
+      'quantity': 500,
+      'price': 3160.00,
+      'totalValue': 1580000.00,
+      'status': 'Completed',
+      'date': '14 Sep 2024',
+      'time': '10:23 AM',
+      'currency': 'TZS',
+    },
+    {
+      'orderId': 'ORD-2024-002',
+      'type': 'Sell',
+      'security': 'CRDB',
+      'quantity': 200,
+      'price': 2530.00,
+      'totalValue': 506000.00,
+      'status': 'Completed',
+      'date': '13 Sep 2024',
+      'time': '02:45 PM',
+      'currency': 'TZS',
+    },
+    {
+      'orderId': 'ORD-2024-003',
+      'type': 'Buy',
+      'security': 'TBL',
+      'quantity': 100,
+      'price': 3820.00,
+      'totalValue': 382000.00,
+      'status': 'Pending',
+      'date': '13 Sep 2024',
+      'time': '11:10 AM',
+      'currency': 'TZS',
+    },
+    {
+      'orderId': 'ORD-2024-004',
+      'type': 'Sell',
+      'security': 'DSE',
+      'quantity': 50,
+      'price': 6440.00,
+      'totalValue': 322000.00,
+      'status': 'Cancelled',
+      'date': '12 Sep 2024',
+      'time': '09:05 AM',
+      'currency': 'TZS',
+    },
+    {
+      'orderId': 'ORD-2024-005',
+      'type': 'Buy',
+      'security': 'TWIGA',
+      'quantity': 80,
+      'price': 6950.00,
+      'totalValue': 556000.00,
+      'status': 'Completed',
+      'date': '11 Sep 2024',
+      'time': '03:30 PM',
+      'currency': 'TZS',
+    },
+    {
+      'orderId': 'ORD-2024-006',
+      'type': 'Buy',
+      'security': 'KA',
+      'quantity': 1000,
+      'price': 315.00,
+      'totalValue': 315000.00,
+      'status': 'Pending',
+      'date': '10 Sep 2024',
+      'time': '10:55 AM',
+      'currency': 'TZS',
+    },
+    {
+      'orderId': 'ORD-2024-007',
+      'type': 'Sell',
+      'security': 'TPS',
+      'quantity': 300,
+      'price': 2120.00,
+      'totalValue': 636000.00,
+      'status': 'Completed',
+      'date': '09 Sep 2024',
+      'time': '01:15 PM',
+      'currency': 'TZS',
+    },
+    {
+      'orderId': 'ORD-2024-008',
+      'type': 'Sell',
+      'security': 'AFRIPRISE',
+      'quantity': 400,
+      'price': 820.00,
+      'totalValue': 328000.00,
+      'status': 'Failed',
+      'date': '08 Sep 2024',
+      'time': '11:40 AM',
+      'currency': 'TZS',
+    },
+  ];
+
+  List<Map<String, dynamic>> get _filtered {
+    if (_selectedFilter == 'All') return _orders;
+    return _orders.where((o) => o['type'] == _selectedFilter).toList();
+  }
+
+  // Summaries
+  int get _totalOrders    => _orders.length;
+  int get _completedCount => _orders.where((o) => o['status'] == 'Completed').length;
+  int get _pendingCount   => _orders.where((o) => o['status'] == 'Pending').length;
+  double get _totalBuyValue => _orders
+      .where((o) => o['type'] == 'Buy' && o['status'] == 'Completed')
+      .fold(0.0, (s, o) => s + (o['totalValue'] as double));
+  double get _totalSellValue => _orders
+      .where((o) => o['type'] == 'Sell' && o['status'] == 'Completed')
+      .fold(0.0, (s, o) => s + (o['totalValue'] as double));
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-
-    _scaleAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.elasticOut,
-    ));
-
-    _animationController.forward();
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -61,320 +151,38 @@ class _PaymentConfirmationPageState extends State<PaymentConfirmationPage>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFB8E6D3),
-              Color(0xFF98D8C8),
-              Color(0xFFF7DC6F),
-              Color(0xFFFFE5B4),
+              Color(0xFF7FFFD4),
+              Color(0xFF98FB98),
+              Color(0xFFAFEEEE),
             ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.black87,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Transaction Receipt',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 40),
-                  ],
-                ),
-              ),
+              // ── App bar ──────────────────────────────────────────────────
+              _buildAppBar(),
 
-              // Main Content
+              // ── Summary cards ────────────────────────────────────────────
+              _buildSummaryRow(),
+
+              const SizedBox(height: 12),
+
+              // ── Filter chips ─────────────────────────────────────────────
+              _buildFilterRow(),
+
+              const SizedBox(height: 12),
+
+              // ── Orders list ──────────────────────────────────────────────
               Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  child: AnimatedBuilder(
-                    animation: _animationController,
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimation,
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 30),
-
-                            // Success Icon
-                            ScaleTransition(
-                              scale: _scaleAnimation,
-                              child: Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  _getStatusIcon(),
-                                  color: Colors.white,
-                                  size: 40,
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // Status Title
-                            Text(
-                              _getStatusTitle(),
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            // Status Subtitle
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 40),
-                              child: Text(
-                                _getStatusSubtitle(),
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 30),
-
-                            // Transaction Details Card
-                            Expanded(
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 20),
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: SingleChildScrollView(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Transaction Details',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 20),
-
-                                      // Transaction ID
-                                      _buildDetailRow(
-                                        'Transaction ID',
-                                        widget.transactionData['transactionId'] ?? 'TXN${DateTime.now().millisecondsSinceEpoch}',
-                                        isCopyable: true,
-                                      ),
-
-                                      // Type
-                                      _buildDetailRow(
-                                        'Type',
-                                        widget.transactionData['type'] ?? 'Transaction',
-                                      ),
-
-                                      // Amount
-                                      _buildDetailRow(
-                                        'Amount',
-                                        '${widget.transactionData['currency'] ?? 'TSZ'} ${_formatAmount(widget.transactionData['amount']?.toString() ?? '0')}',
-                                        isAmount: true,
-                                      ),
-
-                                      // Fee (if applicable)
-                                      if (widget.transactionData['fee'] != null && widget.transactionData['fee'] > 0)
-                                        _buildDetailRow(
-                                          'Processing Fee',
-                                          '${widget.transactionData['currency'] ?? 'TSZ'} ${_formatAmount(widget.transactionData['fee']?.toString() ?? '0')}',
-                                        ),
-
-                                      // Net Amount (for withdrawals)
-                                      if (widget.transactionData['netAmount'] != null)
-                                        _buildDetailRow(
-                                          'Net Amount',
-                                          '${widget.transactionData['currency'] ?? 'TSZ'} ${_formatAmount(widget.transactionData['netAmount']?.toString() ?? '0')}',
-                                          isAmount: true,
-                                        ),
-
-                                      // Payment Method
-                                      _buildDetailRow(
-                                        widget.transactionData['type'] == 'Deposit' ? 'From' : 'To',
-                                        widget.transactionData['paymentMethod'] ?? 'N/A',
-                                      ),
-
-                                      // Status
-                                      _buildDetailRow(
-                                        'Status',
-                                        widget.transactionData['status'] ?? 'Processing',
-                                        isStatus: true,
-                                      ),
-
-                                      // Date & Time
-                                      _buildDetailRow(
-                                        'Date & Time',
-                                        _formatDateTime(DateTime.now()),
-                                      ),
-
-                                      // Reference Number (for some transaction types)
-                                      if (widget.transactionData['reference'] != null)
-                                        _buildDetailRow(
-                                          'Reference',
-                                          widget.transactionData['reference'],
-                                          isCopyable: true,
-                                        ),
-
-                                      const SizedBox(height: 20),
-
-                                      // Additional Info based on transaction type
-                                      if (widget.transactionData['type'] == 'Withdrawal' ||
-                                          widget.transactionData['type'] == 'Dividend Payout')
-                                        Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(
-                                              color: Colors.orange.withOpacity(0.3),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.info_outline,
-                                                color: Colors.orange[700],
-                                                size: 20,
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Text(
-                                                  'Funds will be transferred to your selected account within 1-3 business days.',
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    color: Colors.orange[800],
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // Action Buttons
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: Column(
-                                children: [
-                                  // Share Receipt Button
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: _shareReceipt,
-                                      icon: const Icon(Icons.share_outlined),
-                                      label: const Text('Share Receipt'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(15),
-                                        ),
-                                        elevation: 0,
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 12),
-
-                                  // Download Receipt Button
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton.icon(
-                                      onPressed: _downloadReceipt,
-                                      icon: const Icon(Icons.download_outlined),
-                                      label: const Text('Download PDF'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.green,
-                                        side: const BorderSide(color: Colors.green),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(15),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 12),
-
-                                  // Back to Home Button
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).popUntil((route) => route.isFirst);
-                                      },
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.grey[600],
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                      ),
-                                      child: const Text(
-                                        'Back to Home',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                child: _filtered.isEmpty
+                    ? _buildEmpty()
+                    : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: _filtered.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) => _buildOrderCard(_filtered[i]),
                 ),
               ),
             ],
@@ -384,53 +192,47 @@ class _PaymentConfirmationPageState extends State<PaymentConfirmationPage>
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isCopyable = false, bool isAmount = false, bool isStatus = false}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+  // ── App bar ────────────────────────────────────────────────────────────────
+  Widget _buildAppBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.6), width: 1),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.black87),
             ),
           ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
-                  child: Text(
-                    value,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isAmount
-                          ? Colors.green
-                          : isStatus
-                          ? _getStatusColor()
-                          : Colors.black87,
-                    ),
-                  ),
-                ),
-                if (isCopyable) ...[
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _copyToClipboard(value),
-                    child: Icon(
-                      Icons.copy_outlined,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
+                Text('My Orders',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.black87, letterSpacing: -0.3)),
+                Text('DSE Securities',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black54)),
               ],
+            ),
+          ),
+          // Total orders badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.6), width: 1),
+            ),
+            child: Text(
+              '$_totalOrders Orders',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.teal.shade700),
             ),
           ),
         ],
@@ -438,134 +240,296 @@ class _PaymentConfirmationPageState extends State<PaymentConfirmationPage>
     );
   }
 
-  Color _getStatusColor() {
-    final status = widget.transactionData['status']?.toString().toLowerCase() ?? 'processing';
-    switch (status) {
-      case 'success':
-      case 'completed':
-      case 'successful':
-        return Colors.green;
-      case 'pending':
-      case 'processing':
-        return Colors.orange;
-      case 'failed':
-      case 'error':
-        return Colors.red;
-      default:
-        return Colors.orange;
-    }
-  }
-
-  IconData _getStatusIcon() {
-    final status = widget.transactionData['status']?.toString().toLowerCase() ?? 'processing';
-    switch (status) {
-      case 'success':
-      case 'completed':
-      case 'successful':
-        return Icons.check_circle_outline;
-      case 'pending':
-      case 'processing':
-        return Icons.schedule_outlined;
-      case 'failed':
-      case 'error':
-        return Icons.error_outline;
-      default:
-        return Icons.schedule_outlined;
-    }
-  }
-
-  String _getStatusTitle() {
-    final status = widget.transactionData['status']?.toString().toLowerCase() ?? 'processing';
-    final type = widget.transactionData['type'] ?? 'Transaction';
-
-    switch (status) {
-      case 'success':
-      case 'completed':
-      case 'successful':
-        return '$type Successful!';
-      case 'pending':
-      case 'processing':
-        return '$type Processing';
-      case 'failed':
-      case 'error':
-        return '$type Failed';
-      default:
-        return '$type Initiated';
-    }
-  }
-
-  String _getStatusSubtitle() {
-    final status = widget.transactionData['status']?.toString().toLowerCase() ?? 'processing';
-    final type = widget.transactionData['type']?.toString().toLowerCase() ?? 'transaction';
-
-    switch (status) {
-      case 'success':
-      case 'completed':
-      case 'successful':
-        return 'Your $type has been completed successfully.';
-      case 'pending':
-      case 'processing':
-        return 'Your $type is being processed. You will be notified once completed.';
-      case 'failed':
-      case 'error':
-        return 'Your $type could not be processed. Please try again or contact support.';
-      default:
-        return 'Your $type has been initiated and is being processed.';
-    }
-  }
-
-  String _formatAmount(String amount) {
-    if (amount.isEmpty) return '0.00';
-    final double value = double.tryParse(amount) ?? 0;
-    return value.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-    );
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-
-    final month = months[dateTime.month - 1];
-    final day = dateTime.day.toString().padLeft(2, '0');
-    final year = dateTime.year;
-    final hour = dateTime.hour.toString().padLeft(2, '0');
-    final minute = dateTime.minute.toString().padLeft(2, '0');
-
-    return '$day $month $year - $hour:${minute}';
-  }
-
-  void _copyToClipboard(String text) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$text copied to clipboard'),
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.green,
+  // ── Summary row ────────────────────────────────────────────────────────────
+  Widget _buildSummaryRow() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Row(
+        children: [
+          Expanded(child: _summaryCard(
+            label: 'Total Bought',
+            value: _shortValue(_totalBuyValue),
+            color: Colors.green.shade700,
+            icon: Icons.trending_up_rounded,
+          )),
+          const SizedBox(width: 10),
+          Expanded(child: _summaryCard(
+            label: 'Total Sold',
+            value: _shortValue(_totalSellValue),
+            color: Colors.red.shade600,
+            icon: Icons.trending_down_rounded,
+          )),
+          const SizedBox(width: 10),
+          Expanded(child: _summaryCard(
+            label: 'Pending',
+            value: '$_pendingCount',
+            color: Colors.orange.shade700,
+            icon: Icons.schedule_outlined,
+          )),
+          const SizedBox(width: 10),
+          Expanded(child: _summaryCard(
+            label: 'Done',
+            value: '$_completedCount',
+            color: Colors.teal.shade700,
+            icon: Icons.check_circle_outline_rounded,
+          )),
+        ],
       ),
     );
   }
 
-  void _shareReceipt() {
-    // Implement share functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Share functionality will be implemented'),
-        backgroundColor: Colors.green,
+  Widget _summaryCard({
+    required String label,
+    required String value,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.7), width: 1),
+        boxShadow: [BoxShadow(color: Colors.teal.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3))],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 14, color: color),
+          ),
+          const SizedBox(height: 6),
+          Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: color)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 9, color: Colors.black54, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+        ],
       ),
     );
   }
 
-  void _downloadReceipt() {
-    // Implement download functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Receipt download will be implemented'),
-        backgroundColor: Colors.green,
+  // ── Filter row ─────────────────────────────────────────────────────────────
+  Widget _buildFilterRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: _filters.map((f) {
+          final active = _selectedFilter == f;
+          Color activeColor = Colors.teal.shade700;
+          if (f == 'Buy')  activeColor = Colors.green.shade700;
+          if (f == 'Sell') activeColor = Colors.red.shade600;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedFilter = f),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                decoration: BoxDecoration(
+                  color: active ? activeColor : Colors.white.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: active ? activeColor : Colors.white.withOpacity(0.6),
+                    width: 1,
+                  ),
+                  boxShadow: active
+                      ? [BoxShadow(color: activeColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))]
+                      : [],
+                ),
+                child: Text(
+                  f,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: active ? Colors.white : Colors.black54,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
+  }
+
+  // ── Order card ─────────────────────────────────────────────────────────────
+  Widget _buildOrderCard(Map<String, dynamic> order) {
+    final isBuy      = order['type'] == 'Buy';
+    final typeColor  = isBuy ? Colors.green.shade700 : Colors.red.shade600;
+    final statusColor = _statusColor(order['status'] as String);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.teal.withOpacity(0.07), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        children: [
+          // ── Top row ────────────────────────────────────────────────────
+          Row(
+            children: [
+              // Buy/Sell badge
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: typeColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: typeColor.withOpacity(0.25), width: 1),
+                ),
+                child: Icon(
+                  isBuy ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                  color: typeColor, size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Security + order ID
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(order['security'] as String,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.black87)),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: typeColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            order['type'] as String,
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: typeColor, letterSpacing: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(order['orderId'] as String,
+                        style: const TextStyle(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+
+              // Status chip
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 6, height: 6,
+                        decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+                    const SizedBox(width: 5),
+                    Text(order['status'] as String,
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: statusColor)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // ── Divider ────────────────────────────────────────────────────
+          Container(height: 1, color: Colors.teal.withOpacity(0.1)),
+          const SizedBox(height: 12),
+
+          // ── Bottom details row ─────────────────────────────────────────
+          Row(
+            children: [
+              _orderDetail('Qty', '${order['quantity']}'),
+              _vDivider(),
+              _orderDetail('Price', 'TZS ${_fmt(order['price'] as double)}'),
+              _vDivider(),
+              _orderDetail('Total', 'TZS ${_shortValue(order['totalValue'] as double)}', highlight: true),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(order['date'] as String,
+                      style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w500)),
+                  Text(order['time'] as String,
+                      style: const TextStyle(fontSize: 10, color: Colors.black38)),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _orderDetail(String label, String value, {bool highlight = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.black45, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: highlight ? Colors.teal.shade700 : Colors.black87,
+        )),
+      ],
+    );
+  }
+
+  Widget _vDivider() => Container(
+      width: 1, height: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+      color: Colors.teal.withOpacity(0.15));
+
+  // ── Empty state ────────────────────────────────────────────────────────────
+  Widget _buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.receipt_long_outlined, size: 56, color: Colors.teal.withOpacity(0.35)),
+          const SizedBox(height: 14),
+          Text(
+            'No ${_selectedFilter == 'All' ? '' : _selectedFilter} orders yet',
+            style: const TextStyle(fontSize: 15, color: Colors.black45, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed': return Colors.green.shade700;
+      case 'pending':   return Colors.orange.shade700;
+      case 'cancelled': return Colors.grey.shade600;
+      case 'failed':    return Colors.red.shade600;
+      default:          return Colors.grey.shade600;
+    }
+  }
+
+  String _fmt(double value) {
+    final parts = value.toStringAsFixed(2).split('.');
+    final formatted = parts[0].replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},');
+    return '$formatted.${parts[1]}';
+  }
+
+  String _shortValue(double value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000)    return '${(value / 1000).toStringAsFixed(0)}K';
+    return value.toStringAsFixed(0);
   }
 }

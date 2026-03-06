@@ -157,12 +157,12 @@ class AppDrawer extends StatelessWidget {
                 _buildDrawerItem(
                   context: context,
                   icon: Icons.confirmation_number,
-                  title: 'Payment Confirmation',
+                  title: 'My Orders',
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const PaymentConfirmationPage(transactionData: {},)),
+                      MaterialPageRoute(builder: (context) => const MyOrdersPage(transactionData: {},)),
                     );
                   },
                 ),
