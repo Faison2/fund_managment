@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import 'features/splash screen/splash.dart';
+import 'package:tsl/features/splash%20screen/initial_splash.dart';
 
 
 void main() {
@@ -19,7 +18,7 @@ class TSLApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
       ),
-      home: const SplashScreen(),
+      home: const InitialSplashScreen(),
       builder: (context, child) {
         SystemChrome.setPreferredOrientations([
           DeviceOrientation.portraitUp,

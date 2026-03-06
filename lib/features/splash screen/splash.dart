@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/login/view/login.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -55,7 +56,8 @@ class _SplashScreenState extends State<SplashScreen>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.15),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+    ).animate(
+        CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
 
     _fadeController.forward();
     _slideController.forward();
@@ -77,7 +79,12 @@ class _SplashScreenState extends State<SplashScreen>
     _slideController.forward();
   }
 
-  void _navigateToLogin() {
+  /// Marks onboarding as seen, then navigates to Login.
+  Future<void> _navigateToLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_seen_onboarding', true);
+
+    if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -228,7 +235,8 @@ class _SplashScreenState extends State<SplashScreen>
                             return AnimatedContainer(
                               duration: const Duration(milliseconds: 350),
                               curve: Curves.easeInOut,
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              margin:
+                              const EdgeInsets.symmetric(horizontal: 4),
                               height: 8,
                               width: isActive ? 28 : 8,
                               decoration: BoxDecoration(
@@ -239,7 +247,8 @@ class _SplashScreenState extends State<SplashScreen>
                                 boxShadow: isActive
                                     ? [
                                   BoxShadow(
-                                    color: Colors.blue.withOpacity(0.4),
+                                    color:
+                                    Colors.blue.withOpacity(0.4),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   )
