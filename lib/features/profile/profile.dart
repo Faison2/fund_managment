@@ -15,7 +15,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
   Map<String, dynamic>? _userData;
-  String? _accountStatus; // <-- Added
+  String? _accountStatus;
 
   @override
   void initState() {
@@ -46,18 +46,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      // Prepare API request
+      // ✅ Corrected API request
       final url = Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails');
       final headers = {
         'Content-Type': 'application/json',
       };
       final body = json.encode({
-        "APIUsername": "User2",
-        "APIPassword": "CBZ1234#2",
-        "AccountNumber": cdsNumber,
+        "CDSNumber": cdsNumber, // ✅ Fixed: was "AccountNumber" with extra auth fields
       });
 
-      // Make API call
       final response = await http.post(
         url,
         headers: headers,
@@ -68,10 +65,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final responseData = json.decode(response.body);
 
         if (responseData['status'] == 'success' &&
-            responseData['data'] != null &&
-            responseData['data'].isNotEmpty) {
+            responseData['data'] != null) {
           setState(() {
-            _userData = responseData['data'][0];
+            // ✅ Fixed: data is an object, not an array — removed [0]
+            _userData = Map<String, dynamic>.from(responseData['data']);
             _isLoading = false;
           });
         } else {
@@ -99,7 +96,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-
           const SizedBox(height: 16),
           Text(
             "Individual Account",
@@ -111,7 +107,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          // Account Status from SharedPreferences
           if (_accountStatus != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -151,28 +146,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildInfoTile(
             icon: Icons.email,
             title: 'Email Address',
-            subtitle: _userData?['email'] ?? 'Not provided',
+            subtitle: _userData?['Email'] ?? 'Not provided', // ✅ Fixed: 'email' → 'Email'
             color: const Color(0xFF388E3C),
           ),
           const Divider(height: 1),
           _buildInfoTile(
             icon: Icons.person,
             title: 'Full Name',
-            subtitle: _userData?['fullname'] ?? 'Not provided',
+            subtitle: _userData?['Names'] ?? 'Not provided', // ✅ Fixed: 'fullname' → 'Names'
             color: const Color(0xFF388E3C),
           ),
           const Divider(height: 1),
           _buildInfoTile(
             icon: Icons.phone,
             title: 'Mobile Number',
-            subtitle: _userData?['mobile'] ?? 'Not provided',
+            subtitle: _userData?['Mobile'] ?? 'Not provided', // ✅ Fixed: 'mobile' → 'Mobile'
             color: const Color(0xFF388E3C),
           ),
           const Divider(height: 1),
           _buildInfoTile(
             icon: Icons.location_on,
             title: 'Address',
-            subtitle: _userData?['address'] ?? 'Not provided',
+            subtitle: _userData?['Add_1'] ?? 'Not provided', // ✅ Fixed: 'address' → 'Add_1'
             color: const Color(0xFF388E3C),
           ),
         ],
@@ -363,9 +358,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ElevatedButton(
                   onPressed: _fetchUserProfile,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF4CAF50),
+                    backgroundColor: const Color(0xFF4CAF50),
                     foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 12,
                     ),

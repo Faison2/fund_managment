@@ -50,7 +50,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       parent: _fabController,
       curve: Curves.elasticOut,
     );
-    // Delay FAB entrance so it pops in after screen settles
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _fabController.forward();
     });
@@ -84,12 +83,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  Future<void> _fetchUserDetails(String accountNumber) async {
+  Future<void> _fetchUserDetails(String cdsNumber) async {
     try {
       setState(() => _isLoadingUserData = true);
 
       const String apiUrl =
-          'http://192.168.3.204/TSLFMSAPI/home/UserBasicDetails';
+          'https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails'; // ✅ Fixed: updated to UAT URL
 
       final response = await http.post(
         Uri.parse(apiUrl),
@@ -98,9 +97,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'Accept': 'application/json',
         },
         body: json.encode({
-          'APIUsername': 'User2',
-          'APIPassword': 'CBZ1234#2',
-          'AccountNumber': accountNumber,
+          'CDSNumber': cdsNumber, // ✅ Fixed: removed APIUsername/APIPassword/AccountNumber
         }),
       ).timeout(
         const Duration(seconds: 10),
@@ -111,12 +108,13 @@ class _DashboardScreenState extends State<DashboardScreen>
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['status'] == 'success' &&
             responseData['data'] != null) {
-          final userData = responseData['data'][0];
+          // ✅ Fixed: data is an object, not an array — removed [0]
+          final userData = Map<String, dynamic>.from(responseData['data']);
           setState(() {
-            _userName = _formatName(userData['fullname'] ?? 'Unknown User');
-            _userEmail = userData['email'] ?? '';
-            _userMobile = userData['mobile'] ?? '';
-            _userAddress = userData['address'] ?? '';
+            _userName = _formatName(userData['Names'] ?? 'Unknown User'); // ✅ Fixed: 'fullname' → 'Names'
+            _userEmail = userData['Email'] ?? '';                          // ✅ Fixed: 'email' → 'Email'
+            _userMobile = userData['Mobile'] ?? '';                        // ✅ Fixed: 'mobile' → 'Mobile'
+            _userAddress = userData['Add_1'] ?? '';                        // ✅ Fixed: 'address' → 'Add_1'
             _isLoadingUserData = false;
           });
           await _saveUserDataLocally(userData);
@@ -154,10 +152,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> _saveUserDataLocally(Map<String, dynamic> userData) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_fullname', userData['fullname'] ?? '');
-    await prefs.setString('user_email', userData['email'] ?? '');
-    await prefs.setString('user_mobile', userData['mobile'] ?? '');
-    await prefs.setString('user_address', userData['address'] ?? '');
+    await prefs.setString('user_fullname', userData['Names'] ?? '');   // ✅ Fixed
+    await prefs.setString('user_email', userData['Email'] ?? '');      // ✅ Fixed
+    await prefs.setString('user_mobile', userData['Mobile'] ?? '');    // ✅ Fixed
+    await prefs.setString('user_address', userData['Add_1'] ?? '');    // ✅ Fixed
   }
 
   Future<void> _loadCachedUserData() async {
@@ -246,8 +244,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                     Text(
                       _cdsNumber.isNotEmpty
-                          ? 'CDS: $_cdsNumber'
-                          : 'CDS: Not available',
+                          ? 'Acc No: $_cdsNumber'
+                          : 'Acc No: Not available',
                       style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,

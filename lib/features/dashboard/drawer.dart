@@ -3,14 +3,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/features/statement%20/client_statement.dart';
 import 'package:tsl/features/withdrawal/view/withdrawal_page.dart';
 
-
 import '../auth/login/view/login.dart';
 import '../deposits/view/deposits.dart';
 import '../multicurrency/multicurency.dart';
 import '../payments/payment_confamation.dart';
 import '../payments/view/payment.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends StatefulWidget {
   final int currentIndex;
   final Function(int) onNavigationChanged;
 
@@ -19,6 +18,49 @@ class AppDrawer extends StatelessWidget {
     required this.currentIndex,
     required this.onNavigationChanged,
   }) : super(key: key);
+
+  @override
+  State<AppDrawer> createState() => _AppDrawerState();
+}
+
+class _AppDrawerState extends State<AppDrawer> {
+  String _userName = '';
+  String _cdsNumber = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _userName = prefs.getString('user_fullname') ?? '';
+        _cdsNumber = prefs.getString('cdsNumber') ?? '';
+      });
+    }
+  }
+
+  /// Returns "Good Morning", "Good Afternoon", or "Good Evening"
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
+  /// Capitalises each word in the cached name
+  String get _formattedName {
+    if (_userName.isEmpty) return '';
+    return _userName
+        .toLowerCase()
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0].toUpperCase() + w.substring(1))
+        .join(' ');
+  }
 
   Future<void> _logout(BuildContext context) async {
     bool? shouldLogout = await showDialog<bool>(
@@ -56,7 +98,7 @@ class AppDrawer extends StatelessWidget {
 
   void _navigateToScreen(BuildContext context, int index) {
     Navigator.pop(context);
-    onNavigationChanged(index);
+    widget.onNavigationChanged(index);
   }
 
   void _showAboutDialog(BuildContext context) {
@@ -66,7 +108,8 @@ class AppDrawer extends StatelessWidget {
       applicationName: 'TSL Investment',
       applicationVersion: '1.0.0',
       applicationLegalese: '© 2024 TSL Investment App',
-      applicationIcon: const Icon(Icons.account_balance, size: 48, color: Color(0xFF4A6741)),
+      applicationIcon:
+      const Icon(Icons.account_balance, size: 48, color: Color(0xFF4A6741)),
     );
   }
 
@@ -75,7 +118,7 @@ class AppDrawer extends StatelessWidget {
     return Drawer(
       child: Column(
         children: [
-          // Drawer Header
+          // ── Drawer Header ──────────────────────────────────────────────────
           Container(
             height: 200,
             width: double.infinity,
@@ -90,32 +133,50 @@ class AppDrawer extends StatelessWidget {
                 ],
               ),
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(20),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // CircleAvatar(
-                  //   radius: 30,
-                  //   backgroundColor: Colors.white,
-                  //   child: Icon(Icons.person, color: Color(0xFF4A6741), size: 35),
-                  // ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15),
+
+                  // ✅ Time-based greeting
                   Text(
-                    'Welcome',
-                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                    _greeting,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+
+                  const SizedBox(height: 4),
+
+                  // ✅ Username from API (via SharedPreferences)
+                  if (_formattedName.isNotEmpty)
+                    Text(
+                      _formattedName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+
+                  // CDS number subtitle
                   Text(
-                    'TSL Investment App',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                    _cdsNumber.isNotEmpty ? 'Account Number: $_cdsNumber' : 'TSL Investment App',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ],
               ),
             ),
           ),
 
-          // Drawer Menu Items
+          // ── Drawer Menu Items ──────────────────────────────────────────────
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
@@ -125,7 +186,7 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.home,
                   title: 'Home',
                   index: 1,
-                  isSelected: currentIndex == 1,
+                  isSelected: widget.currentIndex == 1,
                   onTap: () => _navigateToScreen(context, 1),
                 ),
                 _buildDrawerItem(
@@ -133,7 +194,7 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.settings,
                   title: 'Funds',
                   index: 0,
-                  isSelected: currentIndex == 0,
+                  isSelected: widget.currentIndex == 0,
                   onTap: () => _navigateToScreen(context, 0),
                 ),
                 _buildDrawerItem(
@@ -141,7 +202,7 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.pie_chart_outline,
                   title: 'Portfolio',
                   index: 2,
-                  isSelected: currentIndex == 2,
+                  isSelected: widget.currentIndex == 2,
                   onTap: () => _navigateToScreen(context, 2),
                 ),
                 _buildDrawerItem(
@@ -149,11 +210,9 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.person,
                   title: 'Profile',
                   index: 3,
-                  isSelected: currentIndex == 3,
+                  isSelected: widget.currentIndex == 3,
                   onTap: () => _navigateToScreen(context, 3),
                 ),
-
-                // ✅ New Pages
                 _buildDrawerItem(
                   context: context,
                   icon: Icons.confirmation_number,
@@ -162,7 +221,9 @@ class AppDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const MyOrdersPage(transactionData: {},)),
+                      MaterialPageRoute(
+                          builder: (context) =>
+                          const MyOrdersPage(transactionData: {})),
                     );
                   },
                 ),
@@ -174,7 +235,8 @@ class AppDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const PaymentMethodsPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const PaymentMethodsPage()),
                     );
                   },
                 ),
@@ -186,7 +248,8 @@ class AppDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const DepositPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const DepositPage()),
                     );
                   },
                 ),
@@ -198,7 +261,8 @@ class AppDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const WithdrawalPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const WithdrawalPage()),
                     );
                   },
                 ),
@@ -210,7 +274,8 @@ class AppDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const ClientStatementPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const ClientStatementPage()),
                     );
                   },
                 ),
@@ -222,13 +287,13 @@ class AppDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const MultiCurrencyWalletPage()),
+                      MaterialPageRoute(
+                          builder: (context) =>
+                          const MultiCurrencyWalletPage()),
                     );
                   },
                 ),
-
                 const Divider(thickness: 1, color: Colors.grey),
-
                 _buildDrawerItem(
                   context: context,
                   icon: Icons.help_outline,
@@ -236,7 +301,8 @@ class AppDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Help & Support - Coming Soon!')),
+                      const SnackBar(
+                          content: Text('Help & Support - Coming Soon!')),
                     );
                   },
                 ),
@@ -272,7 +338,7 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
 
-          // Logout Section
+          // ── Logout ─────────────────────────────────────────────────────────
           Container(
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: Colors.grey, width: 0.5)),
@@ -281,7 +347,8 @@ class AppDrawer extends StatelessWidget {
               leading: const Icon(Icons.logout, color: Color(0xFF4A6741)),
               title: const Text(
                 'Logout',
-                style: TextStyle(color: Color(0xFF4A6741), fontWeight: FontWeight.w500),
+                style: TextStyle(
+                    color: Color(0xFF4A6741), fontWeight: FontWeight.w500),
               ),
               onTap: () => _logout(context),
             ),
@@ -304,7 +371,9 @@ class AppDrawer extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: isSelected ? const Color(0xFF4A6741).withOpacity(0.1) : Colors.transparent,
+        color: isSelected
+            ? const Color(0xFF4A6741).withOpacity(0.1)
+            : Colors.transparent,
       ),
       child: ListTile(
         leading: Icon(
