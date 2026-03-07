@@ -358,7 +358,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const Expanded(
-              child: Text('Portfolio Performance',
+              child: Text('Funds Performance',
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,

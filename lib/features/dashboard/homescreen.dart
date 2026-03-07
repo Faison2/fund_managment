@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     {'icon': Icons.account_balance_wallet_outlined, 'label': 'Deposit'},
     {'icon': Icons.monetization_on_outlined,        'label': 'Unit Prices'},
     {'icon': Icons.trending_down_outlined,           'label': 'Withdrawal'},
-    {'icon': Icons.swap_horiz_outlined,              'label': 'Transfers'},
+    {'icon': Icons.swap_horiz_outlined,              'label': 'Transactions'},
   ];
 
   @override
@@ -203,14 +203,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case 'Deposit':     page = const DepositPage(); break;
       case 'Unit Prices': page = const FundsScreen(); break;
       case 'Withdrawal':  page = const WithdrawalPage(); break;
-      case 'Transfers':
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: const Text('Transfers coming soon'),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 1),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10))));
-        return;
+      case 'Transactions': page = const ClientStatementPage(); break;
     }
     if (page != null) {
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page!));
