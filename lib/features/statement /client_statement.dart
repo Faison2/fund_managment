@@ -1,805 +1,948 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../funds/model/model.dart';
+import '../funds/repository/repository.dart';
 
+// ── Data model ───────────────────────────────────────────────────────────────
+class _Txn {
+  final String id;
+  final String description;
+  final String rawDate;   // "07-Mar-2026 00:00"
+  final double units;
+  final double price;
+  final double amount;
+  final bool isDeposit;
 
+  _Txn({
+    required this.id,
+    required this.description,
+    required this.rawDate,
+    required this.units,
+    required this.price,
+    required this.amount,
+    required this.isDeposit,
+  });
+
+  DateTime get date {
+    try {
+      return DateFormat('dd-MMM-yyyy HH:mm').parse(rawDate);
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
+
+  factory _Txn.fromJson(Map<String, dynamic> j) {
+    final desc = j['Description'] as String? ?? '';
+    final lower = desc.toLowerCase();
+    final isDeposit = lower.contains('deposit') ||
+        lower.contains('credit') ||
+        lower.contains('purchase') ||
+        lower.contains('buy');
+    return _Txn(
+      id:          j['TrxnID']?.toString() ?? '',
+      description: desc,
+      rawDate:     j['TrxnDate']  as String? ?? '',
+      units:       double.tryParse(j['Units']?.toString() ?? '0') ?? 0,
+      price:       double.tryParse(j['Price']?.toString() ?? '0') ?? 0,
+      amount:      double.tryParse(j['amount']?.toString() ?? '0') ?? 0,
+      isDeposit:   isDeposit,
+    );
+  }
+}
+
+// ── Filter enum ───────────────────────────────────────────────────────────────
+enum _Filter { both, deposits, withdrawals }
+
+// ─────────────────────────────────────────────────────────────────────────────
 class ClientStatementPage extends StatefulWidget {
   const ClientStatementPage({Key? key}) : super(key: key);
-
   @override
   State<ClientStatementPage> createState() => _ClientStatementPageState();
 }
 
-class _ClientStatementPageState extends State<ClientStatementPage> {
-  DateTime _fromDate = DateTime.now().subtract(const Duration(days: 30));
-  DateTime _toDate = DateTime.now();
-  String _selectedStatementType = 'All Transactions';
-  bool _isLoading = false;
-  List<Map<String, dynamic>> _statementData = [];
-  bool _hasGeneratedStatement = false;
+class _ClientStatementPageState extends State<ClientStatementPage>
+    with TickerProviderStateMixin {
 
-  final List<String> _statementTypes = [
-    'All Transactions',
-    'Deposits Only',
-    'Withdrawals Only',
-    'Dividends Only',
-    'Fund Purchases',
-    'Fund Sales',
-  ];
+  // ── User ──────────────────────────────────────────────────────────────────
+  String _cdsNumber = '';
+  String _userName  = '';
 
-  final List<Map<String, String>> _quickDateRanges = [
-    {'label': 'Last 7 Days', 'days': '7'},
-    {'label': 'Last 30 Days', 'days': '30'},
-    {'label': 'Last 90 Days', 'days': '90'},
-    {'label': 'This Year', 'days': '365'},
-  ];
+  // ── Funds ─────────────────────────────────────────────────────────────────
+  List<Fund> _funds          = [];
+  Fund?      _selectedFund;
+  bool       _loadingFunds   = true;
+  String     _fundsError     = '';
+
+  // ── Transactions ──────────────────────────────────────────────────────────
+  List<_Txn> _allTxns        = [];
+  bool       _loadingTxns    = false;
+  String?    _txnsError;
+  bool       _hasFetched     = false;
+
+  // ── Filter ────────────────────────────────────────────────────────────────
+  _Filter    _filter         = _Filter.both;
+
+  // ── Animation ─────────────────────────────────────────────────────────────
+  late AnimationController _fadeCtrl;
+  late Animation<double>   _fadeAnim;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Client Statement',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        backgroundColor:   Color(0xFFB8E6D3),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFB8E6D3),
-              Color(0xFF98D8C8),
-              Color(0xFFF7DC6F),
-              Color(0xFFFFE5B4),
-            ],
-          ),
-        ),
-        child: Column(
-          children: [
-            // Header Section
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Generate Account Statement',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Select date range and statement type',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black.withOpacity(0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Main Content
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(25),
-                    topRight: Radius.circular(25),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    // Filter Section
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Statement Type Selection
-                          const Text(
-                            'Statement Type',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: Colors.grey[300]!),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedStatementType,
-                                isExpanded: true,
-                                icon: const Icon(Icons.keyboard_arrow_down),
-                                items: _statementTypes.map((type) {
-                                  return DropdownMenuItem<String>(
-                                    value: type,
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          _getStatementTypeIcon(type),
-                                          color: _getStatementTypeColor(type),
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          type,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedStatementType = value!;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 25),
-
-                          // Quick Date Range Selection
-                          const Text(
-                            'Quick Date Range',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: _quickDateRanges.map((range) {
-                                return Container(
-                                  margin: const EdgeInsets.only(right: 10),
-                                  child: GestureDetector(
-                                    onTap: () => _selectQuickRange(int.parse(range['days']!)),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: Colors.blue.withOpacity(0.3),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        range['label']!,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.blue[700],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-
-                          const SizedBox(height: 25),
-
-                          // Custom Date Range Selection
-                          const Text(
-                            'Custom Date Range',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-
-                          // From Date
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'From Date',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    GestureDetector(
-                                      onTap: () => _selectDate(context, true),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[50],
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: Colors.grey[300]!),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              DateFormat('MMM dd, yyyy').format(_fromDate),
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                color: Colors.black87,
-                                              ),
-                                            ),
-                                            Icon(
-                                              Icons.calendar_today,
-                                              color: Colors.grey[600],
-                                              size: 20,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 15),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'To Date',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    GestureDetector(
-                                      onTap: () => _selectDate(context, false),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[50],
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: Colors.grey[300]!),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              DateFormat('MMM dd, yyyy').format(_toDate),
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                color: Colors.black87,
-                                              ),
-                                            ),
-                                            Icon(
-                                              Icons.calendar_today,
-                                              color: Colors.grey[600],
-                                              size: 20,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 30),
-
-                          // Generate Statement Button
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _generateStatement,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                                  : const Text(
-                                'Generate Statement',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Statement Results
-                    if (_hasGeneratedStatement) ...[
-                      const Divider(thickness: 1),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            // Statement Header
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Statement Results',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${DateFormat('MMM dd, yyyy').format(_fromDate)} - ${DateFormat('MMM dd, yyyy').format(_toDate)}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      Text(
-                                        '${_statementData.length} transactions found',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[500],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  // Download Options
-                                  Row(
-                                    children: [
-                                      _buildDownloadButton(
-                                        'PDF',
-                                        Icons.picture_as_pdf,
-                                        Colors.red,
-                                        _downloadPDF,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      _buildDownloadButton(
-                                        'CSV',
-                                        Icons.table_chart,
-                                        Colors.green,
-                                        _downloadCSV,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // Statement Summary
-                            Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 20),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[50],
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                children: [
-                                  _buildSummaryItem('Total Deposits', _calculateTotalDeposits(), Colors.green),
-                                  Container(width: 1, height: 40, color: Colors.grey[300]),
-                                  _buildSummaryItem('Total Withdrawals', _calculateTotalWithdrawals(), Colors.red),
-                                  Container(width: 1, height: 40, color: Colors.grey[300]),
-                                  _buildSummaryItem('Net Balance', _calculateNetBalance(), Colors.blue),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            // Statement List
-                            Expanded(
-                              child: ListView.builder(
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                itemCount: _statementData.length,
-                                itemBuilder: (context, index) {
-                                  final transaction = _statementData[index];
-                                  return _buildTransactionItem(transaction);
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 420));
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _init();
   }
 
-  Widget _buildDownloadButton(String label, IconData icon, Color color, VoidCallback onPressed) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _fadeCtrl.dispose();
+    super.dispose();
   }
 
-  Widget _buildSummaryItem(String label, String amount, Color color) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          amount,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTransactionItem(Map<String, dynamic> transaction) {
-    final isCredit = transaction['type'].toString().toLowerCase().contains('deposit') ||
-        transaction['type'].toString().toLowerCase().contains('dividend');
-    final color = isCredit ? Colors.green : Colors.red;
-    final icon = _getTransactionIcon(transaction['type']);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          radius: 20,
-          backgroundColor: color.withOpacity(0.1),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        title: Text(
-          transaction['description'] ?? 'Transaction',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              transaction['type'] ?? '',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-            Text(
-              DateFormat('MMM dd, yyyy • hh:mm a').format(
-                DateTime.parse(transaction['date']),
-              ),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              '${isCredit ? '+' : '-'}${transaction['currency']} ${_formatAmount(transaction['amount'].toString())}',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            if (transaction['balance'] != null) ...[
-              Text(
-                'Bal: ${transaction['currency']} ${_formatAmount(transaction['balance'].toString())}',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[500],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _getStatementTypeIcon(String type) {
-    if (type.contains('All')) return Icons.list_alt;
-    if (type.contains('Deposits')) return Icons.trending_up;
-    if (type.contains('Withdrawals')) return Icons.trending_down;
-    if (type.contains('Dividends')) return Icons.payments;
-    if (type.contains('Purchases')) return Icons.shopping_cart;
-    if (type.contains('Sales')) return Icons.sell;
-    return Icons.receipt;
-  }
-
-  Color _getStatementTypeColor(String type) {
-    if (type.contains('All')) return Colors.blue;
-    if (type.contains('Deposits')) return Colors.green;
-    if (type.contains('Withdrawals')) return Colors.red;
-    if (type.contains('Dividends')) return Colors.purple;
-    if (type.contains('Purchases')) return Colors.orange;
-    if (type.contains('Sales')) return Colors.teal;
-    return Colors.grey;
-  }
-
-  IconData _getTransactionIcon(String type) {
-    if (type.toLowerCase().contains('deposit')) return Icons.trending_up;
-    if (type.toLowerCase().contains('withdrawal')) return Icons.trending_down;
-    if (type.toLowerCase().contains('dividend')) return Icons.payments;
-    if (type.toLowerCase().contains('purchase')) return Icons.shopping_cart;
-    if (type.toLowerCase().contains('sale')) return Icons.sell;
-    return Icons.receipt;
-  }
-
-  void _selectQuickRange(int days) {
+  Future<void> _init() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _toDate = DateTime.now();
-      _fromDate = DateTime.now().subtract(Duration(days: days));
+      _cdsNumber = prefs.getString('cdsNumber') ?? '';
+      _userName  = prefs.getString('user_fullname') ?? 'Investor';
     });
+    _loadFunds();
   }
 
-  Future<void> _selectDate(BuildContext context, bool isFromDate) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: isFromDate ? _fromDate : _toDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Colors.blue,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
+  // ── Load funds ────────────────────────────────────────────────────────────
+  Future<void> _loadFunds() async {
+    setState(() { _loadingFunds = true; _fundsError = ''; });
+    try {
+      final funds = await FundsRepository().fetchFunds();
       setState(() {
-        if (isFromDate) {
-          _fromDate = picked;
-          if (_fromDate.isAfter(_toDate)) {
-            _toDate = _fromDate.add(const Duration(days: 1));
-          }
-        } else {
-          _toDate = picked;
-          if (_toDate.isBefore(_fromDate)) {
-            _fromDate = _toDate.subtract(const Duration(days: 1));
-          }
-        }
+        _funds        = funds;
+        _selectedFund = funds.isNotEmpty ? funds.first : null;
+        _loadingFunds = false;
+      });
+    } catch (_) {
+      setState(() { _fundsError = 'Failed to load funds'; _loadingFunds = false; });
+    }
+  }
+
+  // ── Fetch transactions ────────────────────────────────────────────────────
+  Future<void> _fetchTransactions() async {
+    if (_selectedFund == null) return;
+    setState(() { _loadingTxns = true; _txnsError = null; _hasFetched = false; });
+    try {
+      final response = await http.post(
+        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetTransactions'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'APIUsername': 'User2',
+          'APIPassword': 'CBZ1234#2',
+          'cdsNumber':   _cdsNumber,
+          'Fund':        _selectedFund!.fundingName ?? '',
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        final List<dynamic> raw =
+            (data['data']['trans'] as List<dynamic>?) ?? [];
+        setState(() {
+          _allTxns   = raw.map((j) => _Txn.fromJson(j)).toList()
+            ..sort((a, b) => b.date.compareTo(a.date)); // newest first
+          _loadingTxns = false;
+          _hasFetched  = true;
+        });
+        _fadeCtrl
+          ..reset()
+          ..forward();
+      } else {
+        setState(() {
+          _txnsError   = data['statusDesc'] ?? 'Failed to retrieve transactions';
+          _loadingTxns = false;
+          _hasFetched  = true;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _txnsError   = 'Connection error. Please try again.';
+        _loadingTxns = false;
+        _hasFetched  = true;
       });
     }
   }
 
-  Future<void> _generateStatement() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulate API call delay
-    await Future.delayed(const Duration(seconds: 2));
-
-    // Mock statement data - replace with actual API call
-    _statementData = _generateMockStatementData();
-
-    setState(() {
-      _isLoading = false;
-      _hasGeneratedStatement = true;
-    });
-
-    _showSnackBar('Statement generated successfully!', Colors.green);
-  }
-
-  List<Map<String, dynamic>> _generateMockStatementData() {
-    // This would be replaced with actual API call to fetch statement data
-    List<Map<String, dynamic>> mockData = [
-      {
-        'id': '1',
-        'date': '2024-01-15T10:30:00Z',
-        'type': 'Deposit',
-        'description': 'Fund Deposit - Standard Bank',
-        'amount': 50000,
-        'currency': 'TSZ',
-        'balance': 150000,
-      },
-      {
-        'id': '2',
-        'date': '2024-01-10T14:20:00Z',
-        'type': 'Dividend Payout',
-        'description': 'Quarterly Dividend Payment',
-        'amount': 12500,
-        'currency': 'TSZ',
-        'balance': 100000,
-      },
-      {
-        'id': '3',
-        'date': '2024-01-05T09:15:00Z',
-        'type': 'Withdrawal',
-        'description': 'Fund Withdrawal - EcoCash',
-        'amount': 25000,
-        'currency': 'TSZ',
-        'balance': 87500,
-      },
-      {
-        'id': '4',
-        'date': '2024-01-01T16:45:00Z',
-        'type': 'Fund Purchase',
-        'description': 'TSL Growth Fund Purchase',
-        'amount': 75000,
-        'currency': 'TSZ',
-        'balance': 112500,
-      },
-    ];
-
-    // Filter based on selected statement type
-    if (_selectedStatementType != 'All Transactions') {
-      mockData = mockData.where((transaction) {
-        String type = transaction['type'].toString().toLowerCase();
-        String selectedType = _selectedStatementType.toLowerCase();
-
-        if (selectedType.contains('deposits') && type.contains('deposit')) return true;
-        if (selectedType.contains('withdrawals') && type.contains('withdrawal')) return true;
-        if (selectedType.contains('dividends') && type.contains('dividend')) return true;
-        if (selectedType.contains('purchases') && type.contains('purchase')) return true;
-        if (selectedType.contains('sales') && type.contains('sale')) return true;
-
-        return false;
-      }).toList();
+  // ── Filtered list ─────────────────────────────────────────────────────────
+  List<_Txn> get _filtered {
+    switch (_filter) {
+      case _Filter.deposits:    return _allTxns.where((t) =>  t.isDeposit).toList();
+      case _Filter.withdrawals: return _allTxns.where((t) => !t.isDeposit).toList();
+      case _Filter.both:        return _allTxns;
     }
-
-    return mockData;
   }
 
-  String _formatAmount(String amount) {
-    if (amount.isEmpty) return '0.00';
-    final double value = double.tryParse(amount) ?? 0;
-    return value.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
+  double get _totalDeposits =>
+      _allTxns.where((t) => t.isDeposit).fold(0.0, (s, t) => s + t.amount);
+  double get _totalWithdrawals =>
+      _allTxns.where((t) => !t.isDeposit).fold(0.0, (s, t) => s + t.amount);
+  double get _netFlow => _totalDeposits - _totalWithdrawals;
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  String _fmt(double v) {
+    final s = v.toStringAsFixed(2).split('.');
+    final int = s[0].replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},');
+    return '$int.${s[1]}';
+  }
+
+  // ── PDF Download ──────────────────────────────────────────────────────────
+  Future<void> _downloadPDF() async {
+    final pdf = pw.Document();
+    final txns = _filtered;
+    final fundName = _selectedFund?.fundingName ?? 'Fund';
+    final now = DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now());
+
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(32),
+      build: (ctx) => [
+        // ── Header ──────────────────────────────────────────
+        pw.Container(
+          padding: const pw.EdgeInsets.all(20),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('#1B5E20'),
+            borderRadius: pw.BorderRadius.circular(12),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('TSL Investment',
+                  style: pw.TextStyle(
+                      color: PdfColors.white,
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 4),
+              pw.Text('Client Account Statement',
+                  style: pw.TextStyle(
+                      color: PdfColors.white, fontSize: 13)),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 20),
+
+        // ── Meta ─────────────────────────────────────────────
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+              _pdfLabel('CDS Number', _cdsNumber),
+              pw.SizedBox(height: 6),
+              _pdfLabel('Fund', fundName),
+              pw.SizedBox(height: 6),
+              _pdfLabel('Generated', now),
+            ]),
+            pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+              _pdfLabel('Total Deposits',    'TZS ${_fmt(_totalDeposits)}'),
+              pw.SizedBox(height: 6),
+              _pdfLabel('Total Withdrawals', 'TZS ${_fmt(_totalWithdrawals)}'),
+              pw.SizedBox(height: 6),
+              _pdfLabel('Net Flow',          'TZS ${_fmt(_netFlow)}'),
+            ]),
+          ],
+        ),
+        pw.SizedBox(height: 24),
+
+        // ── Table ─────────────────────────────────────────────
+        pw.Table(
+          columnWidths: {
+            0: const pw.FlexColumnWidth(3),
+            1: const pw.FlexColumnWidth(1.5),
+            2: const pw.FlexColumnWidth(2),
+            3: const pw.FlexColumnWidth(2),
+          },
+          children: [
+            // Header row
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: PdfColor.fromHex('#E8F5E9')),
+              children: ['Description', 'Units', 'Date', 'Amount (TZS)']
+                  .map((h) => pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 8),
+                child: pw.Text(h,
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
+                        color: PdfColor.fromHex('#1B5E20'))),
+              ))
+                  .toList(),
+            ),
+            // Data rows
+            ...txns.asMap().entries.map((e) {
+              final t   = e.value;
+              final odd = e.key.isOdd;
+              return pw.TableRow(
+                decoration: pw.BoxDecoration(
+                    color: odd ? PdfColors.grey100 : PdfColors.white),
+                children: [
+                  t.description,
+                  _fmt(t.units),
+                  DateFormat('dd MMM yy').format(t.date),
+                  '${t.isDeposit ? '+' : '-'} ${_fmt(t.amount)}',
+                ].map((cell) => pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 6),
+                  child: pw.Text(cell,
+                      style: pw.TextStyle(
+                          fontSize: 9,
+                          color: cell.startsWith('+')
+                              ? PdfColors.green800
+                              : cell.startsWith('-')
+                              ? PdfColors.red800
+                              : PdfColors.black)),
+                ))
+                    .toList(),
+              );
+            }),
+          ],
+        ),
+
+        pw.SizedBox(height: 20),
+        pw.Divider(),
+        pw.SizedBox(height: 8),
+        pw.Text('This statement is generated electronically and is valid without a signature.',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+      ],
+    ));
+
+    await Printing.layoutPdf(
+      onLayout: (fmt) => pdf.save(),
+      name: 'TSL_Statement_${fundName.replaceAll(' ', '_')}.pdf',
     );
   }
 
-  String _calculateTotalDeposits() {
-    double total = _statementData
-        .where((t) => t['type'].toString().toLowerCase().contains('deposit'))
-        .fold(0.0, (sum, t) => sum + (t['amount'] ?? 0));
-    return _formatAmount(total.toString());
+  pw.Widget _pdfLabel(String label, String value) => pw.RichText(
+    text: pw.TextSpan(children: [
+      pw.TextSpan(
+          text: '$label: ',
+          style: pw.TextStyle(
+              fontWeight: pw.FontWeight.bold,
+              fontSize: 10,
+              color: PdfColors.grey700)),
+      pw.TextSpan(
+          text: value,
+          style: const pw.TextStyle(fontSize: 10, color: PdfColors.black)),
+    ]),
+  );
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0FBF5),
+      body: Column(children: [
+        _buildHeader(),
+        Expanded(child: _buildBody()),
+      ]),
+    );
   }
 
-  String _calculateTotalWithdrawals() {
-    double total = _statementData
-        .where((t) => t['type'].toString().toLowerCase().contains('withdrawal'))
-        .fold(0.0, (sum, t) => sum + (t['amount'] ?? 0));
-    return _formatAmount(total.toString());
-  }
-
-  String _calculateNetBalance() {
-    double deposits = _statementData
-        .where((t) => t['type'].toString().toLowerCase().contains('deposit') ||
-        t['type'].toString().toLowerCase().contains('dividend'))
-        .fold(0.0, (sum, t) => sum + (t['amount'] ?? 0));
-
-    double withdrawals = _statementData
-        .where((t) => t['type'].toString().toLowerCase().contains('withdrawal'))
-        .fold(0.0, (sum, t) => sum + (t['amount'] ?? 0));
-
-    return _formatAmount((deposits - withdrawals).toString());
-  }
-
-  void _downloadPDF() {
-    _showSnackBar('PDF download started...', Colors.blue);
-    // Implement PDF generation and download logic here
-    // You might use packages like pdf, printing, etc.
-  }
-
-  void _downloadCSV() {
-    _showSnackBar('CSV download started...', Colors.green);
-    // Implement CSV generation and download logic here
-    // You might use packages like csv, path_provider, etc.
-  }
-
-  void _showSnackBar(String message, Color backgroundColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: backgroundColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+  // ── Header ────────────────────────────────────────────────────────────────
+  Widget _buildHeader() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)],
         ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.arrow_back_ios_new,
+                        color: Colors.white, size: 18),
+                  ),
+                ),
+                const Spacer(),
+                if (_hasFetched && _filtered.isNotEmpty)
+                  GestureDetector(
+                    onTap: _downloadPDF,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.4), width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.picture_as_pdf,
+                              color: Colors.white, size: 16),
+                          SizedBox(width: 6),
+                          Text('Download PDF',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+              ]),
+              const SizedBox(height: 18),
+              const Text('Client Statement',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5)),
+              const SizedBox(height: 4),
+              Text('View your deposits & withdrawals per fund',
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.7), fontSize: 13)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Body ──────────────────────────────────────────────────────────────────
+  Widget _buildBody() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFF0FBF5),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Fund picker ────────────────────────────────────────
+                _buildFundPicker(),
+                const SizedBox(height: 20),
+
+                // ── Filter chips ───────────────────────────────────────
+                _buildFilterChips(),
+                const SizedBox(height: 20),
+
+                // ── Fetch button ───────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: (_loadingFunds || _loadingTxns)
+                        ? null
+                        : _fetchTransactions,
+                    icon: _loadingTxns
+                        ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.search_rounded, size: 20),
+                    label: Text(
+                      _loadingTxns ? 'Loading…' : 'Load Transactions',
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B5E20),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Results ────────────────────────────────────────────
+                if (_hasFetched) ...[
+                  if (_txnsError != null)
+                    _buildError()
+                  else ...[
+                    _buildSummaryCards(),
+                    const SizedBox(height: 20),
+                    _buildTransactionList(),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Fund picker ────────────────────────────────────────────────────────────
+  Widget _buildFundPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Select Fund',
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1B5E20),
+                letterSpacing: 0.3)),
+        const SizedBox(height: 10),
+        if (_loadingFunds)
+          Container(
+            height: 58,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4))
+              ],
+            ),
+            child: const Center(
+                child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Color(0xFF1B5E20)))),
+          )
+        else if (_fundsError.isNotEmpty)
+          GestureDetector(
+            onTap: _loadFunds,
+            child: Container(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(_fundsError,
+                        style: const TextStyle(color: Colors.red))),
+                Text('Retry',
+                    style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4))
+              ],
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<Fund>(
+                value: _selectedFund,
+                isExpanded: true,
+                icon: const Icon(Icons.keyboard_arrow_down,
+                    color: Color(0xFF1B5E20)),
+                items: _funds.map((fund) {
+                  final isActive =
+                      fund.status?.toLowerCase() == 'active';
+                  return DropdownMenuItem<Fund>(
+                    value: fund,
+                    child: Row(children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: isActive ? Colors.green : Colors.orange,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(fund.fundingName ?? 'Unknown Fund',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: Colors.black87),
+                                overflow: TextOverflow.ellipsis),
+                            if (fund.issuer != null)
+                              Text(fund.issuer!,
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[500])),
+                          ],
+                        ),
+                      ),
+                    ]),
+                  );
+                }).toList(),
+                onChanged: (f) {
+                  setState(() {
+                    _selectedFund = f;
+                    _hasFetched   = false;
+                    _allTxns      = [];
+                  });
+                },
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ── Filter chips ───────────────────────────────────────────────────────────
+  Widget _buildFilterChips() {
+    return Row(children: [
+      _chip(_Filter.both,        'All',         Icons.swap_vert_rounded),
+      const SizedBox(width: 10),
+      _chip(_Filter.deposits,    'Deposits',    Icons.arrow_downward_rounded),
+      const SizedBox(width: 10),
+      _chip(_Filter.withdrawals, 'Withdrawals', Icons.arrow_upward_rounded),
+    ]);
+  }
+
+  Widget _chip(_Filter filter, String label, IconData icon) {
+    final active = _filter == filter;
+    Color activeColor;
+    switch (filter) {
+      case _Filter.deposits:    activeColor = const Color(0xFF2E7D32); break;
+      case _Filter.withdrawals: activeColor = const Color(0xFFC62828); break;
+      case _Filter.both:        activeColor = const Color(0xFF1565C0); break;
+    }
+    return GestureDetector(
+      onTap: () => setState(() => _filter = filter),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: active ? activeColor : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+              color: active ? activeColor : Colors.grey.shade300, width: 1.5),
+          boxShadow: active
+              ? [
+            BoxShadow(
+                color: activeColor.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4))
+          ]
+              : [],
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 14, color: active ? Colors.white : Colors.grey),
+          const SizedBox(width: 6),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight:
+                  active ? FontWeight.w700 : FontWeight.w500,
+                  color: active ? Colors.white : Colors.grey.shade600)),
+        ]),
+      ),
+    );
+  }
+
+  // ── Summary cards ──────────────────────────────────────────────────────────
+  Widget _buildSummaryCards() {
+    final txns = _filtered;
+    final deposits    = txns.where((t) =>  t.isDeposit).fold(0.0, (s, t) => s + t.amount);
+    final withdrawals = txns.where((t) => !t.isDeposit).fold(0.0, (s, t) => s + t.amount);
+
+    return Row(children: [
+      Expanded(child: _summaryCard(
+        label: 'Deposits',
+        value: 'TZS ${_fmt(deposits)}',
+        icon: Icons.arrow_downward_rounded,
+        color: const Color(0xFF2E7D32),
+        bg: const Color(0xFFE8F5E9),
+        count: txns.where((t) => t.isDeposit).length,
+      )),
+      const SizedBox(width: 12),
+      Expanded(child: _summaryCard(
+        label: 'Withdrawals',
+        value: 'TZS ${_fmt(withdrawals)}',
+        icon: Icons.arrow_upward_rounded,
+        color: const Color(0xFFC62828),
+        bg: const Color(0xFFFFEBEE),
+        count: txns.where((t) => !t.isDeposit).length,
+      )),
+    ]);
+  }
+
+  Widget _summaryCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required Color bg,
+    required int count,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 16,
+              offset: const Offset(0, 6))
+        ],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+                color: bg, borderRadius: BorderRadius.circular(20)),
+            child: Text('$count txns',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: color)),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w500)),
+        const SizedBox(height: 4),
+        Text(value,
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: color,
+                letterSpacing: -0.3),
+            overflow: TextOverflow.ellipsis),
+      ]),
+    );
+  }
+
+  // ── Transaction list ───────────────────────────────────────────────────────
+  Widget _buildTransactionList() {
+    final txns = _filtered;
+    if (txns.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Column(children: [
+            Icon(Icons.receipt_long_outlined,
+                size: 52, color: Colors.grey.shade300),
+            const SizedBox(height: 14),
+            Text('No transactions found',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade400)),
+            const SizedBox(height: 6),
+            Text('Try changing the filter above',
+                style:
+                TextStyle(fontSize: 13, color: Colors.grey.shade400)),
+          ]),
+        ),
+      );
+    }
+
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('${txns.length} Transaction${txns.length == 1 ? '' : 's'}',
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black87)),
+            Text(_selectedFund?.fundingName ?? '',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w500)),
+          ]),
+          const SizedBox(height: 14),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: txns.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) => _buildTxnCard(txns[i]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTxnCard(_Txn t) {
+    final color = t.isDeposit ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+    final bgColor = t.isDeposit ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE);
+    final icon = t.isDeposit
+        ? Icons.arrow_downward_rounded
+        : Icons.arrow_upward_rounded;
+    final sign = t.isDeposit ? '+' : '-';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: Row(children: [
+        // Icon
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 14),
+
+        // Description + date
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(t.description,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87),
+                  overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 4),
+              Row(children: [
+                Icon(Icons.access_time_rounded,
+                    size: 11, color: Colors.grey[400]),
+                const SizedBox(width: 4),
+                Text(DateFormat('dd MMM yyyy • HH:mm').format(t.date),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+              ]),
+              const SizedBox(height: 4),
+              Row(children: [
+                _miniPill('ID: ${t.id}', Colors.grey.shade100,
+                    Colors.grey.shade500),
+                const SizedBox(width: 6),
+                _miniPill('${_fmt(t.units)} units', bgColor, color),
+              ]),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        // Amount
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text('$sign TZS',
+              style: TextStyle(
+                  fontSize: 10,
+                  color: color.withOpacity(0.7),
+                  fontWeight: FontWeight.w600)),
+          Text(_fmt(t.amount),
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: color)),
+          const SizedBox(height: 4),
+          Text('@${_fmt(t.price)}',
+              style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _miniPill(String label, Color bg, Color fg) => Container(
+    padding:
+    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+    decoration: BoxDecoration(
+        color: bg, borderRadius: BorderRadius.circular(20)),
+    child: Text(label,
+        style: TextStyle(
+            fontSize: 10, color: fg, fontWeight: FontWeight.w600)),
+  );
+
+  // ── Error ─────────────────────────────────────────────────────────────────
+  Widget _buildError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: Colors.red.shade50, shape: BoxShape.circle),
+            child: Icon(Icons.cloud_off_outlined,
+                color: Colors.red.shade400, size: 32),
+          ),
+          const SizedBox(height: 14),
+          Text(_txnsError!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.red.shade400, fontSize: 14)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _fetchTransactions,
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1B5E20),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0),
+            child: const Text('Try Again'),
+          ),
+        ]),
       ),
     );
   }
