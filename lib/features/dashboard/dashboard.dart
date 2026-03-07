@@ -70,7 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         await _fetchUserDetails(cdsNumber);
       } else {
         setState(() {
-          _userName = 'CDS Not Found';
+          _userName = 'Acc No Not Found';
           _isLoadingUserData = false;
         });
       }
@@ -315,32 +315,94 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF4A6741),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(10),
-            topRight: Radius.circular(15),
+      bottomNavigationBar: _buildFloatingNavBar(),
+    );
+  }
+
+  Widget _buildFloatingNavBar() {
+    const items = [
+      {'icon': Icons.account_balance_wallet_outlined, 'activeIcon': Icons.account_balance_wallet, 'label': 'Funds'},
+      {'icon': Icons.home_outlined, 'activeIcon': Icons.home, 'label': 'Home'},
+      {'icon': Icons.donut_large_outlined, 'activeIcon': Icons.donut_large, 'label': 'Portfolio'},
+      {'icon': Icons.person_outline, 'activeIcon': Icons.person, 'label': 'Profile'},
+    ];
+
+    return Container(
+      color: const Color(0xFFB8E6D3), // matches scaffold bg — makes it feel floating
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2D4F28).withOpacity(1),
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF2D4F28).withOpacity(0.35),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: List.generate(items.length, (index) {
+                final isSelected = _currentIndex == index;
+                return Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => _currentIndex = index),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF4CAF50).withOpacity(0.25)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(
+                              isSelected
+                                  ? items[index]['activeIcon'] as IconData
+                                  : items[index]['icon'] as IconData,
+                              key: ValueKey(isSelected),
+                              color: isSelected
+                                  ? const Color(0xFF81C784)
+                                  : Colors.white54,
+                              size: isSelected ? 24 : 22,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 200),
+                            style: TextStyle(
+                              fontSize: isSelected ? 10 : 9,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                              color: isSelected
+                                  ? const Color(0xFF81C784)
+                                  : Colors.white38,
+                            ),
+                            child:
+                            Text(items[index]['label'] as String),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
           ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white60,
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(
-                icon: Icon(Icons.settings), label: 'Funds'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.pie_chart_outline), label: 'Portfolio'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.person_off_rounded), label: 'Profile'),
-          ],
         ),
       ),
     );

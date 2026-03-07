@@ -29,6 +29,11 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   bool _isLoadingFunds = true;
   String _fundsError = '';
 
+  // ── Available balance ──────────────────────────────────────────────────────
+  double? _availableBalance;
+  double? _availableUnits;
+  bool _isLoadingBalance = false;
+
   // ── Submission state ───────────────────────────────────────────────────────
   bool _isSubmitting = false;
 
@@ -81,11 +86,62 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         _selectedFund = funds.isNotEmpty ? funds.first : null;
         _isLoadingFunds = false;
       });
+      // Fetch balance for the initially selected fund
+      if (_selectedFund != null) _fetchAvailableBalance();
     } catch (e) {
       setState(() {
         _fundsError = 'Failed to load funds';
         _isLoadingFunds = false;
       });
+    }
+  }
+
+  // ── Fetch available balance for selected fund ──────────────────────────────
+  Future<void> _fetchAvailableBalance() async {
+    if (_selectedFund == null) return;
+    setState(() {
+      _isLoadingBalance = true;
+      _availableBalance = null;
+      _availableUnits = null;
+    });
+    try {
+      final response = await http.post(
+        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetAvailableBalance'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'APIUsername': 'User2',
+          'APIPassword': 'CBZ1234#2',
+          'cdsNumber': _cdsNumber,
+          'Fund': _selectedFund!.fundingName ?? '',
+        }),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        final funds = data['data']['funds'] as List<dynamic>;
+        if (funds.isNotEmpty) {
+          setState(() {
+            _availableBalance = (funds[0]['portfolioValue'] as num).toDouble();
+            _availableUnits   = (funds[0]['investorUnits']  as num).toDouble();
+          });
+        } else {
+          setState(() {
+            _availableBalance = 0;
+            _availableUnits   = 0;
+          });
+        }
+      } else {
+        setState(() {
+          _availableBalance = 0;
+          _availableUnits   = 0;
+        });
+      }
+    } catch (_) {
+      setState(() {
+        _availableBalance = 0;
+        _availableUnits   = 0;
+      });
+    } finally {
+      setState(() => _isLoadingBalance = false);
     }
   }
 
@@ -336,26 +392,44 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Available Balance',
-                              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'TSZ 0.00', // TODO: Replace with real API value
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Available Balance',
+                                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 6),
+                              _isLoadingBalance
+                                  ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.green),
+                              )
+                                  : Text(
+                                _availableBalance != null
+                                    ? 'TZS ${_formatAmount(_availableBalance!.toStringAsFixed(2))}'
+                                    : '—',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                              if (_availableUnits != null && !_isLoadingBalance) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_formatAmount(_availableUnits!.toStringAsFixed(2))} units',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: Colors.green.withOpacity(0.1),
                             shape: BoxShape.circle,
@@ -363,7 +437,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                           child: const Icon(
                             Icons.account_balance_wallet,
                             color: Colors.green,
-                            size: 24,
+                            size: 26,
                           ),
                         ),
                       ],
@@ -477,7 +551,10 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                                   ),
                                 );
                               }).toList(),
-                              onChanged: (fund) => setState(() => _selectedFund = fund),
+                              onChanged: (fund) {
+                                setState(() => _selectedFund = fund);
+                                _fetchAvailableBalance();
+                              },
                             ),
                           ),
                         ),
