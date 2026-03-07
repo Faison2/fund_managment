@@ -138,9 +138,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
         ),
         child: Column(
           children: [
-            // ── Top bar ──────────────────────────────────────────────────
-            _buildTopBar(),
-
             // ── Total value card ─────────────────────────────────────────
             _buildValueCard(),
 
@@ -163,32 +160,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ── Top bar ────────────────────────────────────────────────────────────────
-  Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Portfolio',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black87, letterSpacing: -0.4)),
-              Text('DSE Securities',
-                  style: TextStyle(fontSize: 12, color: Colors.black45, fontWeight: FontWeight.w500)),
-            ],
-          ),
-          Row(children: [
-            _iconBtn(Icons.notifications_outlined),
-            const SizedBox(width: 8),
-            _iconBtn(Icons.tune_rounded),
-          ]),
-        ],
       ),
     );
   }

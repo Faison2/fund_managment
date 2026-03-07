@@ -1,5 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../funds/model/model.dart';
+import '../../funds/repository/repository.dart';
 
 class WithdrawalPage extends StatefulWidget {
   const WithdrawalPage({Key? key}) : super(key: key);
@@ -12,7 +18,19 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   final TextEditingController _amountController = TextEditingController();
   String _selectedWithdrawalMethod = 'Standard Bank ****1234';
   String _selectedCurrency = 'TSZ';
-  String _selectedWithdrawalType = 'Fund Withdrawal';
+
+  // ── User data ──────────────────────────────────────────────────────────────
+  String _cdsNumber = '';
+  String _phoneNumber = '';
+
+  // ── Fund selection ─────────────────────────────────────────────────────────
+  List<Fund> _funds = [];
+  Fund? _selectedFund;
+  bool _isLoadingFunds = true;
+  String _fundsError = '';
+
+  // ── Submission state ───────────────────────────────────────────────────────
+  bool _isSubmitting = false;
 
   final List<String> _withdrawalMethods = [
     'Standard Bank ****1234',
@@ -22,34 +40,244 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
 
   final List<String> _currencies = ['TSZ', 'USD', 'ZWL'];
 
-  final List<String> _withdrawalTypes = [
-    'Fund Withdrawal',
-    'Dividend Payout',
-    'Profit Withdrawal',
-  ];
-
   final List<Map<String, String>> _quickAmounts = [
-    {'amount': '1,000', 'label': '1K'},
-    {'amount': '5,000', 'label': '5K'},
-    {'amount': '10,000', 'label': '10K'},
-    {'amount': '25,000', 'label': '25K'},
+    {'amount': '1000', 'label': '1K'},
+    {'amount': '5000', 'label': '5K'},
+    {'amount': '10000', 'label': '10K'},
+    {'amount': '25000', 'label': '25K'},
   ];
 
-  // Mock available balance - in real app, fetch from API
-  final double _availableBalance = 125000.00;
+  @override
+  void initState() {
+    super.initState();
+    _amountController.addListener(() => setState(() {}));
+    _loadUserData();
+    _loadFunds();
+  }
 
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _cdsNumber = prefs.getString('cdsNumber') ?? '';
+      _phoneNumber = prefs.getString('user_mobile') ?? '';
+    });
+  }
+
+  Future<void> _loadFunds() async {
+    try {
+      setState(() {
+        _isLoadingFunds = true;
+        _fundsError = '';
+      });
+      final funds = await FundsRepository().fetchFunds();
+      setState(() {
+        _funds = funds;
+        _selectedFund = funds.isNotEmpty ? funds.first : null;
+        _isLoadingFunds = false;
+      });
+    } catch (e) {
+      setState(() {
+        _fundsError = 'Failed to load funds';
+        _isLoadingFunds = false;
+      });
+    }
+  }
+
+  // ── API Call ───────────────────────────────────────────────────────────────
+  Future<void> _processWithdrawal() async {
+    if (_amountController.text.isEmpty || _selectedFund == null) return;
+
+    final confirmed = await _showConfirmationDialog();
+    if (!confirmed) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/Redeem'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'APIUsername': 'User2',
+          'APIPassword': 'CBZ1234#2',
+          'cdsNumber': _cdsNumber,
+          'PhoneNumber': _phoneNumber,
+          'Fund': _selectedFund!.fundingName ?? '',
+          'Amount': _amountController.text,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      // ✅ Always show the exact message from the API
+      final String apiMessage = data['statusDesc'] ?? 'No response from server';
+      final bool success = response.statusCode == 200 && data['status'] == 'success';
+
+      _showResultDialog(success: success, message: apiMessage);
+    } catch (e) {
+      _showResultDialog(success: false, message: 'Network error: ${e.toString()}');
+    } finally {
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  // ── Dialogs ────────────────────────────────────────────────────────────────
+  Future<bool> _showConfirmationDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Withdrawal'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _confirmRow('Fund', _selectedFund?.fundingName ?? ''),
+            const SizedBox(height: 6),
+            _confirmRow('Amount', '$_selectedCurrency ${_formatAmount(_amountController.text)}'),
+            const SizedBox(height: 6),
+            _confirmRow('Method', _selectedWithdrawalMethod),
+            const SizedBox(height: 6),
+            _confirmRow('Phone', _phoneNumber.isNotEmpty ? _phoneNumber : 'Not set'),
+            const SizedBox(height: 12),
+            const Text('Please confirm your withdrawal request.',
+                style: TextStyle(color: Colors.grey, fontSize: 13)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Widget _confirmRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 70,
+          child: Text('$label:', style: const TextStyle(color: Colors.grey, fontSize: 14)),
+        ),
+        Expanded(
+          child: Text(value,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+        ),
+      ],
+    );
+  }
+
+  /// Shows success or failure with the raw API statusDesc message
+  void _showResultDialog({required bool success, required String message}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: success ? Colors.orange : Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                success ? Icons.check : Icons.close,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              success ? 'Withdrawal Requested!' : 'Request Failed',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message, // ✅ Exact API message e.g. "No available units"
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (success) Navigator.pop(context); // go back only on success
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: success ? Colors.orange : Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(success ? 'Done' : 'Try Again'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  IconData _getPaymentIcon(String method) {
+    if (method.contains('Bank')) return Icons.account_balance;
+    if (method.contains('Card') || method.contains('Visa')) return Icons.credit_card;
+    if (method.contains('EcoCash')) return Icons.phone_android;
+    return Icons.payment;
+  }
+
+  Color _getPaymentColor(String method) {
+    if (method.contains('Bank')) return Colors.blue;
+    if (method.contains('Card') || method.contains('Visa')) return Colors.purple;
+    if (method.contains('EcoCash')) return Colors.green;
+    return Colors.grey;
+  }
+
+  String _formatAmount(String amount) {
+    if (amount.isEmpty) return '0.00';
+    final double value = double.tryParse(amount) ?? 0;
+    return value.toStringAsFixed(2).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+    );
+  }
+
+  bool _canWithdraw() =>
+      _amountController.text.isNotEmpty &&
+          (double.tryParse(_amountController.text) ?? 0) > 0 &&
+          _selectedFund != null &&
+          !_isSubmitting;
+
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Withdraw Funds',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
-        backgroundColor: Color(0xFFB8E6D3),
+        backgroundColor: const Color(0xFFB8E6D3),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
@@ -71,7 +299,6 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         ),
         child: Column(
           children: [
-            // Header Section with Balance
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -80,21 +307,18 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                   const Text(
                     'Withdraw Money from Your Account',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Choose amount and withdrawal method',
+                    'Choose fund, amount and withdrawal method',
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black.withOpacity(0.6),
-                    ),
+                        fontSize: 14, color: Colors.black.withOpacity(0.6)),
                   ),
                   const SizedBox(height: 15),
-                  // Available Balance Card
+                  // ── Available Balance Card ─────────────────────────────────
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -117,16 +341,13 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                           children: [
                             Text(
                               'Available Balance',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
+                              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              '$_selectedCurrency ${_formatAmount(_availableBalance.toString())}',
-                              style: const TextStyle(
-                                fontSize: 18,
+                            const Text(
+                              'TSZ 0.00', // TODO: Replace with real API value
+                              style: TextStyle(
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green,
                               ),
@@ -151,8 +372,6 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                 ],
               ),
             ),
-
-            // Main Content
             Expanded(
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 10),
@@ -168,78 +387,116 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Withdrawal Type Section
-                      const Text(
-                        'Withdrawal Type',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedWithdrawalType,
-                            isExpanded: true,
-                            icon: const Icon(Icons.keyboard_arrow_down),
-                            items: _withdrawalTypes.map((type) {
-                              return DropdownMenuItem<String>(
-                                value: type,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      _getWithdrawalTypeIcon(type),
-                                      color: _getWithdrawalTypeColor(type),
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      type,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.black87,
+
+                      // ── Fund Selection ─────────────────────────────────────
+                      const Text('Select Fund',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87)),
+                      const SizedBox(height: 12),
+
+                      if (_isLoadingFunds)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: CircularProgressIndicator(color: Colors.orange),
+                          ),
+                        )
+                      else if (_fundsError.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(_fundsError,
+                                    style: const TextStyle(color: Colors.red)),
+                              ),
+                              TextButton(onPressed: _loadFunds, child: const Text('Retry')),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<Fund>(
+                              value: _selectedFund,
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down),
+                              items: _funds.map((fund) {
+                                return DropdownMenuItem<Fund>(
+                                  value: fund,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: fund.status?.toLowerCase() == 'active'
+                                              ? Colors.green
+                                              : Colors.orange,
+                                          shape: BoxShape.circle,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedWithdrawalType = value!;
-                              });
-                            },
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              fund.fundingName ?? 'Unknown Fund',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14,
+                                                  color: Colors.black87),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            if (fund.issuer != null)
+                                              Text(fund.issuer!,
+                                                  style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey[600])),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (fund) => setState(() => _selectedFund = fund),
+                            ),
                           ),
                         ),
-                      ),
 
-                      const SizedBox(height: 25),
+                      const SizedBox(height: 28),
 
-                      // Amount Section
-                      const Text(
-                        'Enter Amount',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
+                      // ── Amount ─────────────────────────────────────────────
+                      const Text('Enter Amount',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87)),
                       const SizedBox(height: 15),
 
-                      // Currency and Amount Input
                       Row(
                         children: [
-                          // Currency Selector
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 16),
                             decoration: BoxDecoration(
                               color: Colors.grey[100],
                               borderRadius: const BorderRadius.only(
@@ -251,37 +508,27 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                             child: DropdownButton<String>(
                               value: _selectedCurrency,
                               underline: const SizedBox(),
-                              items: _currencies.map((currency) {
+                              items: _currencies.map((c) {
                                 return DropdownMenuItem<String>(
-                                  value: currency,
-                                  child: Text(
-                                    currency,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
+                                  value: c,
+                                  child: Text(c,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87)),
                                 );
                               }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedCurrency = value!;
-                                });
-                              },
+                              onChanged: (v) => setState(() => _selectedCurrency = v!),
                             ),
                           ),
-
-                          // Amount Input
                           Expanded(
                             child: TextField(
                               controller: _amountController,
                               keyboardType: TextInputType.number,
                               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                               style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87),
                               decoration: InputDecoration(
                                 hintText: '0.00',
                                 hintStyle: TextStyle(color: Colors.grey[400]),
@@ -309,75 +556,21 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                                   borderSide: BorderSide(color: Colors.orange, width: 2),
                                 ),
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
+                                    horizontal: 16, vertical: 16),
                               ),
                             ),
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
 
-                      // Maximum withdrawal notice
-                      if (_amountController.text.isNotEmpty && _isAmountExceeded()) ...[
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.warning_amber_outlined,
-                                color: Colors.red[600],
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Amount exceeds available balance',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.red[600],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-
-                      // Quick Amount Buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Quick Select',
-                            style: TextStyle(
+                      // ── Quick Amounts ──────────────────────────────────────
+                      const Text('Quick Select',
+                          style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              _amountController.text = _availableBalance.toInt().toString();
-                            },
-                            child: const Text(
-                              'Max Amount',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.orange,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                              color: Colors.black87)),
                       const SizedBox(height: 10),
                       Row(
                         children: _quickAmounts.map((amount) {
@@ -385,34 +578,29 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                             child: Container(
                               margin: const EdgeInsets.only(right: 8),
                               child: GestureDetector(
-                                onTap: () {
-                                  _amountController.text = amount['amount']!.replaceAll(',', '');
-                                },
+                                onTap: () => setState(
+                                        () => _amountController.text = amount['amount']!),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                   decoration: BoxDecoration(
                                     color: Colors.orange.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: Colors.orange.withOpacity(0.3),
-                                    ),
+                                        color: Colors.orange.withOpacity(0.3)),
                                   ),
                                   child: Column(
                                     children: [
                                       Text(
                                         amount['label']!,
                                         style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.orange[700],
-                                        ),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.orange[700]),
                                       ),
                                       Text(
-                                        '$_selectedCurrency ${amount['amount']}',
+                                        '$_selectedCurrency ${_formatAmount(amount['amount']!)}',
                                         style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.orange[600],
-                                        ),
+                                            fontSize: 10, color: Colors.orange[600]),
                                       ),
                                     ],
                                   ),
@@ -423,19 +611,15 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                         }).toList(),
                       ),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 28),
 
-                      // Withdrawal Method Section
-                      const Text(
-                        'Withdrawal Method',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
+                      // ── Withdrawal Method ──────────────────────────────────
+                      const Text('Withdrawal Method',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87)),
                       const SizedBox(height: 15),
-
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         decoration: BoxDecoration(
@@ -453,192 +637,48 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                                 value: method,
                                 child: Row(
                                   children: [
-                                    Icon(
-                                      _getPaymentIcon(method),
-                                      color: _getPaymentColor(method),
-                                      size: 20,
-                                    ),
+                                    Icon(_getPaymentIcon(method),
+                                        color: _getPaymentColor(method), size: 20),
                                     const SizedBox(width: 12),
-                                    Text(
-                                      method,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
+                                    Text(method,
+                                        style: const TextStyle(
+                                            fontSize: 16, color: Colors.black87)),
                                   ],
                                 ),
                               );
                             }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedWithdrawalMethod = value!;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Add New Withdrawal Method
-                      GestureDetector(
-                        onTap: () {
-                          // Navigate to add withdrawal method
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(
-                              color: Colors.blue.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_circle_outline,
-                                color: Colors.blue[700],
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Add New Withdrawal Method',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue[700],
-                                ),
-                              ),
-                            ],
+                            onChanged: (v) =>
+                                setState(() => _selectedWithdrawalMethod = v!),
                           ),
                         ),
                       ),
 
                       const SizedBox(height: 30),
 
-                      // Transaction Info
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Withdrawal Amount',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                Text(
-                                  '$_selectedCurrency ${_amountController.text.isEmpty ? "0.00" : _formatAmount(_amountController.text)}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Processing Fee',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                Text(
-                                  '$_selectedCurrency ${_calculateFee()}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Processing Time',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                Text(
-                                  _getProcessingTime(),
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.orange,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Divider(height: 20),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'You Will Receive',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                Text(
-                                  '$_selectedCurrency ${_calculateNetAmount()}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      // Withdraw Button
+                      // ── Submit Button ──────────────────────────────────────
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _canProcessWithdrawal() ? _processWithdrawal : null,
+                          onPressed: _canWithdraw() ? _processWithdrawal : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
+                                borderRadius: BorderRadius.circular(15)),
                             elevation: 0,
                           ),
-                          child: const Text(
+                          child: _isSubmitting
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2),
+                          )
+                              : const Text(
                             'Request Withdrawal',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
@@ -651,194 +691,6 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  IconData _getPaymentIcon(String method) {
-    if (method.contains('Bank')) return Icons.account_balance;
-    if (method.contains('Card') || method.contains('Visa')) return Icons.credit_card;
-    if (method.contains('EcoCash')) return Icons.phone_android;
-    return Icons.payment;
-  }
-
-  Color _getPaymentColor(String method) {
-    if (method.contains('Bank')) return Colors.blue;
-    if (method.contains('Card') || method.contains('Visa')) return Colors.purple;
-    if (method.contains('EcoCash')) return Colors.green;
-    return Colors.grey;
-  }
-
-  IconData _getWithdrawalTypeIcon(String type) {
-    if (type.contains('Fund')) return Icons.trending_down;
-    if (type.contains('Dividend')) return Icons.payments;
-    if (type.contains('Profit')) return Icons.monetization_on;
-    return Icons.account_balance_wallet;
-  }
-
-  Color _getWithdrawalTypeColor(String type) {
-    if (type.contains('Fund')) return Colors.orange;
-    if (type.contains('Dividend')) return Colors.green;
-    if (type.contains('Profit')) return Colors.blue;
-    return Colors.grey;
-  }
-
-  String _formatAmount(String amount) {
-    if (amount.isEmpty) return '0.00';
-    final double value = double.tryParse(amount) ?? 0;
-    return value.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-    );
-  }
-
-  bool _isAmountExceeded() {
-    if (_amountController.text.isEmpty) return false;
-    final double amount = double.tryParse(_amountController.text) ?? 0;
-    return amount > _availableBalance;
-  }
-
-  bool _canProcessWithdrawal() {
-    if (_amountController.text.isEmpty) return false;
-    final double amount = double.tryParse(_amountController.text) ?? 0;
-    return amount > 0 && amount <= _availableBalance;
-  }
-
-  String _calculateFee() {
-    if (_amountController.text.isEmpty) return '0.00';
-    final double amount = double.tryParse(_amountController.text) ?? 0;
-    final double fee = amount * 0.01; // 1% fee
-    return fee.toStringAsFixed(2);
-  }
-
-  String _calculateNetAmount() {
-    if (_amountController.text.isEmpty) return '0.00';
-    final double amount = double.tryParse(_amountController.text) ?? 0;
-    final double fee = amount * 0.01;
-    final double netAmount = amount - fee;
-    return netAmount.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-    );
-  }
-
-  String _getProcessingTime() {
-    if (_selectedWithdrawalMethod.contains('Bank')) return '1-3 business days';
-    if (_selectedWithdrawalMethod.contains('EcoCash')) return 'Instant';
-    if (_selectedWithdrawalMethod.contains('Card')) return '2-5 business days';
-    return '1-3 business days';
-  }
-
-  void _processWithdrawal() {
-    if (!_canProcessWithdrawal()) return;
-
-    // Show confirmation dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Withdrawal'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Type: $_selectedWithdrawalType'),
-            Text('Amount: $_selectedCurrency ${_formatAmount(_amountController.text)}'),
-            Text('Fee: $_selectedCurrency ${_calculateFee()}'),
-            Text('You will receive: $_selectedCurrency ${_calculateNetAmount()}'),
-            Text('Method: $_selectedWithdrawalMethod'),
-            Text('Processing Time: ${_getProcessingTime()}'),
-            const SizedBox(height: 10),
-            const Text('Please confirm your withdrawal request.'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showSuccessDialog();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: const BoxDecoration(
-                color: Colors.orange,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Withdrawal Requested!',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Your withdrawal of $_selectedCurrency ${_formatAmount(_amountController.text)} has been submitted for processing.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Expected processing time: ${_getProcessingTime()}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.orange[600],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Done'),
-            ),
-          ),
-        ],
       ),
     );
   }
