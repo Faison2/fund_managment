@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/features/settings/settings.dart';
@@ -8,6 +10,7 @@ import '../../provider/theme_provider.dart';
 import '../auth/login/view/login.dart';
 import '../payments/payment_confamation.dart';
 import '../payments/view/payment.dart';
+import '../trade/dashboad/trade_dashboad.dart';
 
 class AppDrawer extends StatefulWidget {
   final int currentIndex;
@@ -25,6 +28,8 @@ class AppDrawer extends StatefulWidget {
 class _AppDrawerState extends State<AppDrawer>
     with SingleTickerProviderStateMixin {
   String _userName = '', _cdsNumber = '';
+  bool _isTradeMode = false; // ← environment flag
+
   late AnimationController _headerAnim;
   late Animation<double> _headerFade;
   late Animation<Offset> _headerSlide;
@@ -38,8 +43,9 @@ class _AppDrawerState extends State<AppDrawer>
       duration: const Duration(milliseconds: 600),
     )..forward();
     _headerFade = CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut);
-    _headerSlide = Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut));
+    _headerSlide =
+        Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
+            CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut));
   }
 
   @override
@@ -52,22 +58,32 @@ class _AppDrawerState extends State<AppDrawer>
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _userName  = prefs.getString('user_fullname') ?? '';
+        _userName = prefs.getString('user_fullname') ?? '';
         _cdsNumber = prefs.getString('cdsNumber') ?? '';
       });
     }
   }
 
   // ── Theme helpers ──────────────────────────────────────────────────────────
-  bool  get _dark  => context.watch<ThemeProvider>().isDark;
-  _DS   get _s     => context.watch<LocaleProvider>().isSwahili ? _sw : _en;
+  bool get _dark => context.watch<ThemeProvider>().isDark;
+  _DS get _s =>
+      context.watch<LocaleProvider>().isSwahili ? _sw : _en;
 
-  Color get _drawerBg    => _dark ? const Color(0xFF0F1F10) : Colors.white;
-  Color get _accent      => _dark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D99);
+  Color get _drawerBg =>
+      _dark ? const Color(0xFF0F1F10) : Colors.white;
+
+  /// Active accent shifts based on mode: teal for FMS, gold-orange for Trade
+  Color get _accent => _isTradeMode
+      ? (_dark ? const Color(0xFFFFB347) : const Color(0xFFE67E22))
+      : (_dark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D99));
+
   Color get _accentGreen => const Color(0xFF4CAF50);
-  Color get _txtPrim     => _dark ? Colors.white           : const Color(0xFF1A1A2E);
-  Color get _txtSec      => _dark ? Colors.white54         : Colors.grey.shade500;
-  Color get _divider     => _dark ? Colors.white12         : Colors.grey.shade100;
+  Color get _txtPrim =>
+      _dark ? Colors.white : const Color(0xFF1A1A2E);
+  Color get _txtSec =>
+      _dark ? Colors.white54 : Colors.grey.shade500;
+  Color get _divider =>
+      _dark ? Colors.white12 : Colors.grey.shade100;
 
   String get _greeting {
     final h = DateTime.now().hour;
@@ -79,14 +95,20 @@ class _AppDrawerState extends State<AppDrawer>
 
   String get _formattedName {
     if (_userName.isEmpty) return '';
-    return _userName.toLowerCase().split(' ')
+    return _userName
+        .toLowerCase()
+        .split(' ')
         .where((w) => w.isNotEmpty)
         .map((w) => w[0].toUpperCase() + w.substring(1))
         .join(' ');
   }
 
   String get _initials {
-    final parts = _formattedName.trim().split(' ').where((w) => w.isNotEmpty).toList();
+    final parts = _formattedName
+        .trim()
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return 'T';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
@@ -132,7 +154,8 @@ class _AppDrawerState extends State<AppDrawer>
               const SizedBox(height: 8),
               Text(s.logoutMsg,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: _txtSec, height: 1.5)),
+                  style:
+                  TextStyle(fontSize: 14, color: _txtSec, height: 1.5)),
               const SizedBox(height: 24),
               Row(children: [
                 Expanded(
@@ -142,11 +165,11 @@ class _AppDrawerState extends State<AppDrawer>
                       side: BorderSide(color: _divider, width: 1.5),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(2)),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(s.cancel,
-                        style: TextStyle(color: _txtSec,
-                            fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            color: _txtSec, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -162,7 +185,8 @@ class _AppDrawerState extends State<AppDrawer>
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(s.logout,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                        style:
+                        const TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ]),
@@ -191,9 +215,35 @@ class _AppDrawerState extends State<AppDrawer>
       applicationName: 'TSL Investment',
       applicationVersion: '1.0.0',
       applicationLegalese: '© 2024 TSL Investment App',
-      applicationIcon: Icon(Icons.account_balance,
-          size: 48, color: _accent),
+      applicationIcon:
+      Icon(Icons.account_balance, size: 48, color: _accent),
     );
+  }
+
+  void _switchToTrade() {
+    HapticFeedback.mediumImpact();
+    setState(() => _isTradeMode = true);
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, animation, __) => const TradeDashboard(),
+        transitionsBuilder: (_, animation, __, child) {
+          final curved =
+          CurvedAnimation(parent: animation, curve: Curves.easeInOut);
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position:
+              Tween<Offset>(begin: const Offset(0.08, 0), end: Offset.zero)
+                  .animate(curved),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 450),
+      ),
+    ).then((_) => setState(() => _isTradeMode = false));
   }
 
   // ─────────────────────────────── BUILD ────────────────────────────────────
@@ -217,6 +267,9 @@ class _AppDrawerState extends State<AppDrawer>
         children: [
           // ── Hero header ──────────────────────────────────────────────────
           _buildHeader(s),
+
+          // ── Environment toggle ───────────────────────────────────────────
+          _buildEnvToggle(),
 
           // ── Menu ────────────────────────────────────────────────────────
           Expanded(
@@ -266,7 +319,6 @@ class _AppDrawerState extends State<AppDrawer>
                             builder: (_) => const ClientStatementPage()));
                   },
                 ),
-
                 const SizedBox(height: 16),
                 _sectionLabel('GENERAL'),
                 const SizedBox(height: 4),
@@ -297,6 +349,180 @@ class _AppDrawerState extends State<AppDrawer>
           // ── Logout button ────────────────────────────────────────────────
           _buildLogout(s),
           const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  // ── Environment Toggle ─────────────────────────────────────────────────────
+  Widget _buildEnvToggle() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 3,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: _accent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  'ENVIRONMENT',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: _txtSec,
+                    letterSpacing: 1.8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: _dark
+                  ? Colors.white.withOpacity(0.06)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _dark
+                    ? Colors.white.withOpacity(0.08)
+                    : Colors.grey.shade200,
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Sliding pill
+                AnimatedAlign(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeInOutCubic,
+                  alignment: _isTradeMode
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: 0.5,
+                    child: Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: _isTradeMode
+                              ? [
+                            const Color(0xFFE67E22),
+                            const Color(0xFFFFB347),
+                          ]
+                              : [
+                            const Color(0xFF2E7D99),
+                            const Color(0xFF4CAF50),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (_isTradeMode
+                                ? const Color(0xFFE67E22)
+                                : const Color(0xFF2E7D99))
+                                .withOpacity(0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Labels row
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (_isTradeMode) {
+                            HapticFeedback.selectionClick();
+                            setState(() => _isTradeMode = false);
+                          }
+                        },
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.account_balance_outlined,
+                                size: 14,
+                                color: !_isTradeMode
+                                    ? Colors.white
+                                    : _txtSec,
+                              ),
+                              const SizedBox(width: 5),
+                              AnimatedDefaultTextStyle(
+                                duration:
+                                const Duration(milliseconds: 200),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: !_isTradeMode
+                                      ? FontWeight.w800
+                                      : FontWeight.w500,
+                                  color: !_isTradeMode
+                                      ? Colors.white
+                                      : _txtSec,
+                                  letterSpacing: 0.3,
+                                ),
+                                child: const Text('FMS'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (!_isTradeMode) _switchToTrade();
+                        },
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.candlestick_chart_outlined,
+                                size: 14,
+                                color:
+                                _isTradeMode ? Colors.white : _txtSec,
+                              ),
+                              const SizedBox(width: 5),
+                              AnimatedDefaultTextStyle(
+                                duration:
+                                const Duration(milliseconds: 200),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: _isTradeMode
+                                      ? FontWeight.w800
+                                      : FontWeight.w500,
+                                  color: _isTradeMode
+                                      ? Colors.white
+                                      : _txtSec,
+                                  letterSpacing: 0.3,
+                                ),
+                                child: const Text('Trade'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -333,7 +559,6 @@ class _AppDrawerState extends State<AppDrawer>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Avatar + verified badge
                   Stack(
                     children: [
                       Container(
@@ -350,7 +575,8 @@ class _AppDrawerState extends State<AppDrawer>
                             end: Alignment.bottomRight,
                           ),
                           border: Border.all(
-                              color: Colors.white.withOpacity(0.5), width: 2.5),
+                              color: Colors.white.withOpacity(0.5),
+                              width: 2.5),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.15),
@@ -379,8 +605,8 @@ class _AppDrawerState extends State<AppDrawer>
                           decoration: BoxDecoration(
                             color: _accentGreen,
                             shape: BoxShape.circle,
-                            border:
-                            Border.all(color: const Color(0xFF1A5F77), width: 2),
+                            border: Border.all(
+                                color: const Color(0xFF1A5F77), width: 2),
                           ),
                           child: const Icon(Icons.check,
                               size: 10, color: Colors.white),
@@ -388,10 +614,7 @@ class _AppDrawerState extends State<AppDrawer>
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 14),
-
-                  // Greeting
                   Text(
                     _greeting,
                     style: const TextStyle(
@@ -403,7 +626,9 @@ class _AppDrawerState extends State<AppDrawer>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _formattedName.isNotEmpty ? _formattedName : 'TSL Investor',
+                    _formattedName.isNotEmpty
+                        ? _formattedName
+                        : 'TSL Investor',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -413,13 +638,10 @@ class _AppDrawerState extends State<AppDrawer>
                       letterSpacing: 0.2,
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  // CDS chip
                   Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.14),
                       borderRadius: BorderRadius.circular(20),
@@ -453,7 +675,6 @@ class _AppDrawerState extends State<AppDrawer>
     );
   }
 
-  // ── Section label ──────────────────────────────────────────────────────────
   Widget _sectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
@@ -482,7 +703,6 @@ class _AppDrawerState extends State<AppDrawer>
     );
   }
 
-  // ── Menu item ──────────────────────────────────────────────────────────────
   Widget _item({
     required IconData icon,
     required String label,
@@ -492,7 +712,6 @@ class _AppDrawerState extends State<AppDrawer>
     int? index,
   }) {
     final selected = index != null && widget.currentIndex == index;
-
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 400 + delay),
@@ -525,7 +744,6 @@ class _AppDrawerState extends State<AppDrawer>
               const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
               child: Row(
                 children: [
-                  // Icon container
                   Container(
                     width: 38,
                     height: 38,
@@ -571,7 +789,6 @@ class _AppDrawerState extends State<AppDrawer>
     );
   }
 
-  // ── Logout ─────────────────────────────────────────────────────────────────
   Widget _buildLogout(_DS s) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -628,9 +845,20 @@ class _AppDrawerState extends State<AppDrawer>
 
 // ── String tables ──────────────────────────────────────────────────────────────
 class _DS {
-  final String goodMorning, goodAfternoon, goodEvening, accountNumber,
-      home, myOrders, paymentMethods, clientStatement, settings, about,
-      logout, logoutTitle, logoutMsg, cancel;
+  final String goodMorning,
+      goodAfternoon,
+      goodEvening,
+      accountNumber,
+      home,
+      myOrders,
+      paymentMethods,
+      clientStatement,
+      settings,
+      about,
+      logout,
+      logoutTitle,
+      logoutMsg,
+      cancel;
   const _DS({
     required this.goodMorning,
     required this.goodAfternoon,
