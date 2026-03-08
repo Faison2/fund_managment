@@ -2,8 +2,97 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../provider/locale_provider.dart';
+import '../../provider/theme_provider.dart';
 
+// ── Localised strings ─────────────────────────────────────────────────────────
+class _PS {
+  final String portfolio, totalPortfolioValue, accNo,
+      funds, active, totalUnits, overview, myFunds,
+      fundsPerformance, fundAllocation, fundSummary,
+      ipo, totalFunds, myInvestment, unitsHeld,
+      nav, navDate, minInvest, subMin, issuer,
+      noInvestment, noActiveFunds,
+      loading, retry, networkError,
+      fundsAvailable;
+  const _PS({
+    required this.portfolio,          required this.totalPortfolioValue,
+    required this.accNo,              required this.funds,
+    required this.active,             required this.totalUnits,
+    required this.overview,           required this.myFunds,
+    required this.fundsPerformance,   required this.fundAllocation,
+    required this.fundSummary,        required this.ipo,
+    required this.totalFunds,         required this.myInvestment,
+    required this.unitsHeld,          required this.nav,
+    required this.navDate,            required this.minInvest,
+    required this.subMin,             required this.issuer,
+    required this.noInvestment,       required this.noActiveFunds,
+    required this.loading,            required this.retry,
+    required this.networkError,       required this.fundsAvailable,
+  });
+}
+
+const _psEn = _PS(
+  portfolio:           'Portfolio',
+  totalPortfolioValue: 'Total Portfolio Value',
+  accNo:               'Acc No',
+  funds:               'Funds',
+  active:              'Active',
+  totalUnits:          'Total Units',
+  overview:            'Overview',
+  myFunds:             'My Funds',
+  fundsPerformance:    'Funds Performance',
+  fundAllocation:      'Fund Allocation',
+  fundSummary:         'Fund Summary',
+  ipo:                 'IPO',
+  totalFunds:          'Total Funds',
+  myInvestment:        'My Investment',
+  unitsHeld:           'Units Held',
+  nav:                 'NAV',
+  navDate:             'NAV Date',
+  minInvest:           'Min. Invest',
+  subMin:              'Sub. Min',
+  issuer:              'Issuer',
+  noInvestment:        'No investment in this fund yet',
+  noActiveFunds:       'No active fund investments yet',
+  loading:             'Loading portfolio...',
+  retry:               'Retry',
+  networkError:        'Network error',
+  fundsAvailable:      'fund(s) available for Acc No',
+);
+
+const _psSw = _PS(
+  portfolio:           'Mkoba',
+  totalPortfolioValue: 'Jumla ya Thamani ya Mkoba',
+  accNo:               'Nambari ya Akaunti',
+  funds:               'Fedha',
+  active:              'Hai',
+  totalUnits:          'Jumla ya Vitengo',
+  overview:            'Muhtasari',
+  myFunds:             'Fedha Zangu',
+  fundsPerformance:    'Utendaji wa Fedha',
+  fundAllocation:      'Ugawaji wa Fedha',
+  fundSummary:         'Muhtasari wa Fedha',
+  ipo:                 'Toleo la Awali',
+  totalFunds:          'Jumla ya Fedha',
+  myInvestment:        'Uwekezaji Wangu',
+  unitsHeld:           'Vitengo Vilivyoshikiliwa',
+  nav:                 'Thamani ya Sasa',
+  navDate:             'Tarehe ya Thamani',
+  minInvest:           'Kiwango cha Chini',
+  subMin:              'Kiwango Kinachofuata',
+  issuer:              'Mtoa Huduma',
+  noInvestment:        'Hakuna uwekezaji katika fedha hii bado',
+  noActiveFunds:       'Hakuna uwekezaji wa fedha bado',
+  loading:             'Inapakia mkoba...',
+  retry:               'Jaribu Tena',
+  networkError:        'Hitilafu ya mtandao',
+  fundsAvailable:      'fedha zinapatikana kwa Akaunti Nambari',
+);
+
+// ── PortfolioScreen ───────────────────────────────────────────────────────────
 class PortfolioScreen extends StatefulWidget {
   const PortfolioScreen({Key? key}) : super(key: key);
 
@@ -32,15 +121,39 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     3: [2.9, 3.2, 3.0, 3.5, 3.4, 3.8, 4.0, 4.2, 4.5, 4.7, 5.0, 5.4],
   };
 
-  // Fund card accent colors cycling
   final List<Color> _fundColors = [
-    Color(0xFF2ECC71),
-    Color(0xFF3498DB),
-    Color(0xFFE67E22),
-    Color(0xFF9B59B6),
-    Color(0xFFE74C3C),
-    Color(0xFF1ABC9C),
+    const Color(0xFF2ECC71), const Color(0xFF3498DB),
+    const Color(0xFFE67E22), const Color(0xFF9B59B6),
+    const Color(0xFFE74C3C), const Color(0xFF1ABC9C),
   ];
+
+  // ── Theme helpers ──────────────────────────────────────────────────────────
+  bool  get _dark   => context.watch<ThemeProvider>().isDark;
+  _PS   get _s      => context.watch<LocaleProvider>().isSwahili ? _psSw : _psEn;
+
+  // Background gradient
+  Gradient get _bgGradient => _dark
+      ? const LinearGradient(
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+      colors: [Color(0xFF0B1A0C), Color(0xFF091510), Color(0xFF0D1A10)])
+      : const LinearGradient(
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+      colors: [Color(0xFFB8E6D3), Color(0xFF98D8C8), Color(0xFFFFE5B4)]);
+
+  // Card surface
+  Color get _cardBg     => _dark ? const Color(0xFF132013).withOpacity(0.85)
+      : Colors.white.withOpacity(0.55);
+  Color get _cardBorder => _dark ? const Color(0xFF1E3320)
+      : Colors.white.withOpacity(0.7);
+  Color get _txtPrim    => _dark ? const Color(0xFFE8F5E9) : Colors.black87;
+  Color get _txtSec     => _dark ? const Color(0xFF81A884) : Colors.black45;
+  Color get _txtHint    => _dark ? const Color(0xFF4A7A4D) : Colors.black38;
+  Color get _divider    => _dark ? const Color(0xFF1E3320) : Colors.black12;
+  Color get _teal       => _dark ? const Color(0xFF38BDF8) : Colors.teal.shade700;
+  Color get _tealDim    => _dark ? const Color(0xFF38BDF8).withOpacity(0.12)
+      : Colors.teal.withOpacity(0.08);
+  Color get _green      => _dark ? const Color(0xFF4ADE80) : Colors.green.shade700;
+  Color get _statItem   => _dark ? const Color(0xFF1A2E1C) : Colors.white.withOpacity(0.4);
 
   @override
   void initState() {
@@ -57,11 +170,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
-
+    setState(() { _isLoading = true; _errorMessage = ''; });
     try {
       final prefs = await SharedPreferences.getInstance();
       _cdsNumber = prefs.getString('cdsNumber') ?? '';
@@ -77,13 +186,13 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       ).timeout(const Duration(seconds: 15));
 
       final responseData = jsonDecode(response.body);
-
       if (response.statusCode == 200 && responseData['status'] == 'success') {
         final data = responseData['data'];
         final List<dynamic> funds = data['funds'] ?? [];
         setState(() {
-          _totalPortfolioValue = (data['totalPortfolioValue'] as num).toDouble();
-          _funds = funds.map((f) => Map<String, dynamic>.from(f)).toList();
+          _totalPortfolioValue =
+              (data['totalPortfolioValue'] as num).toDouble();
+          _funds    = funds.map((f) => Map<String, dynamic>.from(f)).toList();
           _isLoading = false;
         });
       } else {
@@ -94,14 +203,14 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Network error: ${e.toString()}';
+        _errorMessage = '${_s.networkError}: $e';
         _isLoading = false;
       });
     }
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  Color _colorFor(int index) => _fundColors[index % _fundColors.length];
+  Color _colorFor(int i) => _fundColors[i % _fundColors.length];
 
   String _fmt(double v, {int decimals = 2}) {
     final parts = v.toStringAsFixed(decimals).split('.');
@@ -112,43 +221,40 @@ class _PortfolioScreenState extends State<PortfolioScreen>
 
   String _shortVal(double v) {
     if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(2)}M';
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
+    if (v >= 1000)    return '${(v / 1000).toStringAsFixed(1)}K';
     return v.toStringAsFixed(0);
   }
 
-  int get _activeFunds => _funds.where((f) =>
-  (f['status'] as String).toLowerCase() == 'active').length;
-
+  int    get _activeFunds => _funds.where(
+          (f) => (f['status'] as String).toLowerCase() == 'active').length;
   double get _totalInvestedUnits => _funds.fold(0.0,
           (sum, f) => sum + (f['investorUnits'] as num).toDouble());
 
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
+    context.watch<LocaleProvider>();
+    final s = _s;
+
     return SafeArea(
       child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFB8E6D3), Color(0xFF98D8C8), Color(0xFFFFE5B4)],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: _bgGradient),
         child: _isLoading
-            ? _buildLoader()
+            ? _buildLoader(s)
             : _errorMessage.isNotEmpty
-            ? _buildError()
+            ? _buildError(s)
             : Column(children: [
-          _buildValueCard(),
+          _buildValueCard(s),
           const SizedBox(height: 12),
-          _buildTabBar(),
+          _buildTabBar(s),
           const SizedBox(height: 8),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildOverviewTab(),
-                _buildFundsTab(),
+                _buildOverviewTab(s),
+                _buildFundsTab(s),
               ],
             ),
           ),
@@ -157,35 +263,35 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     );
   }
 
-  Widget _buildLoader() => const Center(
+  // ── Loader ─────────────────────────────────────────────────────────────────
+  Widget _buildLoader(_PS s) => Center(
     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4A6741))),
-      SizedBox(height: 16),
-      Text('Loading portfolio...',
-          style: TextStyle(
-              color: Color(0xFF2E7D32),
-              fontSize: 15,
+          valueColor: AlwaysStoppedAnimation<Color>(_green)),
+      const SizedBox(height: 16),
+      Text(s.loading,
+          style: TextStyle(color: _green, fontSize: 15,
               fontWeight: FontWeight.w500)),
     ]),
   );
 
-  Widget _buildError() => Center(
+  // ── Error ──────────────────────────────────────────────────────────────────
+  Widget _buildError(_PS s) => Center(
     child: Padding(
       padding: const EdgeInsets.all(24),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Icon(Icons.error_outline, size: 56, color: Colors.red),
+        Icon(Icons.error_outline, size: 56, color: Colors.red.shade400),
         const SizedBox(height: 16),
         Text(_errorMessage,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red, fontSize: 14)),
+            style: TextStyle(color: Colors.red.shade400, fontSize: 14)),
         const SizedBox(height: 24),
         ElevatedButton.icon(
           onPressed: _loadData,
           icon: const Icon(Icons.refresh),
-          label: const Text('Retry'),
+          label: Text(s.retry),
           style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A6741),
+              backgroundColor: _green,
               foregroundColor: Colors.white),
         ),
       ]),
@@ -193,176 +299,143 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   );
 
   // ── Value card ─────────────────────────────────────────────────────────────
-  Widget _buildValueCard() {
+  Widget _buildValueCard(_PS s) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.45),
+        color: _cardBg,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.teal.withOpacity(0.1),
-              blurRadius: 16,
-              offset: const Offset(0, 6))
-        ],
+        border: Border.all(color: _cardBorder, width: 1.5),
+        boxShadow: [BoxShadow(color: _teal.withOpacity(0.1),
+            blurRadius: 16, offset: const Offset(0, 6))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Text('Total Portfolio Value',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.black45,
+          Text(s.totalPortfolioValue,
+              style: TextStyle(fontSize: 12, color: _txtSec,
                   fontWeight: FontWeight.w500)),
           const Spacer(),
-          // Refresh button
           GestureDetector(
             onTap: _loadData,
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.teal.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.refresh_rounded,
-                  size: 14, color: Colors.teal.shade700),
+                  color: _tealDim, borderRadius: BorderRadius.circular(8)),
+              child: Icon(Icons.refresh_rounded, size: 14, color: _teal),
             ),
           ),
         ]),
         const SizedBox(height: 6),
-        Text(
-          'TZS ${_fmt(_totalPortfolioValue)}',
-          style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: Colors.black87,
-              letterSpacing: -0.5),
-        ),
+        Text('TZS ${_fmt(_totalPortfolioValue)}',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900,
+                color: _txtPrim, letterSpacing: -0.5)),
         const SizedBox(height: 6),
-        Text(
-          'Acc No: $_cdsNumber',
-          style: const TextStyle(fontSize: 11, color: Colors.black38),
-        ),
+        Text('${s.accNo}: $_cdsNumber',
+            style: TextStyle(fontSize: 11, color: _txtHint)),
         const SizedBox(height: 16),
         Row(children: [
-          _miniStat('Funds', '${_funds.length}', Colors.teal.shade700),
+          _miniStat(s.funds,      '${_funds.length}',            _teal),
           _vLine(),
-          _miniStat('Active', '$_activeFunds', Colors.green.shade700),
+          _miniStat(s.active,     '$_activeFunds',               _green),
           _vLine(),
-          _miniStat('Total Units', _shortVal(_totalInvestedUnits), Colors.black54),
+          _miniStat(s.totalUnits, _shortVal(_totalInvestedUnits), _txtSec),
         ]),
       ]),
     );
   }
 
   Widget _miniStat(String label, String value, Color valueColor) => Expanded(
-    child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.black38,
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 3),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: valueColor)),
-        ]),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
+      Text(label, style: TextStyle(fontSize: 10, color: _txtHint,
+          fontWeight: FontWeight.w500)),
+      const SizedBox(height: 3),
+      Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+          color: valueColor)),
+    ]),
   );
 
-  Widget _vLine() => Container(
-      width: 1,
-      height: 28,
-      color: Colors.black12,
-      margin: const EdgeInsets.symmetric(horizontal: 4));
+  Widget _vLine() => Container(width: 1, height: 28,
+      color: _divider, margin: const EdgeInsets.symmetric(horizontal: 4));
 
   // ── Tab bar ────────────────────────────────────────────────────────────────
-  Widget _buildTabBar() {
+  Widget _buildTabBar(_PS s) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.3),
+          color: _dark ? const Color(0xFF132013) : Colors.white.withOpacity(0.3),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.5), width: 1),
+          border: Border.all(color: _cardBorder, width: 1),
         ),
         child: TabBar(
           controller: _tabController,
-          indicator: BoxDecoration(
-            color: Colors.teal.shade700,
-            borderRadius: BorderRadius.circular(18),
-          ),
+          indicator: BoxDecoration(color: _teal,
+              borderRadius: BorderRadius.circular(18)),
           indicatorSize: TabBarIndicatorSize.tab,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.black54,
-          labelStyle:
-          const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          unselectedLabelColor: _txtSec,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
           unselectedLabelStyle:
           const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
           dividerColor: Colors.transparent,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'My Funds'),
-          ],
+          tabs: [Tab(text: s.overview), Tab(text: s.myFunds)],
         ),
       ),
     );
   }
 
   // ── Overview tab ───────────────────────────────────────────────────────────
-  Widget _buildOverviewTab() {
+  Widget _buildOverviewTab(_PS s) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       child: Column(children: [
-        _buildChartCard(),
+        _buildChartCard(s),
         const SizedBox(height: 14),
-        _buildAllocationCard(),
+        _buildAllocationCard(s),
         const SizedBox(height: 14),
-        _buildFundsSummaryCard(),
+        _buildFundsSummaryCard(s),
       ]),
     );
   }
 
   // ── Chart card ─────────────────────────────────────────────────────────────
-  Widget _buildChartCard() {
-    final data = _chartData[_selectedPeriod]!;
-    final spots =
-    List.generate(data.length, (i) => FlSpot(i.toDouble(), data[i]));
-    final minY = (data.reduce((a, b) => a < b ? a : b) - 0.3)
-        .clamp(0.0, double.infinity);
-    final maxY = data.reduce((a, b) => a > b ? a : b) + 0.3;
-    final isUp = data.last >= data.first;
-    final lineColor =
-    isUp ? Colors.green.shade600 : Colors.red.shade500;
+  Widget _buildChartCard(_PS s) {
+    final data      = _chartData[_selectedPeriod]!;
+    final spots     = List.generate(data.length, (i) => FlSpot(i.toDouble(), data[i]));
+    final minY      = (data.reduce((a, b) => a < b ? a : b) - 0.3).clamp(0.0, double.infinity);
+    final maxY      = data.reduce((a, b) => a > b ? a : b) + 0.3;
+    final isUp      = data.last >= data.first;
+    final lineColor = isUp ? Colors.green.shade500 : Colors.red.shade400;
+
+    // Capture theme values as locals — never call context.watch() inside
+    // fl_chart callbacks (getDrawingHorizontalLine, getTitlesWidget, etc.)
+    // as those run outside Flutter's build tree and will silently break.
+    final isDark       = _dark;
+    final gridColor    = (isDark ? Colors.white : Colors.black).withOpacity(0.06);
+    final hintColor    = _txtHint;
+    final primColor    = _txtPrim;
+    final tealColor    = _teal;
+    final cardBgColor  = _cardBg;
+    final cardBdColor  = _cardBorder;
+    final tooltipBg    = isDark ? const Color(0xFF132013) : Colors.teal.shade800;
+    final shadowOpacity = isDark ? 0.2 : 0.04;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 4))
-        ],
+        color: cardBgColor, borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cardBdColor, width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(shadowOpacity),
+            blurRadius: 8, offset: const Offset(0, 4))],
       ),
-      child:
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Expanded(
-              child: Text('Funds Performance',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87))),
+          Expanded(child: Text(s.fundsPerformance,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                  color: primColor))),
           ...List.generate(_periods.length, (i) {
             final active = i == _selectedPeriod;
             return GestureDetector(
@@ -370,17 +443,14 @@ class _PortfolioScreenState extends State<PortfolioScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.only(left: 6),
-                padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: active ? Colors.teal.shade700 : Colors.transparent,
+                  color: active ? tealColor : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(_periods[i],
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: active ? Colors.white : Colors.black38)),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                        color: active ? Colors.white : hintColor)),
               ),
             );
           }),
@@ -389,65 +459,45 @@ class _PortfolioScreenState extends State<PortfolioScreen>
         SizedBox(
           height: 150,
           child: LineChart(LineChartData(
-            minY: minY,
-            maxY: maxY,
+            minY: minY, maxY: maxY,
             gridData: FlGridData(
-              show: true,
-              drawVerticalLine: false,
+              show: true, drawVerticalLine: false,
               horizontalInterval: (maxY - minY) / 3,
               getDrawingHorizontalLine: (_) => FlLine(
-                  color: Colors.black.withOpacity(0.06),
-                  strokeWidth: 1,
-                  dashArray: [4, 4]),
+                  color: gridColor,
+                  strokeWidth: 1, dashArray: [4, 4]),
             ),
             borderData: FlBorderData(show: false),
             titlesData: FlTitlesData(
-              leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 34,
-                    interval: (maxY - minY) / 3,
-                    getTitlesWidget: (v, _) => Text('${v.toStringAsFixed(1)}M',
-                        style: const TextStyle(
-                            fontSize: 8, color: Colors.black45)),
-                  )),
-              bottomTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
-              topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
+              leftTitles: AxisTitles(sideTitles: SideTitles(
+                showTitles: true, reservedSize: 34,
+                interval: (maxY - minY) / 3,
+                getTitlesWidget: (v, _) => Text('${v.toStringAsFixed(1)}M',
+                    style: TextStyle(fontSize: 8, color: hintColor)),
+              )),
+              bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles:    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             ),
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (_) => Colors.teal.shade800,
-                getTooltipItems: (spots) => spots
-                    .map((s) => LineTooltipItem(
+                getTooltipColor: (_) => tooltipBg,
+                getTooltipItems: (spots) => spots.map((s) => LineTooltipItem(
                   'TZS ${s.y.toStringAsFixed(2)}M',
-                  const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
+                  const TextStyle(color: Colors.white, fontSize: 10,
                       fontWeight: FontWeight.w600),
-                ))
-                    .toList(),
+                )).toList(),
               ),
             ),
             lineBarsData: [
               LineChartBarData(
-                spots: spots,
-                isCurved: true,
-                color: lineColor,
-                barWidth: 2.5,
+                spots: spots, isCurved: true, color: lineColor, barWidth: 2.5,
                 dotData: const FlDotData(show: false),
                 belowBarData: BarAreaData(
                   show: true,
                   gradient: LinearGradient(
-                    colors: [
-                      lineColor.withOpacity(0.25),
-                      lineColor.withOpacity(0.0)
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    colors: [lineColor.withOpacity(0.25), lineColor.withOpacity(0.0)],
+                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
                   ),
                 ),
               ),
@@ -459,8 +509,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   }
 
   // ── Allocation donut ───────────────────────────────────────────────────────
-  Widget _buildAllocationCard() {
-    // Only show funds with portfolioValue > 0 in the donut
+  Widget _buildAllocationCard(_PS s) {
     final activeFunds = _funds
         .where((f) => (f['portfolioValue'] as num).toDouble() > 0)
         .toList();
@@ -469,65 +518,44 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.55),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5),
-        ),
-        child: Center(
-          child: Text('No active fund investments yet',
-              style: TextStyle(color: Colors.black45, fontSize: 13)),
-        ),
+            color: _cardBg, borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _cardBorder, width: 1.5)),
+        child: Center(child: Text(s.noActiveFunds,
+            style: TextStyle(color: _txtSec, fontSize: 13))),
       );
     }
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 4))
-        ],
+        color: _cardBg, borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _cardBorder, width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(_dark ? 0.2 : 0.04),
+            blurRadius: 8, offset: const Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                  color: Colors.teal.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(7)),
-              child: Icon(Icons.donut_large_rounded,
-                  color: Colors.teal.shade700, size: 14)),
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(color: _tealDim,
+                borderRadius: BorderRadius.circular(7)),
+            child: Icon(Icons.donut_large_rounded, color: _teal, size: 14),
+          ),
           const SizedBox(width: 8),
-          const Text('Fund Allocation',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87)),
+          Text(s.fundAllocation, style: TextStyle(fontSize: 13,
+              fontWeight: FontWeight.w700, color: _txtPrim)),
         ]),
         const SizedBox(height: 16),
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           SizedBox(
-            width: 120,
-            height: 120,
+            width: 120, height: 120,
             child: PieChart(PieChartData(
-              startDegreeOffset: -90,
-              sectionsSpace: 2,
-              centerSpaceRadius: 32,
+              startDegreeOffset: -90, sectionsSpace: 2, centerSpaceRadius: 32,
               sections: activeFunds.asMap().entries.map((e) {
                 final pct = (e.value['portfolioValue'] as num).toDouble() /
-                    _totalPortfolioValue *
-                    100;
+                    _totalPortfolioValue * 100;
                 return PieChartSectionData(
-                  value: pct,
-                  color: _colorFor(e.key),
-                  radius: 28,
-                  title: '',
-                );
+                    value: pct, color: _colorFor(e.key), radius: 28, title: '');
               }).toList(),
             )),
           ),
@@ -535,32 +563,21 @@ class _PortfolioScreenState extends State<PortfolioScreen>
           Expanded(
             child: Column(
               children: activeFunds.asMap().entries.map((e) {
-                final pct =
-                    (e.value['portfolioValue'] as num).toDouble() /
-                        _totalPortfolioValue *
-                        100;
+                final pct = (e.value['portfolioValue'] as num).toDouble() /
+                    _totalPortfolioValue * 100;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 7),
                   child: Row(children: [
-                    Container(
-                        width: 8,
-                        height: 8,
+                    Container(width: 8, height: 8,
                         decoration: BoxDecoration(
-                            color: _colorFor(e.key),
-                            shape: BoxShape.circle)),
+                            color: _colorFor(e.key), shape: BoxShape.circle)),
                     const SizedBox(width: 7),
-                    Expanded(
-                        child: Text(e.value['fundName'] as String,
-                            style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black87),
-                            overflow: TextOverflow.ellipsis)),
+                    Expanded(child: Text(e.value['fundName'] as String,
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                            color: _txtPrim), overflow: TextOverflow.ellipsis)),
                     Text('${pct.toStringAsFixed(0)}%',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.teal.shade700)),
+                        style: TextStyle(fontSize: 11,
+                            fontWeight: FontWeight.w600, color: _teal)),
                   ]),
                 );
               }).toList(),
@@ -572,86 +589,71 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   }
 
   // ── Funds summary card ─────────────────────────────────────────────────────
-  Widget _buildFundsSummaryCard() {
-    final ipoCount =
-        _funds.where((f) => (f['status'] as String).toLowerCase() == 'ipo').length;
+  Widget _buildFundsSummaryCard(_PS s) {
+    final ipoCount = _funds.where(
+            (f) => (f['status'] as String).toLowerCase() == 'ipo').length;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 4))
-        ],
+        color: _cardBg, borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _cardBorder, width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(_dark ? 0.2 : 0.04),
+            blurRadius: 8, offset: const Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(7)),
-              child: Icon(Icons.bar_chart_rounded,
-                  color: Colors.green.shade700, size: 14)),
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(color: _green.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(7)),
+            child: Icon(Icons.bar_chart_rounded, color: _green, size: 14),
+          ),
           const SizedBox(width: 8),
-          const Text('Fund Summary',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87)),
+          Text(s.fundSummary, style: TextStyle(fontSize: 13,
+              fontWeight: FontWeight.w700, color: _txtPrim)),
         ]),
         const SizedBox(height: 16),
         Row(children: [
-          _perfStat('Total Funds', '${_funds.length}', Colors.teal.shade700,
+          _perfStat(s.totalFunds, '${_funds.length}', _teal,
               Icons.account_balance_rounded),
           const SizedBox(width: 10),
-          _perfStat('Active', '$_activeFunds', Colors.green.shade700,
+          _perfStat(s.active, '$_activeFunds', _green,
               Icons.check_circle_rounded),
           const SizedBox(width: 10),
-          _perfStat('IPO', '$ipoCount', Colors.orange.shade700,
+          _perfStat(s.ipo, '$ipoCount', Colors.orange.shade600,
               Icons.new_releases_rounded),
         ]),
       ]),
     );
   }
 
-  Widget _perfStat(
-      String label, String value, Color color, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.2), width: 1),
+  Widget _perfStat(String label, String value, Color color, IconData icon) =>
+      Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(_dark ? 0.1 : 0.07),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: color.withOpacity(0.2), width: 1),
+          ),
+          child: Column(children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(height: 6),
+            Text(value, style: TextStyle(fontSize: 15,
+                fontWeight: FontWeight.w800, color: color)),
+            const SizedBox(height: 2),
+            Text(label, style: TextStyle(fontSize: 10,
+                color: _txtSec, fontWeight: FontWeight.w500)),
+          ]),
         ),
-        child: Column(children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(height: 6),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w800, color: color)),
-          const SizedBox(height: 2),
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.black45,
-                  fontWeight: FontWeight.w500)),
-        ]),
-      ),
-    );
-  }
+      );
 
   // ── My Funds tab ───────────────────────────────────────────────────────────
-  Widget _buildFundsTab() {
+  Widget _buildFundsTab(_PS s) {
     return RefreshIndicator(
       onRefresh: _loadData,
-      color: Colors.teal.shade700,
+      color: _teal,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -661,28 +663,21 @@ class _PortfolioScreenState extends State<PortfolioScreen>
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             margin: const EdgeInsets.only(bottom: 14),
             decoration: BoxDecoration(
-              color: Colors.teal.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.teal.withOpacity(0.2)),
+              color: _tealDim, borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _teal.withOpacity(0.2)),
             ),
             child: Row(children: [
-              Icon(Icons.info_outline_rounded,
-                  size: 15, color: Colors.teal.shade700),
+              Icon(Icons.info_outline_rounded, size: 15, color: _teal),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                    '${_funds.length} fund${_funds.length != 1 ? 's' : ''} available for Acc No $_cdsNumber',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.teal.shade700,
-                        fontWeight: FontWeight.w500)),
-              ),
+              Expanded(child: Text(
+                  '${_funds.length} ${s.fundsAvailable} $_cdsNumber',
+                  style: TextStyle(fontSize: 12, color: _teal,
+                      fontWeight: FontWeight.w500))),
             ]),
           ),
-
           ..._funds.asMap().entries.map((e) => Padding(
             padding: const EdgeInsets.only(bottom: 14),
-            child: _buildFundCard(e.value, e.key),
+            child: _buildFundCard(e.value, e.key, s),
           )),
         ]),
       ),
@@ -690,104 +685,75 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   }
 
   // ── Fund card ──────────────────────────────────────────────────────────────
-  Widget _buildFundCard(Map<String, dynamic> fund, int index) {
-    final color = _colorFor(index);
-    final status = fund['status'] as String;
-    final isActive = status.toLowerCase() == 'active';
-    final isIPO = status.toLowerCase() == 'ipo';
+  Widget _buildFundCard(Map<String, dynamic> fund, int index, _PS s) {
+    final color          = _colorFor(index);
+    final status         = fund['status'] as String;
+    final isActive       = status.toLowerCase() == 'active';
+    final isIPO          = status.toLowerCase() == 'ipo';
     final portfolioValue = (fund['portfolioValue'] as num).toDouble();
-    final investorUnits = (fund['investorUnits'] as num).toDouble();
-    final nav = (fund['nav'] as num).toDouble();
-    final hasInvestment = portfolioValue > 0;
+    final investorUnits  = (fund['investorUnits'] as num).toDouble();
+    final nav            = (fund['nav'] as num).toDouble();
+    final hasInvestment  = portfolioValue > 0;
 
-    Color statusColor = isActive
+    final Color statusColor = isActive
         ? Colors.green.shade600
-        : isIPO
-        ? Colors.orange.shade700
-        : Colors.grey.shade500;
+        : isIPO ? Colors.orange.shade700 : Colors.grey.shade500;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-              color: color.withOpacity(0.1),
-              blurRadius: 12,
-              offset: const Offset(0, 5))
-        ],
+        color: _cardBg, borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _cardBorder, width: 1.5),
+        boxShadow: [BoxShadow(color: color.withOpacity(_dark ? 0.08 : 0.1),
+            blurRadius: 12, offset: const Offset(0, 5))],
       ),
       child: Column(children: [
         // ── Header strip ────────────────────────────────────────────────
         Container(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
+            color: color.withOpacity(_dark ? 0.12 : 0.08),
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+                topLeft: Radius.circular(20), topRight: Radius.circular(20)),
           ),
           child: Row(children: [
-            // Fund badge
             Container(
-              width: 48,
-              height: 48,
+              width: 48, height: 48,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withOpacity(_dark ? 0.18 : 0.15),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: color.withOpacity(0.3), width: 1.5),
               ),
-              child: Center(
-                child: Text(
-                  fund['fundCode'] as String,
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: color,
-                      letterSpacing: -0.3),
-                ),
-              ),
+              child: Center(child: Text(fund['fundCode'] as String,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900,
+                      color: color, letterSpacing: -0.3))),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(fund['fundName'] as String,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black87)),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800,
+                            color: _txtPrim)),
                     const SizedBox(height: 3),
                     Text(fund['description'] as String,
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.black45)),
+                        style: TextStyle(fontSize: 12, color: _txtSec)),
                   ]),
             ),
             // Status badge
             Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: statusColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: statusColor.withOpacity(0.3), width: 1),
+                border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                        color: statusColor, shape: BoxShape.circle)),
+                Container(width: 6, height: 6,
+                    decoration: BoxDecoration(color: statusColor,
+                        shape: BoxShape.circle)),
                 const SizedBox(width: 5),
-                Text(status,
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: statusColor)),
+                Text(status, style: TextStyle(fontSize: 11,
+                    fontWeight: FontWeight.w700, color: statusColor)),
               ]),
             ),
           ]),
@@ -797,105 +763,79 @@ class _PortfolioScreenState extends State<PortfolioScreen>
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(children: [
-            // My investment row (highlighted if has investment)
             if (hasInvestment) ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.07),
+                  color: color.withOpacity(_dark ? 0.1 : 0.07),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: color.withOpacity(0.2), width: 1),
+                  border: Border.all(color: color.withOpacity(0.2), width: 1),
                 ),
                 child: Row(children: [
                   Icon(Icons.account_balance_wallet_rounded,
                       color: color, size: 18),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('My Investment',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.black45,
-                                  fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 2),
-                          Text(
-                            'TZS ${_fmt(portfolioValue)}',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                color: color),
-                          ),
-                        ]),
-                  ),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(s.myInvestment, style: TextStyle(fontSize: 10,
+                            color: _txtSec, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 2),
+                        Text('TZS ${_fmt(portfolioValue)}',
+                            style: TextStyle(fontSize: 16,
+                                fontWeight: FontWeight.w900, color: color)),
+                      ])),
                   Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    const Text('Units Held',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.black45,
-                            fontWeight: FontWeight.w500)),
+                    Text(s.unitsHeld, style: TextStyle(fontSize: 10,
+                        color: _txtSec, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 2),
                     Text(_fmt(investorUnits),
-                        style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black87)),
+                        style: TextStyle(fontSize: 14,
+                            fontWeight: FontWeight.w800, color: _txtPrim)),
                   ]),
                 ]),
               ),
               const SizedBox(height: 12),
             ] else ...[
-              // No investment yet
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.06),
+                  color: _dark
+                      ? Colors.grey.withOpacity(0.08)
+                      : Colors.grey.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: Colors.grey.withOpacity(0.2), width: 1),
+                  border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
                 ),
                 child: Row(children: [
-                  Icon(Icons.info_outline,
-                      size: 14, color: Colors.grey.shade500),
+                  Icon(Icons.info_outline, size: 14, color: _txtSec),
                   const SizedBox(width: 8),
-                  Text('No investment in this fund yet',
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade500)),
+                  Text(s.noInvestment,
+                      style: TextStyle(fontSize: 12, color: _txtSec)),
                 ]),
               ),
             ],
 
             // Key stats grid
             Row(children: [
-              _fundStat('NAV', 'TZS ${_fmt(nav)}', Colors.teal.shade700),
+              _fundStat(s.nav,     'TZS ${_fmt(nav)}', _teal),
               _statDivider(),
-              _fundStat('NAV Date', fund['navDate'] as String, Colors.black54),
+              _fundStat(s.navDate, fund['navDate'] as String, _txtSec),
               _statDivider(),
-              _fundStat(
-                  'Min. Invest',
+              _fundStat(s.minInvest,
                   'TZS ${_shortVal((fund['minInvestment'] as num).toDouble())}',
-                  Colors.green.shade700),
+                  _green),
             ]),
-
             const SizedBox(height: 10),
-
             Row(children: [
-              _fundStat(
-                  'Sub. Min',
+              _fundStat(s.subMin,
                   'TZS ${_shortVal((fund['subsequentMinInvestment'] as num).toDouble())}',
-                  Colors.orange.shade700),
+                  Colors.orange.shade600),
               _statDivider(),
-              _fundStat(
-                  'Total Units',
-                  _shortVal((fund['totalUnitsAllInvestors'] as num)
-                      .toDouble()),
-                  Colors.purple.shade600),
+              _fundStat(s.totalUnits,
+                  _shortVal((fund['totalUnitsAllInvestors'] as num).toDouble()),
+                  Colors.purple.shade400),
               _statDivider(),
-              _fundStat('Issuer', fund['issuer'] as String, Colors.black45),
+              _fundStat(s.issuer, fund['issuer'] as String, _txtHint),
             ]),
           ]),
         ),
@@ -903,31 +843,21 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     );
   }
 
-  Widget _fundStat(String label, String value, Color valueColor) =>
-      Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 9,
-                    color: Colors.black38,
-                    fontWeight: FontWeight.w500)),
-            const SizedBox(height: 4),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: valueColor),
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center),
-          ]),
-        ),
-      );
+  Widget _fundStat(String label, String value, Color valueColor) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+          color: _statItem, borderRadius: BorderRadius.circular(10)),
+      child: Column(children: [
+        Text(label, style: TextStyle(fontSize: 9, color: _txtHint,
+            fontWeight: FontWeight.w500)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(fontSize: 11,
+            fontWeight: FontWeight.w700, color: valueColor),
+            overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+      ]),
+    ),
+  );
 
   Widget _statDivider() => const SizedBox(width: 6);
 }
