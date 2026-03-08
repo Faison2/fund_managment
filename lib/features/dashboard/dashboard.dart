@@ -3,9 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../funds/view/fund.dart';
-import '../market_watch/market_watch.dart';
 import '../portifolio/portfolio.dart';
 import '../profile/profile.dart';
+import '../trade/dashboad/trade_dashboad.dart';
 import 'drawer.dart';
 import 'homescreen.dart';
 
@@ -178,7 +178,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _openMarketWatch() {
     Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const MarketWatchScreen(),
+        pageBuilder: (_, __, ___) => const TradeDashboard(),
         transitionsBuilder: (_, animation, __, child) {
           return SlideTransition(
             position: Tween<Offset>(
@@ -304,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
           icon: const Icon(Icons.candlestick_chart_outlined, size: 20),
           label: const Text(
-            'Market Watch',
+            'DSE TREADEs',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 13,

@@ -47,7 +47,6 @@ class _TradeDashboardState extends State<TradeDashboard>
     HapticFeedback.selectionClick();
     if (_fabExpanded) _toggleFab();
 
-    // Indices 1, 3, 4 navigate to separate pages
     switch (index) {
       case 1:
         _push(const MarketsPage());
@@ -75,8 +74,7 @@ class _TradeDashboardState extends State<TradeDashboard>
             opacity: curved,
             child: SlideTransition(
               position: Tween<Offset>(
-                  begin: const Offset(0.05, 0),
-                  end: Offset.zero)
+                  begin: const Offset(0.05, 0), end: Offset.zero)
                   .animate(curved),
               child: child,
             ),
@@ -98,8 +96,8 @@ class _TradeDashboardState extends State<TradeDashboard>
         backgroundColor: TradeColors.bg,
         extendBody: true,
         drawer: _TradeDrawer(onSwitchToFms: () {
-          Navigator.pop(context); // close drawer
-          Navigator.pop(context); // go back to FMS
+          Navigator.pop(context);
+          Navigator.pop(context);
         }),
         body: FadeTransition(
           opacity: _pageFade,
@@ -123,6 +121,7 @@ class _TradeDashboardState extends State<TradeDashboard>
           child: Column(
             children: [
               _buildPortfolioCard(),
+              _buildBuySellButtons(), // ← NEW
               const SizedBox(height: 24),
               _buildPerformanceSection(),
               const SizedBox(height: 24),
@@ -230,7 +229,6 @@ class _TradeDashboardState extends State<TradeDashboard>
         ),
         child: Stack(
           children: [
-            // Background glow
             Positioned(
               top: -30,
               right: -30,
@@ -280,11 +278,11 @@ class _TradeDashboardState extends State<TradeDashboard>
                   ]),
                   const SizedBox(height: 20),
                   Row(children: [
-                    _miniStat('Day P&L', '+TZS 48,200',
-                        TradeColors.green),
+                    _miniStat(
+                        'Day P&L', '+TZS 48,200', TradeColors.green),
                     _vDivider(),
-                    _miniStat('Invested', 'TZS 18.5M',
-                        TradeColors.txtSec),
+                    _miniStat(
+                        'Invested', 'TZS 18.5M', TradeColors.txtSec),
                     _vDivider(),
                     _miniStat('Returns', '+14.6%', TradeColors.gold),
                   ]),
@@ -334,9 +332,101 @@ class _TradeDashboardState extends State<TradeDashboard>
   }
 
   Widget _vDivider() => Container(
-      height: 32,
-      width: 1,
-      color: Colors.white.withOpacity(0.08));
+      height: 32, width: 1, color: Colors.white.withOpacity(0.08));
+
+  // ── Buy / Sell buttons ─────────────────────────────────────────────────────
+  Widget _buildBuySellButtons() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Row(
+        children: [
+          // BUY
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                showTradeSheet(context, kStocks.first, isBuy: true);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00C896), Color(0xFF00A878)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: TradeColors.green.withOpacity(0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.trending_up_rounded,
+                        color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text('Buy',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // SELL
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                showTradeSheet(context, kStocks.first, isBuy: false);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF4D6A), Color(0xFFE0003C)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: TradeColors.red.withOpacity(0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.trending_down_rounded,
+                        color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text('Sell',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // ── Performance chart section ──────────────────────────────────────────────
   Widget _buildPerformanceSection() {
@@ -378,8 +468,8 @@ class _TradeDashboardState extends State<TradeDashboard>
                 SizedBox(
                   width: 120,
                   height: 120,
-                  child: CustomPaint(
-                      painter: DonutPainter(stocks: kStocks)),
+                  child:
+                  CustomPaint(painter: DonutPainter(stocks: kStocks)),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
@@ -394,8 +484,7 @@ class _TradeDashboardState extends State<TradeDashboard>
                             height: 10,
                             decoration: BoxDecoration(
                               color: s.color,
-                              borderRadius:
-                              BorderRadius.circular(3),
+                              borderRadius: BorderRadius.circular(3),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -404,15 +493,13 @@ class _TradeDashboardState extends State<TradeDashboard>
                                 style: const TextStyle(
                                     color: TradeColors.txtPrim,
                                     fontSize: 12,
-                                    fontWeight:
-                                    FontWeight.w600)),
+                                    fontWeight: FontWeight.w600)),
                           ),
                           Text('${s.allocation}%',
                               style: TextStyle(
                                   color: s.color,
                                   fontSize: 12,
-                                  fontWeight:
-                                  FontWeight.w700)),
+                                  fontWeight: FontWeight.w700)),
                         ]),
                       );
                     }).toList(),
@@ -426,7 +513,7 @@ class _TradeDashboardState extends State<TradeDashboard>
     );
   }
 
-  // ── Quick holdings preview (top 3 + See All button) ───────────────────────
+  // ── Quick holdings preview ─────────────────────────────────────────────────
   Widget _buildQuickHoldings() {
     return Column(
       children: [
@@ -452,12 +539,10 @@ class _TradeDashboardState extends State<TradeDashboard>
             ),
           ),
         ),
-        // Show top 3 only
         ...kStocks.take(3).map((s) => StockTile(
           stock: s,
           onTap: () => showTradeSheet(context, s),
         )),
-        // See all button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           child: GestureDetector(
@@ -507,8 +592,7 @@ class _TradeDashboardState extends State<TradeDashboard>
                 offset: Offset(0, -80 * t),
                 onTap: () {
                   _toggleFab();
-                  showTradeSheet(context, kStocks.first,
-                      isBuy: false);
+                  showTradeSheet(context, kStocks.first, isBuy: false);
                 },
               ),
               _fabAction(
@@ -518,8 +602,7 @@ class _TradeDashboardState extends State<TradeDashboard>
                 offset: Offset(0, -40 * t),
                 onTap: () {
                   _toggleFab();
-                  showTradeSheet(context, kStocks.first,
-                      isBuy: true);
+                  showTradeSheet(context, kStocks.first, isBuy: true);
                 },
               ),
             ],
@@ -582,8 +665,7 @@ class _TradeDashboardState extends State<TradeDashboard>
               decoration: BoxDecoration(
                 color: TradeColors.surface,
                 borderRadius: BorderRadius.circular(8),
-                border:
-                Border.all(color: color.withOpacity(0.3)),
+                border: Border.all(color: color.withOpacity(0.3)),
               ),
               child: Text(label,
                   style: TextStyle(
@@ -628,7 +710,7 @@ class _TradeDashboardState extends State<TradeDashboard>
           children: [
             _navItem(0, Icons.pie_chart_rounded, 'Portfolio'),
             _navItem(1, Icons.bar_chart_rounded, 'Markets'),
-            const SizedBox(width: 60), // FAB gap
+            const SizedBox(width: 60),
             _navItem(3, Icons.star_rounded, 'Watchlist'),
             _navItem(4, Icons.person_rounded, 'Profile'),
           ],
@@ -643,8 +725,8 @@ class _TradeDashboardState extends State<TradeDashboard>
       onTap: () => _onNavTap(idx),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(
-            horizontal: 12, vertical: 6),
+        padding:
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: sel
               ? TradeColors.teal.withOpacity(0.1)
@@ -667,9 +749,8 @@ class _TradeDashboardState extends State<TradeDashboard>
                     ? TradeColors.teal
                     : TradeColors.txtSec.withOpacity(0.6),
                 fontSize: 10,
-                fontWeight: sel
-                    ? FontWeight.w700
-                    : FontWeight.w500,
+                fontWeight:
+                sel ? FontWeight.w700 : FontWeight.w500,
               ),
               child: Text(label),
             ),
@@ -681,7 +762,7 @@ class _TradeDashboardState extends State<TradeDashboard>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PERIOD CHART (self-contained so dashboard stays clean)
+// PERIOD CHART
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PeriodChart extends StatefulWidget {
@@ -693,8 +774,9 @@ class _PeriodChart extends StatefulWidget {
 }
 
 class _PeriodChartState extends State<_PeriodChart> {
-  int _period = 1; // 0=1W, 1=1M, 2=3M, 3=6M
+  int _period = 1;
   static const _periods = ['1W', '1M', '3M', '6M'];
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -705,7 +787,6 @@ class _PeriodChartState extends State<_PeriodChart> {
       ),
       child: Column(
         children: [
-          // Period tabs
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Row(
@@ -730,9 +811,8 @@ class _PeriodChartState extends State<_PeriodChart> {
                     ),
                     child: Text(_periods[i],
                         style: TextStyle(
-                            color: sel
-                                ? Colors.white
-                                : TradeColors.txtSec,
+                            color:
+                            sel ? Colors.white : TradeColors.txtSec,
                             fontSize: 12,
                             fontWeight: sel
                                 ? FontWeight.w700
@@ -813,13 +893,8 @@ class _TradeDrawerState extends State<_TradeDrawer>
       ),
       child: Column(
         children: [
-          // ── Header ───────────────────────────────────────────────────
           _buildHeader(),
-
-          // ── Environment toggle ───────────────────────────────────────
           _buildEnvToggle(),
-
-          // ── Menu items ───────────────────────────────────────────────
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -841,11 +916,8 @@ class _TradeDrawerState extends State<_TradeDrawer>
                   delay: 50,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const MarketsPage()),
-                    );
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const MarketsPage()));
                   },
                 ),
                 _item(
@@ -855,11 +927,9 @@ class _TradeDrawerState extends State<_TradeDrawer>
                   delay: 100,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const WatchlistPage()),
-                    );
+                    Navigator.push(context,
+                        MaterialPageRoute(
+                            builder: (_) => const WatchlistPage()));
                   },
                 ),
                 _item(
@@ -869,11 +939,9 @@ class _TradeDrawerState extends State<_TradeDrawer>
                   delay: 150,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const HoldingsPage()),
-                    );
+                    Navigator.push(context,
+                        MaterialPageRoute(
+                            builder: (_) => const HoldingsPage()));
                   },
                 ),
                 _item(
@@ -883,18 +951,14 @@ class _TradeDrawerState extends State<_TradeDrawer>
                   delay: 200,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const ProfilePage()),
-                    );
+                    Navigator.push(context,
+                        MaterialPageRoute(
+                            builder: (_) => const ProfilePage()));
                   },
                 ),
               ],
             ),
           ),
-
-          // ── Switch to FMS button ─────────────────────────────────────
           _buildSwitchToFms(),
           const SizedBox(height: 20),
         ],
@@ -902,7 +966,6 @@ class _TradeDrawerState extends State<_TradeDrawer>
     );
   }
 
-  // ── Header ─────────────────────────────────────────────────────────────────
   Widget _buildHeader() {
     return SlideTransition(
       position: _headerSlide,
@@ -932,7 +995,6 @@ class _TradeDrawerState extends State<_TradeDrawer>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Avatar with glow
                   Stack(
                     children: [
                       Container(
@@ -941,10 +1003,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: const LinearGradient(
-                            colors: [
-                              TradeColors.teal,
-                              Color(0xFF0080FF),
-                            ],
+                            colors: [TradeColors.teal, Color(0xFF0080FF)],
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -972,8 +1031,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
                             color: TradeColors.green,
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: const Color(0xFF003D55),
-                                width: 2),
+                                color: const Color(0xFF003D55), width: 2),
                           ),
                           child: const Icon(Icons.check,
                               size: 10, color: Colors.white),
@@ -995,7 +1053,6 @@ class _TradeDrawerState extends State<_TradeDrawer>
                           fontSize: 13,
                           fontWeight: FontWeight.w500)),
                   const SizedBox(height: 10),
-                  // Portfolio value chip
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
@@ -1003,16 +1060,15 @@ class _TradeDrawerState extends State<_TradeDrawer>
                       color: Colors.white.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.15),
-                          width: 1),
+                          color: Colors.white.withOpacity(0.15), width: 1),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.account_balance_wallet_outlined,
+                      children: const [
+                        Icon(Icons.account_balance_wallet_outlined,
                             size: 12, color: TradeColors.teal),
-                        const SizedBox(width: 5),
-                        const Text('TZS 21,200,000',
+                        SizedBox(width: 5),
+                        Text('TZS 21,200,000',
                             style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 11,
@@ -1029,7 +1085,6 @@ class _TradeDrawerState extends State<_TradeDrawer>
     );
   }
 
-  // ── Environment toggle (Trade active) ─────────────────────────────────────
   Widget _buildEnvToggle() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
@@ -1063,11 +1118,11 @@ class _TradeDrawerState extends State<_TradeDrawer>
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.06),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border:
+              Border.all(color: Colors.white.withOpacity(0.08)),
             ),
             child: Stack(
               children: [
-                // Pill locked on Trade side
                 Align(
                   alignment: Alignment.centerRight,
                   child: FractionallySizedBox(
@@ -1091,7 +1146,6 @@ class _TradeDrawerState extends State<_TradeDrawer>
                     ),
                   ),
                 ),
-                // FMS tap → switch
                 Row(
                   children: [
                     Expanded(
@@ -1105,8 +1159,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
                             mainAxisSize: MainAxisSize.min,
                             children: const [
                               Icon(Icons.account_balance_outlined,
-                                  size: 14,
-                                  color: TradeColors.txtSec),
+                                  size: 14, color: TradeColors.txtSec),
                               SizedBox(width: 5),
                               Text('FMS',
                                   style: TextStyle(
@@ -1147,7 +1200,6 @@ class _TradeDrawerState extends State<_TradeDrawer>
     );
   }
 
-  // ── Section label ──────────────────────────────────────────────────────────
   Widget _sectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
@@ -1173,7 +1225,6 @@ class _TradeDrawerState extends State<_TradeDrawer>
     );
   }
 
-  // ── Menu item ──────────────────────────────────────────────────────────────
   Widget _item({
     required IconData icon,
     required String label,
@@ -1235,7 +1286,6 @@ class _TradeDrawerState extends State<_TradeDrawer>
     );
   }
 
-  // ── Switch to FMS ──────────────────────────────────────────────────────────
   Widget _buildSwitchToFms() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1277,7 +1327,8 @@ class _TradeDrawerState extends State<_TradeDrawer>
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF2E7D99).withOpacity(0.35),
+                        color:
+                        const Color(0xFF2E7D99).withOpacity(0.35),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -1299,8 +1350,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
                       SizedBox(height: 2),
                       Text('Fund Management System',
                           style: TextStyle(
-                              color: TradeColors.txtSec,
-                              fontSize: 11)),
+                              color: TradeColors.txtSec, fontSize: 11)),
                     ],
                   ),
                 ),
