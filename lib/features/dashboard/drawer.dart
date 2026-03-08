@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +7,7 @@ import 'package:tsl/features/statement /client_statement.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../auth/login/view/login.dart';
+import '../contact_us/contact.dart';
 import '../payments/payment_confamation.dart';
 import '../payments/view/payment.dart';
 import '../trade/dashboad/trade_dashboad.dart';
@@ -28,7 +28,7 @@ class AppDrawer extends StatefulWidget {
 class _AppDrawerState extends State<AppDrawer>
     with SingleTickerProviderStateMixin {
   String _userName = '', _cdsNumber = '';
-  bool _isTradeMode = false; // ← environment flag
+  bool _isTradeMode = false;
 
   late AnimationController _headerAnim;
   late Animation<double> _headerFade;
@@ -72,7 +72,6 @@ class _AppDrawerState extends State<AppDrawer>
   Color get _drawerBg =>
       _dark ? const Color(0xFF0F1F10) : Colors.white;
 
-  /// Active accent shifts based on mode: teal for FMS, gold-orange for Trade
   Color get _accent => _isTradeMode
       ? (_dark ? const Color(0xFFFFB347) : const Color(0xFFE67E22))
       : (_dark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D99));
@@ -265,13 +264,8 @@ class _AppDrawerState extends State<AppDrawer>
       ),
       child: Column(
         children: [
-          // ── Hero header ──────────────────────────────────────────────────
           _buildHeader(s),
-
-          // ── Environment toggle ───────────────────────────────────────────
           _buildEnvToggle(),
-
-          // ── Menu ────────────────────────────────────────────────────────
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -342,11 +336,23 @@ class _AppDrawerState extends State<AppDrawer>
                   delay: 200,
                   onTap: () => _showAboutDialog(context),
                 ),
+                // ── Contact Us ───────────────────────────────────────────
+                _item(
+                  icon: Icons.contact_support_outlined,
+                  label: s.contactUs,
+                  color: const Color(0xFF4CAF50),
+                  delay: 250,
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ContactUsPage()));
+                  },
+                ),
               ],
             ),
           ),
-
-          // ── Logout button ────────────────────────────────────────────────
           _buildLogout(s),
           const SizedBox(height: 16),
         ],
@@ -401,7 +407,6 @@ class _AppDrawerState extends State<AppDrawer>
             ),
             child: Stack(
               children: [
-                // Sliding pill
                 AnimatedAlign(
                   duration: const Duration(milliseconds: 280),
                   curve: Curves.easeInOutCubic,
@@ -439,7 +444,6 @@ class _AppDrawerState extends State<AppDrawer>
                     ),
                   ),
                 ),
-                // Labels row
                 Row(
                   children: [
                     Expanded(
@@ -855,6 +859,7 @@ class _DS {
       clientStatement,
       settings,
       about,
+      contactUs, // ← NEW
       logout,
       logoutTitle,
       logoutMsg,
@@ -870,6 +875,7 @@ class _DS {
     required this.clientStatement,
     required this.settings,
     required this.about,
+    required this.contactUs, // ← NEW
     required this.logout,
     required this.logoutTitle,
     required this.logoutMsg,
@@ -888,6 +894,7 @@ const _en = _DS(
   clientStatement: 'Client Statement',
   settings: 'Settings',
   about: 'About',
+  contactUs: 'Contact Us', // ← NEW
   logout: 'Logout',
   logoutTitle: 'Logout',
   logoutMsg: 'Are you sure you want to logout?',
@@ -905,6 +912,7 @@ const _sw = _DS(
   clientStatement: 'Taarifa ya Mteja',
   settings: 'Mipangilio',
   about: 'Kuhusu',
+  contactUs: 'Wasiliana Nasi', // ← NEW
   logout: 'Toka',
   logoutTitle: 'Toka?',
   logoutMsg: 'Una uhakika unataka kutoka?',
