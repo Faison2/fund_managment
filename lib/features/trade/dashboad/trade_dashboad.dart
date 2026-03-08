@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import '../holdings/holding.dart';
 import '../market_watch/market_watch.dart';
 import '../markets /markets.dart';
-import '../profile/profile.dart';
+import '../profile/trade_profile.dart';
 import '../trade/trade_shared.dart';
 
 class TradeDashboard extends StatefulWidget {
