@@ -9,6 +9,7 @@ import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../deposits/view/deposits.dart';
 import '../funds/view/fund.dart';
+import '../sma/sma.dart';
 import '../statement /client_statement.dart';
 import '../withdrawal/view/withdrawal_page.dart';
 
@@ -467,56 +468,79 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () => setState(() => _isSMAExpanded = !_isSMAExpanded),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SMAPage()),
+            );
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: headerBg,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: border, width: 1.2),
-              boxShadow: [BoxShadow(
+              boxShadow: [
+                BoxShadow(
                   color: Colors.black.withOpacity(dark ? 0.2 : 0.05),
-                  blurRadius: 10, offset: const Offset(0, 3))],
-            ),
-            child: Row(children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: green.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.account_tree_outlined, color: green, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(s.smaTitle,
-                      style: TextStyle(fontSize: 13,
-                          fontWeight: FontWeight.w800, color: txtP)),
-                  Text(s.smaPortfolio,
-                      style: TextStyle(fontSize: 11, color: txtS)),
-                ]),
-              ),
-              if (!_isLoadingSMA && _smaPortfolios.isNotEmpty) ...[
-                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text(s.totalValue,
-                      style: TextStyle(fontSize: 9, color: txtH)),
-                  Text(
-                    'TZS ${_fmt(_smaPortfolios.fold(0.0, (sum, p) => sum + ((p['portfolioValue'] as num?)?.toDouble() ?? 0.0)))}',
-                    style: TextStyle(fontSize: 12,
-                        fontWeight: FontWeight.w800, color: green),
-                  ),
-                ]),
-                const SizedBox(width: 10),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                )
               ],
-              AnimatedRotation(
-                turns: _isSMAExpanded ? 0.5 : 0,
-                duration: const Duration(milliseconds: 250),
-                child: Icon(Icons.keyboard_arrow_down_rounded,
-                    color: txtS, size: 22),
-              ),
-            ]),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: green.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.account_tree_outlined, color: green, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.smaTitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: txtP,
+                        ),
+                      ),
+                      Text(
+                        s.smaPortfolio,
+                        style: TextStyle(fontSize: 11, color: txtS),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!_isLoadingSMA && _smaPortfolios.isNotEmpty) ...[
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        s.totalValue,
+                        style: TextStyle(fontSize: 9, color: txtH),
+                      ),
+                      Text(
+                        'TZS ${_fmt(_smaPortfolios.fold(0.0, (sum, p) => sum + ((p['portfolioValue'] as num?)?.toDouble() ?? 0.0)))}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: green,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Icon(Icons.arrow_forward_ios, color: txtS, size: 16),
+              ],
+            ),
           ),
         ),
         AnimatedCrossFade(
