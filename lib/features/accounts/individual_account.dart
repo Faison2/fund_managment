@@ -109,7 +109,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   // FIX #6 – only Individual / Minor
   String _selectedAccountType = 'Individual';
   String _selectedBankType = 'Local';
-  String _selectedAmountCurrency = 'USD';
+  String _selectedAmountCurrency = 'TZS';
   String? _cdsNumber;
 
   // FIX #1 – Nationality dropdown
@@ -471,7 +471,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     'Direct Fund Transfer',
   ];
   final List<String> _bankTypes = ['Local', 'Savings', 'Current', 'Corporate'];
-  final List<String> _currencies = ['USD', 'TZS', 'ZWL', 'EUR', 'GBP'];
+  final List<String> _currencies = ['TZS', 'USD', 'ZWL', 'EUR', 'GBP'];
 
   // FIX #7 – Removed "Investment Preferences" step entirely
   final List<Map<String, dynamic>> _steps = [
@@ -1168,6 +1168,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                               _bankNameController.text =
                                   bank.bankName;
                               _errors.remove('bankName');
+                              // Auto-populate SWIFT/BIC code when bank selected
+                              try {
+                                _swiftCodeController.text = bank.bicCode ?? '';
+                              } catch (e) {
+                                _swiftCodeController.text = '';
+                              }
                             });
                             Navigator.pop(context);
                           },
@@ -2727,3 +2733,4 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     super.dispose();
   }
 }
+

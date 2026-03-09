@@ -4,13 +4,15 @@ import 'dart:convert';
 class Bank {
   final String bankName;
   final String bankCode;
+  final String bicCode; // BIC / SWIFT code provided by API
 
-  Bank({required this.bankName, required this.bankCode});
+  Bank({required this.bankName, required this.bankCode, required this.bicCode});
 
   factory Bank.fromJson(Map<String, dynamic> json) {
     return Bank(
       bankName: json['bankName'] ?? '', // Changed from 'BankName' to 'bankName'
       bankCode: json['bankCode'] ?? '', // Changed from 'BankCode' to 'bankCode'
+      bicCode: json['bicCode'] ?? '', // New: parse 'bicCode' field
     );
   }
 }
