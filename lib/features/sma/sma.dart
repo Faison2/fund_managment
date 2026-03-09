@@ -14,7 +14,9 @@ class _SS {
   final String title, subtitle, totalPortfolio, cashBalance,
       investments, viewAll, viewLess, loading, errorRetry,
       noInvestments, amount, date, txnId, invested, currency,
-      performance, summaryHeader, activeInvestments;
+      performance, summaryHeader, activeInvestments,
+      cashTransactions, tabInvestments, tabCash, creditTxn, debitTxn,
+      totalCredits, totalDebits, netFlow;
   const _SS({
     required this.title,            required this.subtitle,
     required this.totalPortfolio,   required this.cashBalance,
@@ -25,6 +27,10 @@ class _SS {
     required this.txnId,            required this.invested,
     required this.currency,         required this.performance,
     required this.summaryHeader,    required this.activeInvestments,
+    required this.cashTransactions, required this.tabInvestments,
+    required this.tabCash,          required this.creditTxn,
+    required this.debitTxn,         required this.totalCredits,
+    required this.totalDebits,      required this.netFlow,
   });
 }
 
@@ -47,6 +53,14 @@ const _ssEn = _SS(
   performance:       'Portfolio Performance',
   summaryHeader:     'Account Summary',
   activeInvestments: 'Active Investments',
+  cashTransactions:  'Cash Transactions',
+  tabInvestments:    'Investments',
+  tabCash:           'Cash',
+  creditTxn:         'Credit',
+  debitTxn:          'Debit',
+  totalCredits:      'Total Credits',
+  totalDebits:       'Total Debits',
+  netFlow:           'Net Flow',
 );
 
 const _ssSw = _SS(
@@ -68,6 +82,14 @@ const _ssSw = _SS(
   performance:       'Utendaji wa Mkoba',
   summaryHeader:     'Muhtasari wa Akaunti',
   activeInvestments: 'Uwekezaji Unaoendelea',
+  cashTransactions:  'Miamala ya Fedha',
+  tabInvestments:    'Uwekezaji',
+  tabCash:           'Fedha',
+  creditTxn:         'Ingizo',
+  debitTxn:          'Toa',
+  totalCredits:      'Jumla ya Ingizo',
+  totalDebits:       'Jumla ya Kutoa',
+  netFlow:           'Mtiririko Halisi',
 );
 
 // ── SMA data models ───────────────────────────────────────────────────────────
@@ -97,6 +119,32 @@ class _SMAInvestment {
   });
 }
 
+// ── Cash transaction models ───────────────────────────────────────────────────
+class _CashData {
+  final String cdsNumber;
+  final double cashBalance;
+  final List<_CashTxn> transactions;
+  const _CashData({
+    required this.cdsNumber,
+    required this.cashBalance,
+    required this.transactions,
+  });
+}
+
+class _CashTxn {
+  final String description;
+  final DateTime date;
+  final String txnId;
+  final double amount;
+  bool get isCredit => amount >= 0;
+  const _CashTxn({
+    required this.description,
+    required this.date,
+    required this.txnId,
+    required this.amount,
+  });
+}
+
 // ── SMA Page ──────────────────────────────────────────────────────────────────
 class SMAPage extends StatefulWidget {
   const SMAPage({Key? key}) : super(key: key);
@@ -105,12 +153,17 @@ class SMAPage extends StatefulWidget {
   State<SMAPage> createState() => _SMAPageState();
 }
 
-class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
+class _SMAPageState extends State<SMAPage>
+    with SingleTickerProviderStateMixin {
   _SMAData? _data;
-  bool   _loading  = true;
+  _CashData? _cashData;
+
+  bool   _loading    = true;
   String? _error;
-  bool   _showAll  = false;
-  String _cdsNumber = '';
+  bool   _showAll    = false;
+  bool   _showAllCash = false;
+  String _cdsNumber  = '';
+  int    _tabIndex   = 0; // 0 = Investments, 1 = Cash
 
   late AnimationController _entryCtrl;
   late Animation<double>   _entryFade;
@@ -143,48 +196,93 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
       final prefs = await SharedPreferences.getInstance();
       _cdsNumber  = prefs.getString('cdsNumber') ?? 'FC00318';
 
-      final response = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetSMAInvestments'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'APIUsername': 'User2',
-          'APIPassword': 'CBZ1234#2',
-          'cdsNumber':   _cdsNumber,
-        }),
-      ).timeout(const Duration(seconds: 15));
+      // ── Fire both requests in parallel ────────────────────────────────────
+      final results = await Future.wait([
+        http.post(
+          Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetSMAInvestments'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'APIUsername': 'User2',
+            'APIPassword': 'CBZ1234#2',
+            'cdsNumber':   _cdsNumber,
+          }),
+        ).timeout(const Duration(seconds: 15)),
+        http.post(
+          Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetSMACashTransactions'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'APIUsername': 'User2',
+            'APIPassword': 'CBZ1234#2',
+            'cdsNumber':   _cdsNumber,
+          }),
+        ).timeout(const Duration(seconds: 15)),
+      ]);
 
-      final json = jsonDecode(response.body);
-      if (response.statusCode == 200 && json['status'] == 'success') {
-        final d = json['data'] as Map<String, dynamic>;
-        final List<dynamic> rawInv = (d['smaInvestments'] as List<dynamic>?) ?? [];
-        final investments = rawInv.map((j) {
-          DateTime dt;
-          try { dt = DateTime.parse(j['TrxnDate'] as String); }
-          catch (_) { dt = DateTime.now(); }
-          return _SMAInvestment(
-            description: j['Description'] as String? ?? '',
-            date:        dt,
-            txnId:       j['TrxnID']?.toString() ?? '',
-            amount:      (j['Amount'] as num?)?.toDouble() ?? 0.0,
-          );
-        }).toList();
+      final invResp  = results[0];
+      final cashResp = results[1];
 
-        setState(() {
-          _data = _SMAData(
-            cdsNumber:          d['cdsNumber'] as String? ?? _cdsNumber,
-            cashBal:            (d['cashBal']             as num?)?.toDouble() ?? 0.0,
-            totalPortfolioValue:(d['totalPortfolioValue'] as num?)?.toDouble() ?? 0.0,
-            investments:        investments,
+      // ── Parse investments ─────────────────────────────────────────────────
+      _SMAData? parsedInv;
+      if (invResp.statusCode == 200) {
+        final j = jsonDecode(invResp.body);
+        if (j['status'] == 'success') {
+          final d = j['data'] as Map<String, dynamic>;
+          final rawInv = (d['smaInvestments'] as List<dynamic>?) ?? [];
+          parsedInv = _SMAData(
+            cdsNumber:           d['cdsNumber'] as String? ?? _cdsNumber,
+            cashBal:             (d['cashBal']             as num?)?.toDouble() ?? 0.0,
+            totalPortfolioValue: (d['totalPortfolioValue'] as num?)?.toDouble() ?? 0.0,
+            investments: rawInv.map((item) {
+              DateTime dt;
+              try { dt = DateTime.parse(item['TrxnDate'] as String); }
+              catch (_) { dt = DateTime.now(); }
+              return _SMAInvestment(
+                description: item['Description'] as String? ?? '',
+                date:        dt,
+                txnId:       item['TrxnID']?.toString() ?? '',
+                amount:      (item['Amount'] as num?)?.toDouble() ?? 0.0,
+              );
+            }).toList(),
           );
-          _loading = false;
-        });
-        _entryCtrl.forward();
-      } else {
-        setState(() {
-          _error   = json['statusDesc'] ?? 'Failed to load';
-          _loading = false;
-        });
+        }
       }
+
+      // ── Parse cash transactions ───────────────────────────────────────────
+      _CashData? parsedCash;
+      if (cashResp.statusCode == 200) {
+        final j = jsonDecode(cashResp.body);
+        if (j['status'] == 'success') {
+          final d = j['data'] as Map<String, dynamic>;
+          final rawTxns = (d['smaInvestments'] as List<dynamic>?) ?? [];
+          parsedCash = _CashData(
+            cdsNumber:   d['cdsNumber'] as String? ?? _cdsNumber,
+            cashBalance: (d['CashBalance'] as num?)?.toDouble() ?? 0.0,
+            transactions: rawTxns.map((item) {
+              DateTime dt;
+              try { dt = DateTime.parse(item['TrxnDate'] as String); }
+              catch (_) { dt = DateTime.now(); }
+              return _CashTxn(
+                description: item['Description'] as String? ?? '',
+                date:        dt,
+                txnId:       item['TrxnID']?.toString() ?? '',
+                amount:      (item['Amount'] as num?)?.toDouble() ?? 0.0,
+              );
+            }).toList(),
+          );
+        }
+      }
+
+      if (parsedInv == null && parsedCash == null) {
+        setState(() { _error = 'Failed to load data'; _loading = false; });
+        return;
+      }
+
+      setState(() {
+        _data     = parsedInv;
+        _cashData = parsedCash;
+        _loading  = false;
+      });
+      _entryCtrl.forward(from: 0);
     } catch (e) {
       setState(() { _error = 'Connection error. Please try again.'; _loading = false; });
     }
@@ -192,34 +290,34 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   String _fmt(double v, {int decimals = 2}) {
-    final parts = v.toStringAsFixed(decimals).split('.');
-    final int = parts[0].replaceAllMapped(
+    final parts = v.abs().toStringAsFixed(decimals).split('.');
+    final intPart = parts[0].replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},');
-    return decimals > 0 ? '$int.${parts[1]}' : int;
+    final formatted = decimals > 0 ? '$intPart.${parts[1]}' : intPart;
+    return v < 0 ? '-$formatted' : formatted;
   }
 
   String _shortAmt(double v) {
-    if (v.abs() >= 1e9) return '${(v / 1e9).toStringAsFixed(2)}B';
-    if (v.abs() >= 1e6) return '${(v / 1e6).toStringAsFixed(1)}M';
-    if (v.abs() >= 1e3) return '${(v / 1e3).toStringAsFixed(0)}K';
-    return v.toStringAsFixed(0);
+    final abs = v.abs();
+    String s;
+    if (abs >= 1e9)      s = '${(abs / 1e9).toStringAsFixed(2)}B';
+    else if (abs >= 1e6) s = '${(abs / 1e6).toStringAsFixed(1)}M';
+    else if (abs >= 1e3) s = '${(abs / 1e3).toStringAsFixed(0)}K';
+    else                 s = abs.toStringAsFixed(0);
+    return v < 0 ? '-$s' : s;
   }
 
-  /// Parse bank name from description e.g. "AZANIA @ 15.00% P.A" → "AZANIA"
   String _bankName(String desc) {
     final parts = desc.trim().split(RegExp(r'\s+@|\s+%|\s+P\.A'));
     return parts.first.trim();
   }
 
-  /// Parse rate from description e.g. "AZANIA @ 15.00% P.A" → "15.00%"
   String _rate(String desc) {
     final match = RegExp(r'(\d+\.\d+)%').firstMatch(desc);
     return match != null ? '${match.group(1)}%' : '';
   }
 
-  /// Parse maturity date if present e.g. "May 18, 2026" → "18 May 2026"
   String? _maturity(String desc) {
-    // Look for pattern like "May 18, 2026" or "February 16, 2026"
     final match = RegExp(
       r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})',
     ).firstMatch(desc);
@@ -239,6 +337,22 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
     if (b.contains('nmb'))    return const Color(0xFF2E7D32);
     if (b.contains('stb'))    return const Color(0xFFE65100);
     return const Color(0xFF37474F);
+  }
+
+  /// Pick icon + colour for cash transaction description
+  _TxnMeta _txnMeta(String desc, bool isCredit) {
+    final d = desc.toLowerCase();
+    if (d.contains('deposit'))            return _TxnMeta(Icons.arrow_downward_rounded, const Color(0xFF00897B));
+    if (d.contains('redemption in'))      return _TxnMeta(Icons.swap_horiz_rounded,     const Color(0xFF1E88E5));
+    if (d.contains('redemption out'))     return _TxnMeta(Icons.swap_horiz_rounded,     const Color(0xFFE53935));
+    if (d.contains('redemption'))         return _TxnMeta(Icons.currency_exchange,       const Color(0xFF8E24AA));
+    if (d.contains('invest') || d.contains('fdr')) return _TxnMeta(Icons.trending_up_rounded, const Color(0xFF43A047));
+    if (d.contains('call deposit'))       return _TxnMeta(Icons.savings_outlined,        const Color(0xFFFB8C00));
+    if (d.contains('withdraw'))           return _TxnMeta(Icons.arrow_upward_rounded,    const Color(0xFFE53935));
+    if (d.contains('interest'))           return _TxnMeta(Icons.percent_rounded,         const Color(0xFF00ACC1));
+    return isCredit
+        ? _TxnMeta(Icons.add_circle_outline, const Color(0xFF43A047))
+        : _TxnMeta(Icons.remove_circle_outline, const Color(0xFFE53935));
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -273,7 +387,7 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
                 colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
           ),
           child: SafeArea(bottom: false, child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
             child: Column(children: [
               // back + title row
               Row(children: [
@@ -311,30 +425,33 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
               ]),
 
               // ── Summary cards (only when loaded) ────────────────────────
-              if (!_loading && _data != null) ...[
-                const SizedBox(height: 24),
+              if (!_loading && (_data != null || _cashData != null)) ...[
+                const SizedBox(height: 20),
                 Row(children: [
                   _headerStatCard(
                     label: s.totalPortfolio,
-                    value: 'TZS ${_shortAmt(_data!.totalPortfolioValue)}',
-                    fullValue: _fmt(_data!.totalPortfolioValue),
+                    value: 'TZS ${_shortAmt(_data?.totalPortfolioValue ?? 0)}',
+                    fullValue: _fmt(_data?.totalPortfolioValue ?? 0),
                     icon: Icons.account_balance_outlined,
                     accent: const Color(0xFF69F0AE),
                   ),
                   const SizedBox(width: 12),
                   _headerStatCard(
                     label: s.cashBalance,
-                    value: 'TZS ${_shortAmt(_data!.cashBal)}',
-                    fullValue: _fmt(_data!.cashBal),
+                    value: 'TZS ${_shortAmt(_cashData?.cashBalance ?? _data?.cashBal ?? 0)}',
+                    fullValue: _fmt(_cashData?.cashBalance ?? _data?.cashBal ?? 0),
                     icon: Icons.account_balance_wallet_outlined,
-                    accent: _data!.cashBal >= 0
+                    accent: (_cashData?.cashBalance ?? _data?.cashBal ?? 0) >= 0
                         ? const Color(0xFF69F0AE)
                         : const Color(0xFFFF8A80),
-                    negative: _data!.cashBal < 0,
+                    negative: (_cashData?.cashBalance ?? _data?.cashBal ?? 0) < 0,
                   ),
                 ]),
                 const SizedBox(height: 12),
                 _investmentCountBanner(dark, s),
+                const SizedBox(height: 16),
+                // ── Tab switcher ──────────────────────────────────────────
+                _buildTabSwitcher(s),
               ],
             ]),
           )),
@@ -348,10 +465,57 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
                 ? _buildLoading(green, txtS, s)
                 : _error != null
                 ? _buildError(dark, green, txtP, txtS, s)
-                : _buildContent(dark, txtP, txtS, txtH, green, border, s),
+                : _tabIndex == 0
+                ? _buildInvestmentsContent(dark, txtP, txtS, txtH, green, border, s)
+                : _buildCashContent(dark, txtP, txtS, txtH, green, border, s),
           ),
         ),
       ]),
+    );
+  }
+
+  // ── Tab Switcher ───────────────────────────────────────────────────────────
+  Widget _buildTabSwitcher(_SS s) {
+    return Container(
+      height: 58,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Row(children: [
+        _tabBtn(1, Icons.trending_up_rounded, s.tabInvestments),
+        _tabBtn(0, Icons.swap_horiz_rounded,  s.tabCash),
+      ]),
+    );
+  }
+
+  Widget _tabBtn(int idx, IconData icon, String label) {
+    final selected = _tabIndex == idx;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _tabIndex = idx);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(1),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(icon,
+                size: 14,
+                color: selected ? const Color(0xFF1B5E20) : Colors.white70),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700,
+                color: selected ? const Color(0xFF1B5E20) : Colors.white70)),
+          ]),
+        ),
+      ),
     );
   }
 
@@ -384,8 +548,7 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
               if (negative) ...[
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                       color: const Color(0xFFFF8A80).withOpacity(0.18),
                       borderRadius: BorderRadius.circular(6)),
@@ -430,12 +593,9 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
             style: const TextStyle(fontSize: 13,
                 color: Colors.white, fontWeight: FontWeight.w700)),
         const Spacer(),
-        if (_data != null) ...[
-          // Largest investment highlight
-          Text('Largest: TZS ${_shortAmt(_data!.investments.isEmpty ? 0 :
-          _data!.investments.map((i) => i.amount).reduce((a, b) => a > b ? a : b))}',
+        if (_data != null && _data!.investments.isNotEmpty)
+          Text('Largest: TZS ${_shortAmt(_data!.investments.map((i) => i.amount).reduce((a, b) => a > b ? a : b))}',
               style: const TextStyle(fontSize: 11, color: Colors.white60)),
-        ],
       ]),
     );
   }
@@ -483,12 +643,18 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
         ]),
       ));
 
-  // ── Main content ───────────────────────────────────────────────────────────
-  Widget _buildContent(
-      bool dark, Color txtP, Color txtS, Color txtH, Color green, Color border, _SS s,
+  // ══════════════════════════════════════════════════════════════════════════
+  // TAB 0 — INVESTMENTS
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildInvestmentsContent(
+      bool dark, Color txtP, Color txtS, Color txtH,
+      Color green, Color border, _SS s,
       ) {
-    final data = _data!;
-    final allInv = data.investments;
+    if (_data == null) {
+      return Center(child: Text(s.noInvestments,
+          style: TextStyle(fontSize: 14, color: txtS)));
+    }
+    final allInv = _data!.investments;
     final shown  = _showAll ? allInv : allInv.take(4).toList();
 
     return FadeTransition(
@@ -500,14 +666,12 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-            // ── Portfolio breakdown bar ──────────────────────────────────────
             if (allInv.isNotEmpty)
               _buildPortfolioBreakdownBar(
                   dark, txtP, txtS, txtH, green, border, allInv, s),
 
             const SizedBox(height: 28),
 
-            // ── Investments section label ────────────────────────────────────
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.activeInvestments.toUpperCase(), style: TextStyle(
@@ -525,46 +689,14 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
 
             const SizedBox(height: 14),
 
-            // ── Investment cards ─────────────────────────────────────────────
             ...shown.asMap().entries.map((e) =>
                 _buildInvestmentCard(e.key, e.value, dark, txtP, txtS, txtH,
                     border, allInv.length, s)),
 
-            // ── View All / Less toggle ───────────────────────────────────────
             if (allInv.length > 4) ...[
               const SizedBox(height: 4),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _showAll = !_showAll);
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    color: green.withOpacity(dark ? 0.12 : 0.08),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: green.withOpacity(0.25)),
-                  ),
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(
-                      _showAll
-                          ? s.viewLess
-                          : '${s.viewAll} (${allInv.length - 4} more)',
-                      style: TextStyle(fontSize: 13,
-                          fontWeight: FontWeight.w700, color: green),
-                    ),
-                    const SizedBox(width: 6),
-                    AnimatedRotation(
-                      turns: _showAll ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 250),
-                      child: Icon(Icons.keyboard_arrow_down_rounded,
-                          color: green, size: 18),
-                    ),
-                  ]),
-                ),
-              ),
+              _viewToggleBtn(_showAll, s, green, dark,
+                  allInv.length - 4, () => setState(() => _showAll = !_showAll)),
             ],
           ]),
         ),
@@ -572,12 +704,278 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
     );
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // TAB 1 — CASH TRANSACTIONS
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildCashContent(
+      bool dark, Color txtP, Color txtS, Color txtH,
+      Color green, Color border, _SS s,
+      ) {
+    if (_cashData == null) {
+      return Center(child: Text(s.cashTransactions,
+          style: TextStyle(fontSize: 14, color: txtS)));
+    }
+    final allTxns = _cashData!.transactions;
+    final shown   = _showAllCash ? allTxns : allTxns.take(6).toList();
+
+    final totalCredits = allTxns.where((t) => t.isCredit).fold(0.0, (a, t) => a + t.amount);
+    final totalDebits  = allTxns.where((t) => !t.isCredit).fold(0.0, (a, t) => a + t.amount.abs());
+    final netFlow      = totalCredits - totalDebits;
+
+    return FadeTransition(
+      opacity: _entryFade,
+      child: SlideTransition(
+        position: _entrySlide,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+            // ── Cash flow summary card ─────────────────────────────────────
+            _buildCashSummaryCard(dark, txtP, txtS, border, green,
+                totalCredits, totalDebits, netFlow, s),
+
+            const SizedBox(height: 24),
+
+            // ── Section header ─────────────────────────────────────────────
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(s.cashTransactions.toUpperCase(), style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w800,
+                    color: txtH, letterSpacing: 1.2)),
+                const SizedBox(height: 2),
+                Text('${allTxns.length} transactions',
+                    style: TextStyle(fontSize: 13,
+                        fontWeight: FontWeight.w600, color: txtP)),
+              ]),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: (netFlow >= 0 ? const Color(0xFF43A047) : const Color(0xFFE53935))
+                      .withOpacity(dark ? 0.15 : 0.09),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Net ${netFlow >= 0 ? '+' : ''}TZS ${_shortAmt(netFlow)}',
+                  style: TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w700,
+                      color: netFlow >= 0
+                          ? const Color(0xFF43A047) : const Color(0xFFE53935)),
+                ),
+              ),
+            ]),
+
+            const SizedBox(height: 14),
+
+            ...shown.asMap().entries.map((e) =>
+                _buildCashTxnCard(e.key, e.value, dark, txtP, txtS, txtH, border)),
+
+            if (allTxns.length > 6) ...[
+              const SizedBox(height: 4),
+              _viewToggleBtn(_showAllCash, s, green, dark,
+                  allTxns.length - 6, () => setState(() => _showAllCash = !_showAllCash)),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
+
+  // ── Cash flow summary card ─────────────────────────────────────────────────
+  Widget _buildCashSummaryCard(
+      bool dark, Color txtP, Color txtS, Color border, Color green,
+      double credits, double debits, double net, _SS s,
+      ) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF132013) : const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: green.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.swap_horiz_rounded, color: green, size: 16),
+          ),
+          const SizedBox(width: 10),
+          Text(s.cashTransactions, style: TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w800, color: txtP)),
+        ]),
+        const SizedBox(height: 16),
+        Row(children: [
+          _cashFlowStat(s.totalCredits, credits, const Color(0xFF43A047), dark, true),
+          const SizedBox(width: 10),
+          _cashFlowStat(s.totalDebits,  debits,  const Color(0xFFE53935), dark, false),
+          const SizedBox(width: 10),
+          _cashFlowStat(s.netFlow,      net,
+              net >= 0 ? const Color(0xFF00ACC1) : const Color(0xFFE53935), dark, net >= 0),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _cashFlowStat(String label, double value, Color color, bool dark, bool credit) =>
+      Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(dark ? 0.12 : 0.07),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.25)),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(credit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                  size: 11, color: color),
+              const SizedBox(width: 4),
+              Expanded(child: Text(label, style: TextStyle(
+                  fontSize: 9, fontWeight: FontWeight.w600,
+                  color: color), overflow: TextOverflow.ellipsis)),
+            ]),
+            const SizedBox(height: 6),
+            Text(_shortAmt(value),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900,
+                    color: color, letterSpacing: -0.4)),
+            Text('TZS', style: TextStyle(fontSize: 8, color: color.withOpacity(0.6))),
+          ]),
+        ),
+      );
+
+  // ── Single cash transaction card ──────────────────────────────────────────
+  Widget _buildCashTxnCard(
+      int index, _CashTxn txn,
+      bool dark, Color txtP, Color txtS, Color txtH, Color border,
+      ) {
+    final meta     = _txnMeta(txn.description, txn.isCredit);
+    final cardBg   = dark ? const Color(0xFF132013) : Colors.white;
+    final subtleBg = meta.color.withOpacity(dark ? 0.10 : 0.06);
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 280 + index * 50),
+      curve: Curves.easeOut,
+      builder: (_, v, child) => Opacity(
+          opacity: v,
+          child: Transform.translate(
+              offset: Offset(0, 14 * (1 - v)), child: child)),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: border),
+          boxShadow: [BoxShadow(
+              color: Colors.black.withOpacity(dark ? 0.12 : 0.04),
+              blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: Row(children: [
+          // ── Left colour strip ──────────────────────────────────────────
+          Container(
+            width: 4,
+            height: 72,
+            decoration: BoxDecoration(
+              color: meta.color,
+              borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16)),
+            ),
+          ),
+
+          // ── Icon ──────────────────────────────────────────────────────
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: subtleBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(meta.icon, size: 20, color: meta.color),
+          ),
+
+          // ── Details ───────────────────────────────────────────────────
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(txn.description,
+                    style: TextStyle(fontSize: 13,
+                        fontWeight: FontWeight.w700, color: txtP),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 5),
+                Row(children: [
+                  _metaChip(Icons.calendar_today_outlined,
+                      DateFormat('dd MMM yyyy').format(txn.date), txtS, dark),
+                  const SizedBox(width: 8),
+                  _metaChip(Icons.tag_outlined,
+                      '#${txn.txnId}', txtS, dark),
+                ]),
+              ]),
+            ),
+          ),
+
+          // ── Amount ───────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(txn.isCredit ? '+' : '−',
+                  style: TextStyle(fontSize: 10,
+                      fontWeight: FontWeight.w700, color: meta.color)),
+              Text('TZS ${_shortAmt(txn.amount.abs())}',
+                  style: TextStyle(fontSize: 15,
+                      fontWeight: FontWeight.w900, color: meta.color,
+                      letterSpacing: -0.4)),
+              Text(_fmt(txn.amount.abs(), decimals: 0),
+                  style: TextStyle(fontSize: 9, color: txtH)),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  // ── Shared view-all / view-less button ────────────────────────────────────
+  Widget _viewToggleBtn(bool expanded, _SS s, Color green, bool dark,
+      int remaining, VoidCallback onTap) =>
+      GestureDetector(
+        onTap: () { HapticFeedback.selectionClick(); onTap(); },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: green.withOpacity(dark ? 0.12 : 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: green.withOpacity(0.25)),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+              expanded ? s.viewLess : '${s.viewAll} ($remaining more)',
+              style: TextStyle(fontSize: 13,
+                  fontWeight: FontWeight.w700, color: green),
+            ),
+            const SizedBox(width: 6),
+            AnimatedRotation(
+              turns: expanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 250),
+              child: Icon(Icons.keyboard_arrow_down_rounded,
+                  color: green, size: 18),
+            ),
+          ]),
+        ),
+      );
+
   // ── Portfolio breakdown bar ───────────────────────────────────────────────
   Widget _buildPortfolioBreakdownBar(
       bool dark, Color txtP, Color txtS, Color txtH, Color green, Color border,
       List<_SMAInvestment> investments, _SS s,
       ) {
-    // Group by bank
     final Map<String, double> byBank = {};
     for (final inv in investments) {
       final b = _bankName(inv.description);
@@ -596,8 +994,6 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
         Text(s.performance, style: TextStyle(
             fontSize: 13, fontWeight: FontWeight.w800, color: txtP)),
         const SizedBox(height: 16),
-
-        // Segmented bar
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: Row(
@@ -605,18 +1001,12 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
               final pct = total > 0 ? e.value / total : 0.0;
               return Flexible(
                 flex: (pct * 1000).round(),
-                child: Container(
-                  height: 14,
-                  color: _bankColor(e.key),
-                ),
+                child: Container(height: 14, color: _bankColor(e.key)),
               );
             }).toList(),
           ),
         ),
-
         const SizedBox(height: 16),
-
-        // Legend
         Wrap(
           spacing: 12, runSpacing: 10,
           children: byBank.entries.map((e) {
@@ -643,9 +1033,9 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
       bool dark, Color txtP, Color txtS, Color txtH, Color border,
       int total, _SS s,
       ) {
-    final bank     = _bankName(inv.description);
-    final rate     = _rate(inv.description);
-    final maturity = _maturity(inv.description);
+    final bank      = _bankName(inv.description);
+    final rate      = _rate(inv.description);
+    final maturity  = _maturity(inv.description);
     final bankColor = _bankColor(bank);
     final cardBg    = dark ? const Color(0xFF132013) : Colors.white;
     final subtleBg  = dark
@@ -670,13 +1060,11 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
               blurRadius: 8, offset: const Offset(0, 3))],
         ),
         child: Column(children: [
-          // ── Card header ──────────────────────────────────────────────────
           Container(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             decoration: BoxDecoration(
               color: subtleBg,
-              borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(15)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
             ),
             child: Row(children: [
               Container(
@@ -710,8 +1098,7 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
                       decoration: BoxDecoration(
                         color: bankColor.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                            color: bankColor.withOpacity(0.3)),
+                        border: Border.all(color: bankColor.withOpacity(0.3)),
                       ),
                       child: Text(rate, style: TextStyle(
                           fontSize: 10, fontWeight: FontWeight.w700,
@@ -750,16 +1137,13 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
               ]),
             ]),
           ),
-
-          // ── Card footer ──────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
             child: Row(children: [
               _metaChip(Icons.calendar_today_outlined,
                   DateFormat('dd MMM yyyy').format(inv.date), txtS, dark),
               const SizedBox(width: 10),
-              _metaChip(Icons.tag_outlined,
-                  '#${inv.txnId}', txtS, dark),
+              _metaChip(Icons.tag_outlined, '#${inv.txnId}', txtS, dark),
               const Spacer(),
               Text(_fmt(inv.amount),
                   style: TextStyle(fontSize: 11, color: txtS,
@@ -787,4 +1171,11 @@ class _SMAPageState extends State<SMAPage> with SingleTickerProviderStateMixin {
               fontSize: 11, fontWeight: FontWeight.w500, color: txtS)),
         ]),
       );
+}
+
+// ── Transaction meta (icon + colour) ─────────────────────────────────────────
+class _TxnMeta {
+  final IconData icon;
+  final Color    color;
+  const _TxnMeta(this.icon, this.color);
 }

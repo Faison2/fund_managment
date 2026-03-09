@@ -13,6 +13,8 @@ import '../sma/sma.dart';
 import '../statement /client_statement.dart';
 import '../withdrawal/view/withdrawal_page.dart';
 
+
+// ── Localised strings ─────────────────────────────────────────────────────────
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _HS {
   final String deposit, unitPrices, withdrawal, transactions,
@@ -23,7 +25,7 @@ class _HS {
       loadingSMA, noSMA, noSMADesc, smaTitle, smaPortfolio,
       totalValue, holdings, moreHoldings, notInvestedYet,
       cashBalance, securities, manager, failedLoad,
-      contactManager, notInvested;
+      contactManager, notInvested, viewDashboard;
   const _HS({
     required this.deposit,           required this.unitPrices,
     required this.withdrawal,        required this.transactions,
@@ -43,14 +45,14 @@ class _HS {
     required this.notInvestedYet,    required this.cashBalance,
     required this.securities,        required this.manager,
     required this.failedLoad,        required this.contactManager,
-    required this.notInvested,
+    required this.notInvested,       required this.viewDashboard,
   });
 }
 
 const _hsEn = _HS(
-  deposit:            'Deposit',
+  deposit:            'Invest',
   unitPrices:         'Unit Prices',
-  withdrawal:         'Withdrawal',
+  withdrawal:         'Redeem',
   transactions:       'Transactions',
   portfolioValue:     'Portfolio Value',
   myUnits:            'My Units',
@@ -72,7 +74,7 @@ const _hsEn = _HS(
   netFlow:            'Net Flow',
   loadingSMA:         'Loading SMA portfolios…',
   noSMA:              'No SMA Portfolios',
-  noSMADesc:          'You don\'t have any Separately Managed Account portfolios yet. Contact your relationship manager to get started.',
+  noSMADesc:          'You don\'t have any Separately Managed Account portfolios yet.',
   smaTitle:           'Separately Managed Account',
   smaPortfolio:       'SMA Portfolio',
   totalValue:         'Total Value',
@@ -85,6 +87,7 @@ const _hsEn = _HS(
   failedLoad:         'Failed to load portfolio',
   contactManager:     'Contact your relationship manager to get started.',
   notInvested:        'Not invested yet',
+  viewDashboard:      'View Dashboard',
 );
 
 const _hsSw = _HS(
@@ -112,7 +115,7 @@ const _hsSw = _HS(
   netFlow:            'Mtiririko Halisi',
   loadingSMA:         'Inapakia SMA…',
   noSMA:              'Hakuna Mkoba wa SMA',
-  noSMADesc:          'Huna mkoba wowote wa Akaunti Inayosimamiwa Kando bado. Wasiliana na msimamizi wako.',
+  noSMADesc:          'Huna mkoba wowote wa Akaunti Inayosimamiwa Kando bado.',
   smaTitle:           'Akaunti Inayosimamiwa Kando',
   smaPortfolio:       'Mkoba wa SMA',
   totalValue:         'Jumla ya Thamani',
@@ -125,6 +128,7 @@ const _hsSw = _HS(
   failedLoad:         'Imeshindwa kupakia mkoba',
   contactManager:     'Wasiliana na msimamizi wako ili kuanza.',
   notInvested:        'Bado haujawekeza',
+  viewDashboard:      'Angalia Dashibodi',
 );
 
 // ── HomeScreen ────────────────────────────────────────────────────────────────
@@ -139,19 +143,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _currentFundIndex  = 0;
   final PageController _fundPageController = PageController();
 
-  // ── Portfolio ──────────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _funds = [];
   bool   _isLoadingFunds = true;
   String? _fundsError;
   double _totalPortfolioValue = 0;
   String _cdsNumber = '';
 
-  // ── SMA ───────────────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _smaPortfolios = [];
   bool   _isLoadingSMA  = true;
-  bool   _isSMAExpanded = false;
 
-  // ── Transactions ───────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _transactions = [];
   bool _isLoadingTxns = true;
   late AnimationController _chartFadeCtrl;
@@ -162,10 +162,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Color(0xFF1B5E20), Color(0xFF1B5E20), Color(0xFF1B5E20),
   ];
 
-  // ── Action routing keys (English, never translated) ────────────────────────
-  static const _kDeposit      = 'Deposit';
+  static const _kDeposit      = 'Invest';
   static const _kUnitPrices   = 'Unit Prices';
-  static const _kWithdrawal   = 'Withdrawal';
+  static const _kWithdrawal   = 'Redeem';
   static const _kTransactions = 'Transactions';
 
   static const List<IconData> _actionIcons = [
@@ -178,7 +177,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _kDeposit, _kUnitPrices, _kWithdrawal, _kTransactions,
   ];
 
-  // ── Provider getters ───────────────────────────────────────────────────────
   bool get _dark => context.watch<ThemeProvider>().isDark;
   _HS  get _s    => context.watch<LocaleProvider>().isSwahili ? _hsSw : _hsEn;
 
@@ -328,10 +326,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   double get _totalWithdrawals => _transactions
       .where((t) => t['type'] == 'Withdrawal')
       .fold(0.0, (s, t) => s + (t['amount'] as double));
-  double get _maxY {
-    if (_transactions.isEmpty) return 100;
-    return (_transactions.map((t) => t['amount'] as double).reduce(max) * 1.3).ceilToDouble();
-  }
 
   String _actionLabel(String key, _HS s) {
     switch (key) {
@@ -365,7 +359,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final dark  = _dark;
     final s     = _s;
 
-    // ── Theme tokens ─────────────────────────────────────────────────────────
     final txtP    = dark ? const Color(0xFFE8F5E9) : Colors.black87;
     final txtS    = dark ? const Color(0xFF81A884)  : Colors.black54;
     final txtH    = dark ? const Color(0xFF4A7A4D)  : Colors.grey.shade400;
@@ -374,7 +367,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final cardBg2 = dark ? const Color(0xFF0F1A10)  : Colors.white.withOpacity(0.55);
     final border  = dark ? const Color(0xFF1E3320)  : Colors.white.withOpacity(0.7);
     final divider = dark ? const Color(0xFF1E3320)  : Colors.black.withOpacity(0.05);
-    final accentOpacity = dark ? 0.20 : 0.10;
 
     return SafeArea(
       child: Container(
@@ -398,7 +390,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 _buildPortfolioSection(dark, txtP, txtS, s),
                 const SizedBox(height: 10),
 
-                // Page dots
                 if (!_isLoadingFunds && _fundsError == null && _funds.isNotEmpty)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -420,12 +411,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                 const SizedBox(height: 16),
 
-                _buildSMASection(dark, txtP, txtS, txtH, green,
-                    cardBg, cardBg2, border, accentOpacity, s),
+                // ── SMA Banner (tap → full page) ────────────────────────────
+                _buildSMABanner(dark, txtP, txtS, txtH, green, border, s),
 
                 const SizedBox(height: 14),
 
-                // ── Action buttons ──────────────────────────────────────────
                 Row(
                   children: List.generate(_actionKeys.length, (i) => Expanded(
                     child: Padding(
@@ -455,378 +445,109 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── SMA Section ────────────────────────────────────────────────────────────
-  Widget _buildSMASection(
+  // ── SMA Banner ─────────────────────────────────────────────────────────────
+  // Replaces the old accordion. Tapping navigates to SMAPage.
+  Widget _buildSMABanner(
       bool dark, Color txtP, Color txtS, Color txtH, Color green,
-      Color cardBg, Color cardBg2, Color border, double accentOpacity, _HS s,
+      Color border, _HS s,
       ) {
     final headerBg = dark
         ? const Color(0xFF132013).withOpacity(0.9)
         : Colors.white.withOpacity(0.45);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SMAPage()),
+    // Total SMA value from GetSMAPortfolios (used only for the preview badge)
+    final smaTotal = _isLoadingSMA
+        ? null
+        : _smaPortfolios.fold<double>(
+        0.0, (sum, p) => sum + ((p['portfolioValue'] as num?)?.toDouble() ?? 0.0));
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (_, animation, __) => const SMAPage(),
+          transitionsBuilder: (_, animation, __, child) {
+            final curved = CurvedAnimation(
+                parent: animation, curve: Curves.easeInOut);
+            return FadeTransition(
+              opacity: curved,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                    begin: const Offset(0.04, 0), end: Offset.zero)
+                    .animate(curved),
+                child: child,
+              ),
             );
           },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: headerBg,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: border, width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(dark ? 0.2 : 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                )
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: green.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.account_tree_outlined, color: green, size: 18),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        s.smaTitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: txtP,
-                        ),
-                      ),
-                      Text(
-                        s.smaPortfolio,
-                        style: TextStyle(fontSize: 11, color: txtS),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!_isLoadingSMA && _smaPortfolios.isNotEmpty) ...[
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        s.totalValue,
-                        style: TextStyle(fontSize: 9, color: txtH),
-                      ),
-                      Text(
-                        'TZS ${_fmt(_smaPortfolios.fold(0.0, (sum, p) => sum + ((p['portfolioValue'] as num?)?.toDouble() ?? 0.0)))}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 10),
-                ],
-                Icon(Icons.arrow_forward_ios, color: txtS, size: 16),
-              ],
-            ),
-          ),
+          transitionDuration: const Duration(milliseconds: 380),
         ),
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 300),
-          crossFadeState: _isSMAExpanded
-              ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          firstChild: const SizedBox.shrink(),
-          secondChild: Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: _buildSMAContent(dark, txtP, txtS, txtH, green,
-                cardBg, cardBg2, border, s),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSMAContent(
-      bool dark, Color txtP, Color txtS, Color txtH, Color green,
-      Color cardBg, Color cardBg2, Color border, _HS s,
-      ) {
-    if (_isLoadingSMA) {
-      return _smaCard(dark, border,
-        child: Center(child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            CircularProgressIndicator(color: green, strokeWidth: 2),
-            const SizedBox(height: 12),
-            Text(s.loadingSMA,
-                style: TextStyle(fontSize: 12, color: txtS)),
-          ]),
-        )),
-      );
-    }
-    if (_smaPortfolios.isEmpty) {
-      return _smaCard(dark, border,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                  color: green.withOpacity(0.07), shape: BoxShape.circle),
-              child: Icon(Icons.account_tree_outlined, color: green, size: 30),
-            ),
-            const SizedBox(height: 14),
-            Text(s.noSMA, style: TextStyle(fontSize: 14,
-                fontWeight: FontWeight.w700, color: txtS)),
-            const SizedBox(height: 6),
-            Text(s.noSMADesc, textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: txtH, height: 1.5)),
-          ]),
-        ),
-      );
-    }
-    return Column(
-      children: _smaPortfolios.map((p) =>
-          _buildSMACard(p, dark, txtP, txtS, txtH, green, border, s)).toList(),
-    );
-  }
-
-  Widget _smaCard(bool dark, Color border, {required Widget child}) =>
-      Container(
-        width: double.infinity,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: dark
-              ? const Color(0xFF132013).withOpacity(0.8)
-              : Colors.white.withOpacity(0.55),
-          borderRadius: BorderRadius.circular(18),
+          color: headerBg,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: border, width: 1.2),
           boxShadow: [BoxShadow(
               color: Colors.black.withOpacity(dark ? 0.2 : 0.05),
               blurRadius: 10, offset: const Offset(0, 3))],
         ),
-        child: child,
-      );
+        child: Row(children: [
 
-  Widget _buildSMACard(
-      Map<String, dynamic> p,
-      bool dark, Color txtP, Color txtS, Color txtH, Color green,
-      Color border, _HS s,
-      ) {
-    final portfolioName   = p['portfolioName']   as String? ?? s.smaPortfolio;
-    final managerName     = p['managerName']     as String? ?? '—';
-    final portfolioValue  = (p['portfolioValue']  as num?)?.toDouble() ?? 0.0;
-    final cashBalance     = (p['cashBalance']     as num?)?.toDouble() ?? 0.0;
-    final securitiesValue = (p['securitiesValue'] as num?)?.toDouble() ?? 0.0;
-    final currency        = p['currency']        as String? ?? 'TZS';
-    final returnPct       = (p['returnPercent']   as num?)?.toDouble();
-    final status          = p['status']          as String? ?? 'Active';
-    final List<dynamic> holdings = (p['holdings'] as List<dynamic>?) ?? [];
-    final bool isPos = (returnPct ?? 0) >= 0;
+          // Icon
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: green.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(Icons.account_tree_outlined, color: green, size: 20),
+          ),
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-            colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
-            begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(
-            color: const Color(0xFF1B5E20).withOpacity(0.35),
-            blurRadius: 14, offset: const Offset(0, 5))],
+          const SizedBox(width: 14),
+
+          // Title + subtitle
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(s.smaTitle, style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w800, color: txtP)),
+              const SizedBox(height: 2),
+              Text(s.smaPortfolio,
+                  style: TextStyle(fontSize: 11, color: txtS)),
+            ]),
+          ),
+
+          // Value badge
+          if (!_isLoadingSMA && smaTotal != null && smaTotal > 0) ...[
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(s.totalValue,
+                  style: TextStyle(fontSize: 9, color: txtH)),
+              Text('TZS ${_shortAmt(smaTotal)}',
+                  style: TextStyle(fontSize: 13,
+                      fontWeight: FontWeight.w800, color: green)),
+            ]),
+            const SizedBox(width: 10),
+          ],
+
+          if (_isLoadingSMA)
+            SizedBox(width: 16, height: 16,
+                child: CircularProgressIndicator(
+                    color: green, strokeWidth: 2)),
+
+          // Arrow
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: green.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.arrow_forward_ios_rounded,
+                color: green, size: 13),
+          ),
+        ]),
       ),
-      child: Stack(children: [
-        Positioned(right: -15, top: -15, child: _circle(90, 0.05)),
-        Positioned(right: 50, bottom: -20, child: _circle(60, 0.04)),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(portfolioName,
-                    style: const TextStyle(fontSize: 14,
-                        fontWeight: FontWeight.w800, color: Colors.white,
-                        letterSpacing: 0.2),
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text('${s.manager}: $managerName',
-                    style: TextStyle(fontSize: 10,
-                        color: Colors.white.withOpacity(0.55))),
-              ])),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                    color: const Color(0xFF69F0AE).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: const Color(0xFF69F0AE).withOpacity(0.4))),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.circle, size: 6, color: Color(0xFF69F0AE)),
-                  const SizedBox(width: 5),
-                  Text(status, style: const TextStyle(fontSize: 10,
-                      fontWeight: FontWeight.w700, color: Color(0xFF69F0AE))),
-                ]),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => setState(() => _isBalanceVisible = !_isBalanceVisible),
-                child: Icon(
-                    _isBalanceVisible
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    color: Colors.white38, size: 17),
-              ),
-            ]),
-
-            const SizedBox(height: 12),
-            Divider(color: Colors.white.withOpacity(0.12), height: 1),
-            const SizedBox(height: 12),
-
-            Text('${s.portfolioValue}',
-                style: TextStyle(fontSize: 10,
-                    color: Colors.white.withOpacity(0.5),
-                    fontWeight: FontWeight.w500)),
-            const SizedBox(height: 4),
-            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(
-                _isBalanceVisible
-                    ? '$currency ${_fmt(portfolioValue)}'
-                    : _mask(''),
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900,
-                    color: Colors.white, letterSpacing: -0.5),
-              ),
-              if (returnPct != null) ...[
-                const SizedBox(width: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: (isPos ? const Color(0xFF69F0AE) : Colors.red.shade200)
-                        .withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(
-                        isPos ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                        size: 12,
-                        color: isPos ? const Color(0xFF69F0AE) : Colors.red[300]),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${isPos ? '+' : ''}${returnPct.toStringAsFixed(2)}%',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                          color: isPos ? const Color(0xFF69F0AE) : Colors.red[300]),
-                    ),
-                  ]),
-                ),
-              ],
-            ]),
-
-            const SizedBox(height: 14),
-            Row(children: [
-              _smaStatChip(label: s.cashBalance,
-                  value: _isBalanceVisible
-                      ? '$currency ${_fmt(cashBalance)}' : _mask(''),
-                  icon: Icons.account_balance_wallet_outlined),
-              const SizedBox(width: 10),
-              _smaStatChip(label: s.securities,
-                  value: _isBalanceVisible
-                      ? '$currency ${_fmt(securitiesValue)}' : _mask(''),
-                  icon: Icons.bar_chart_rounded),
-            ]),
-
-            if (holdings.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Text(s.holdings, style: TextStyle(fontSize: 10,
-                  color: Colors.white.withOpacity(0.5),
-                  fontWeight: FontWeight.w600, letterSpacing: 0.3)),
-              const SizedBox(height: 8),
-              ...holdings.take(4).map((h) {
-                final hMap    = Map<String, dynamic>.from(h as Map);
-                final secName = hMap['securityName'] as String? ?? '—';
-                final qty     = (hMap['quantity']    as num?)?.toDouble() ?? 0;
-                final mktVal  = (hMap['marketValue'] as num?)?.toDouble() ?? 0;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 7),
-                  child: Row(children: [
-                    Container(
-                      width: 30, height: 30,
-                      decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.show_chart_rounded,
-                          size: 14, color: Colors.white54),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(secName,
-                        style: const TextStyle(fontSize: 12,
-                            fontWeight: FontWeight.w600, color: Colors.white),
-                        overflow: TextOverflow.ellipsis)),
-                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text(
-                        _isBalanceVisible
-                            ? '$currency ${_fmt(mktVal)}' : _mask(''),
-                        style: const TextStyle(fontSize: 12,
-                            fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
-                      Text('${_fmt(qty, decimals: 0)} units',
-                          style: TextStyle(fontSize: 9,
-                              color: Colors.white.withOpacity(0.45))),
-                    ]),
-                  ]),
-                );
-              }).toList(),
-              if (holdings.length > 4)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    '+ ${holdings.length - 4} ${s.moreHoldings}',
-                    style: TextStyle(fontSize: 11,
-                        color: Colors.white.withOpacity(0.4),
-                        fontStyle: FontStyle.italic),
-                  ),
-                ),
-            ],
-          ]),
-        ),
-      ]),
     );
   }
-
-  Widget _smaStatChip({required String label, required String value, required IconData icon}) =>
-      Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.12)),
-          ),
-          child: Row(children: [
-            Icon(icon, size: 14, color: Colors.white38),
-            const SizedBox(width: 8),
-            Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: TextStyle(fontSize: 9,
-                  color: Colors.white.withOpacity(0.45),
-                  fontWeight: FontWeight.w500)),
-              const SizedBox(height: 2),
-              Text(value, style: const TextStyle(fontSize: 11,
-                  fontWeight: FontWeight.w700, color: Colors.white),
-                  overflow: TextOverflow.ellipsis),
-            ])),
-          ]),
-        ),
-      );
 
   // ── Transactions section ───────────────────────────────────────────────────
   Widget _buildTransactionsSection(
@@ -871,7 +592,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         const SizedBox(height: 14),
         if (!_isLoadingTxns && _transactions.isNotEmpty) ...[
-          _buildSummaryPills(dark, txtP, s),
+          _buildSummaryPills(dark, s),
           const SizedBox(height: 14),
         ],
         _buildCandlestickChartCard(dark, txtP, txtS, green, cardBg, border, s),
@@ -881,27 +602,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Summary pills ──────────────────────────────────────────────────────────
-  Widget _buildSummaryPills(bool dark, Color txtP, _HS s) {
-    final net = _totalDeposits - _totalWithdrawals;
+  Widget _buildSummaryPills(bool dark, _HS s) {
+    final net        = _totalDeposits - _totalWithdrawals;
     final isPositive = net >= 0;
-    // In dark mode, soften the pill backgrounds
-    final depBg  = dark ? const Color(0xFF1A2E1A) : const Color(0xFFE8F5E9);
-    final witBg  = dark ? const Color(0xFF2A1010) : const Color(0xFFFFEBEE);
-    final netBg  = isPositive
+    final depBg = dark ? const Color(0xFF1A2E1A) : const Color(0xFFE8F5E9);
+    final witBg = dark ? const Color(0xFF2A1010) : const Color(0xFFFFEBEE);
+    final netBg = isPositive
         ? (dark ? const Color(0xFF0D1F30) : const Color(0xFFE3F2FD))
         : (dark ? const Color(0xFF1E0A2A) : const Color(0xFFF3E5F5));
 
     return Row(children: [
       _summaryPill(s.deposits,
           'TZS ${_shortAmt(_totalDeposits)}',
-          Icons.arrow_downward_rounded,
-          const Color(0xFF2E7D32), depBg),
+          Icons.arrow_downward_rounded, const Color(0xFF2E7D32), depBg),
       const SizedBox(width: 10),
       _summaryPill(s.withdrawals,
           'TZS ${_shortAmt(_totalWithdrawals)}',
-          Icons.arrow_upward_rounded,
-          const Color(0xFFC62828), witBg),
+          Icons.arrow_upward_rounded, const Color(0xFFC62828), witBg),
       const SizedBox(width: 10),
       _summaryPill(s.netFlow,
           '${isPositive ? '+' : ''}TZS ${_shortAmt(net)}',
@@ -940,12 +657,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       );
 
-  // ── Candlestick chart card ─────────────────────────────────────────────────
   Widget _buildCandlestickChartCard(
       bool dark, Color txtP, Color txtS, Color green,
       Color cardBg, Color border, _HS s,
       ) {
-    final candles = _buildCandles();
+    final candles    = _buildCandles();
     final bullColor  = dark ? const Color(0xFF4ADE80) : Colors.green.shade600;
     final bearColor  = Colors.red.shade400;
     final labelColor = dark ? const Color(0xFF81A884) : Colors.black38;
@@ -963,76 +679,68 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             color: Colors.black.withOpacity(dark ? 0.2 : 0.06),
             blurRadius: 12, offset: const Offset(0, 5))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                  color: green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(9)),
-              child: Icon(Icons.candlestick_chart_outlined, color: green, size: 16),
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.txnCandlestick, style: TextStyle(fontSize: 13,
-                  fontWeight: FontWeight.w800, color: txtP)),
-              if (!_isLoadingTxns && candles.isNotEmpty)
-                Text('${candles.length} ${s.tradingDays} · '
-                    '${_funds.isNotEmpty ? _funds[_currentFundIndex]['fundName'] : ''}',
-                    style: TextStyle(fontSize: 10, color: txtS)),
-            ])),
-            _dot(bullColor, s.bullish, txtS),
-            const SizedBox(width: 12),
-            _dot(bearColor, s.bearish, txtS),
-          ]),
-
-          const SizedBox(height: 16),
-
-          SizedBox(
-            height: 200,
-            child: _isLoadingTxns
-                ? Center(child: Column(
-                mainAxisAlignment: MainAxisAlignment.center, children: [
-              SizedBox(width: 22, height: 22,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: green)),
-              const SizedBox(height: 10),
-              Text(s.loadingChart,
-                  style: TextStyle(fontSize: 12, color: txtS)),
-            ]))
-                : candles.isEmpty
-                ? Center(child: Column(
-                mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.candlestick_chart_outlined,
-                  size: 40, color: txtS.withOpacity(0.4)),
-              const SizedBox(height: 10),
-              Text(s.noTransactions,
-                  style: TextStyle(fontSize: 13, color: txtS)),
-            ]))
-                : FadeTransition(
-              opacity: _chartFadeAnim,
-              child: _CandlestickChart(
-                candles:    candles,
-                bullColor:  bullColor,
-                bearColor:  bearColor,
-                labelColor: labelColor,
-                gridColor:  gridColor,
-                shortAmt:   _shortAmt,
-              ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+                color: green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(9)),
+            child: Icon(Icons.candlestick_chart_outlined, color: green, size: 16),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(s.txnCandlestick, style: TextStyle(fontSize: 13,
+                fontWeight: FontWeight.w800, color: txtP)),
+            if (!_isLoadingTxns && candles.isNotEmpty)
+              Text('${candles.length} ${s.tradingDays} · '
+                  '${_funds.isNotEmpty ? _funds[_currentFundIndex]['fundName'] : ''}',
+                  style: TextStyle(fontSize: 10, color: txtS)),
+          ])),
+          _dot(bullColor, s.bullish, txtS),
+          const SizedBox(width: 12),
+          _dot(bearColor, s.bearish, txtS),
+        ]),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 200,
+          child: _isLoadingTxns
+              ? Center(child: Column(
+              mainAxisAlignment: MainAxisAlignment.center, children: [
+            SizedBox(width: 22, height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2, color: green)),
+            const SizedBox(height: 10),
+            Text(s.loadingChart,
+                style: TextStyle(fontSize: 12, color: txtS)),
+          ]))
+              : candles.isEmpty
+              ? Center(child: Column(
+              mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.candlestick_chart_outlined,
+                size: 40, color: txtS.withOpacity(0.4)),
+            const SizedBox(height: 10),
+            Text(s.noTransactions,
+                style: TextStyle(fontSize: 13, color: txtS)),
+          ]))
+              : FadeTransition(
+            opacity: _chartFadeAnim,
+            child: _CandlestickChart(
+              candles:    candles,
+              bullColor:  bullColor,
+              bearColor:  bearColor,
+              labelColor: labelColor,
+              gridColor:  gridColor,
+              shortAmt:   _shortAmt,
             ),
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 
-  // ── Recent list ────────────────────────────────────────────────────────────
   Widget _buildRecentList(
-      bool dark, Color txtP, Color txtS, Color cardBg,
-      Color divider, _HS s,
+      bool dark, Color txtP, Color txtS, Color cardBg, Color divider, _HS s,
       ) {
     if (_isLoadingTxns || _transactions.isEmpty) return const SizedBox.shrink();
     final recent = _transactions.reversed.take(5).toList();
@@ -1041,8 +749,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(s.latestActivity, style: TextStyle(fontSize: 14,
-              fontWeight: FontWeight.w700, color: txtS)),
+          child: Text(s.latestActivity, style: TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w700, color: txtS)),
         ),
         const SizedBox(height: 10),
         Container(
@@ -1073,7 +781,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       Map<String, dynamic> txn, bool dark, Color txtP, Color txtS,
       ) {
     final isDeposit = txn['type'] == 'Deposit';
-    final color  = isDeposit ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+    final color   = isDeposit ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
     final bgColor = isDeposit
         ? (dark ? const Color(0xFF1A2E1A) : const Color(0xFFE8F5E9))
         : (dark ? const Color(0xFF2A1010) : const Color(0xFFFFEBEE));
@@ -1086,8 +794,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       child: Row(children: [
-        Container(
-            width: 42, height: 42,
+        Container(width: 42, height: 42,
             decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 18)),
         const SizedBox(width: 12),
@@ -1111,16 +818,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Portfolio section ──────────────────────────────────────────────────────
-  Widget _buildPortfolioSection(
-      bool dark, Color txtP, Color txtS, _HS s,
-      ) {
+  Widget _buildPortfolioSection(bool dark, Color txtP, Color txtS, _HS s) {
     final green = dark ? const Color(0xFF4ADE80) : const Color(0xFF1B5E20);
-
     if (_isLoadingFunds) {
-      return _blankCard(
-        height: 175,
-        color: const Color(0xFF1B5E20),
+      return _blankCard(height: 175, color: const Color(0xFF1B5E20),
         child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center, children: [
           const CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
@@ -1131,9 +832,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
     if (_fundsError != null) {
-      return _blankCard(
-        height: 175,
-        color: const Color(0xFF1B5E20),
+      return _blankCard(height: 175, color: const Color(0xFF1B5E20),
         child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center, children: [
           const Icon(Icons.cloud_off_outlined, color: Colors.white54, size: 28),
@@ -1187,16 +886,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: child,
       );
 
-  // ── Fund card ──────────────────────────────────────────────────────────────
   Widget _buildFundCard(
       Map<String, dynamic> fund, int index,
       bool dark, Color txtP, Color txtS, _HS s,
       ) {
-    final baseColor     = _cardColor(index);
-    final portfolioVal  = (fund['portfolioValue'] as num).toDouble();
-    final units         = (fund['investorUnits']  as num).toDouble();
-    final nav           = (fund['nav']            as num).toDouble();
-    final status        = fund['status'] as String;
+    final baseColor    = _cardColor(index);
+    final portfolioVal = (fund['portfolioValue'] as num).toDouble();
+    final units        = (fund['investorUnits']  as num).toDouble();
+    final nav          = (fund['nav']            as num).toDouble();
+    final status       = fund['status'] as String;
     final hasInvestment = portfolioVal > 0;
 
     Color statusColor; IconData statusIcon;
@@ -1266,8 +964,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: () =>
-                    setState(() => _isBalanceVisible = !_isBalanceVisible),
+                onTap: () => setState(() => _isBalanceVisible = !_isBalanceVisible),
                 child: Icon(
                     _isBalanceVisible
                         ? Icons.visibility_outlined
@@ -1285,8 +982,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 const SizedBox(height: 4),
                 hasInvestment
                     ? Text(
-                    _isBalanceVisible
-                        ? 'TZS ${_fmt(portfolioVal)}' : _mask(''),
+                    _isBalanceVisible ? 'TZS ${_fmt(portfolioVal)}' : _mask(''),
                     style: const TextStyle(fontSize: 17,
                         fontWeight: FontWeight.w900, color: Colors.white,
                         letterSpacing: -0.3))
@@ -1362,8 +1058,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Container(
               width: 38, height: 38,
               decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(11)),
+                  color: iconBg, borderRadius: BorderRadius.circular(11)),
               child: Icon(icon, color: txtP, size: 19)),
           const SizedBox(height: 6),
           Text(label, textAlign: TextAlign.center,
@@ -1382,7 +1077,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Text(label, style: TextStyle(fontSize: 10, color: txtS)),
       ]);
 
-  // ── Candlestick data builder ───────────────────────────────────────────────
   List<_CandleData> _buildCandles() {
     if (_transactions.isEmpty) return [];
     final Map<String, List<Map<String, dynamic>>> byDay = {};
@@ -1393,9 +1087,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final candles = <_CandleData>[];
     final sortedKeys = byDay.keys.toList()..sort();
     for (final key in sortedKeys) {
-      final group  = byDay[key]!;
+      final group   = byDay[key]!;
       final amounts = group.map((t) => t['amount'] as double).toList();
-      final isUp = group.where((t) => t['type'] == 'Deposit').length >=
+      final isUp    = group.where((t) => t['type'] == 'Deposit').length >=
           group.where((t) => t['type'] == 'Withdrawal').length;
       candles.add(_CandleData(
         date:  group.first['date'] as DateTime,
@@ -1428,9 +1122,9 @@ class _CandlestickChart extends StatefulWidget {
   final String Function(double) shortAmt;
 
   const _CandlestickChart({
-    required this.candles,    required this.bullColor,
-    required this.bearColor,  required this.labelColor,
-    required this.gridColor,  required this.shortAmt,
+    required this.candles,   required this.bullColor,
+    required this.bearColor, required this.labelColor,
+    required this.gridColor, required this.shortAmt,
   });
 
   @override
@@ -1505,14 +1199,14 @@ class _CandlestickChartState extends State<_CandlestickChart> {
           }),
           if (_hoveredIndex != null)
             Builder(builder: (_) {
-              final idx = _hoveredIndex!;
-              final c   = widget.candles[idx];
-              final cx  = yLabelW + (idx + 0.5) * slotW;
-              final double ttW   = 100.0;
-              double ttLeft      = cx + 6;
+              final idx     = _hoveredIndex!;
+              final c       = widget.candles[idx];
+              final cx      = yLabelW + (idx + 0.5) * slotW;
+              const double ttW = 100.0;
+              double ttLeft    = cx + 6;
               if (ttLeft + ttW > w) ttLeft = cx - ttW - 6;
-              final bodyTop    = toY(max(c.open, c.close));
-              final tooltipY   = max(0.0, bodyTop - 60.0);
+              final bodyTop  = toY(max(c.open, c.close));
+              final tooltipY = max(0.0, bodyTop - 60.0);
               return Positioned(
                 left: ttLeft, top: tooltipY,
                 child: Container(
@@ -1551,8 +1245,8 @@ class _CandlestickChartState extends State<_CandlestickChart> {
     children: [
       Text(label, style: const TextStyle(fontSize: 9,
           color: Colors.white54, fontWeight: FontWeight.w600)),
-      Text(widget.shortAmt(v), style: const TextStyle(fontSize: 10,
-          color: Colors.white, fontWeight: FontWeight.w700)),
+      Text(widget.shortAmt(v), style: const TextStyle(
+          fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700)),
     ],
   );
 }
@@ -1589,13 +1283,13 @@ class _CandlePainter extends CustomPainter {
       canvas.drawPath(dashPath, gridPaint);
     }
     for (int i = 0; i < candles.length; i++) {
-      final c      = candles[i];
-      final color  = c.isUp ? bullColor : bearColor;
-      final cx     = (i + 0.5) * slotW;
-      final highY  = _toY(c.high);
-      final lowY   = _toY(c.low);
-      final openY  = _toY(c.open);
-      final closeY = _toY(c.close);
+      final c          = candles[i];
+      final color      = c.isUp ? bullColor : bearColor;
+      final cx         = (i + 0.5) * slotW;
+      final highY      = _toY(c.high);
+      final lowY       = _toY(c.low);
+      final openY      = _toY(c.open);
+      final closeY     = _toY(c.close);
       final bodyTop    = min(openY, closeY);
       final bodyBottom = max(openY, closeY);
       final bodyHeight = max(1.0, bodyBottom - bodyTop);
@@ -1608,22 +1302,19 @@ class _CandlePainter extends CustomPainter {
         );
       }
 
-      final wickPaint = Paint()
+      canvas.drawLine(Offset(cx, highY), Offset(cx, lowY), Paint()
         ..color = color.withOpacity(isHovered ? 1.0 : 0.7)
-        ..strokeWidth = 1.2 ..style = PaintingStyle.stroke;
-      final bodyPaint = Paint()
-        ..color = color.withOpacity(isHovered ? 1.0 : 0.85)
-        ..style = PaintingStyle.fill;
-      final bodyBorderPaint = Paint()
-        ..color = color ..strokeWidth = 1.0 ..style = PaintingStyle.stroke;
+        ..strokeWidth = 1.2 ..style = PaintingStyle.stroke);
 
-      canvas.drawLine(Offset(cx, highY), Offset(cx, lowY), wickPaint);
       final bodyRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(cx - bodyW / 2, bodyTop, bodyW, bodyHeight),
         const Radius.circular(2),
       );
-      canvas.drawRRect(bodyRect, bodyPaint);
-      canvas.drawRRect(bodyRect, bodyBorderPaint);
+      canvas.drawRRect(bodyRect, Paint()
+        ..color = color.withOpacity(isHovered ? 1.0 : 0.85)
+        ..style = PaintingStyle.fill);
+      canvas.drawRRect(bodyRect, Paint()
+        ..color = color ..strokeWidth = 1.0 ..style = PaintingStyle.stroke);
     }
   }
 

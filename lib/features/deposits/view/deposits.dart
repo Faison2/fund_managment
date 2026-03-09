@@ -41,19 +41,19 @@ class _DS {
 }
 
 const _dsEn = _DS(
-  depositFunds:    'Deposit Funds',
+  depositFunds:    'Invest Funds',
   chooseFund:      'Choose fund and amount to deposit',
   selectFund:      'Select Fund',
   enterAmount:     'Enter Amount',
   quickSelect:     'Quick Select',
   summary:         'Summary',
   fund:            'Fund',
-  depositAmount:   'Deposit Amount',
+  depositAmount:   'Invest Amount',
   processingFee:   'Processing Fee',
   totalAmount:     'Total Amount',
-  depositNow:      'Deposit Now',
+  depositNow:      'Invest Now',
   confirmDeposit:  'Confirm Deposit',
-  confirmDetails:  'Please confirm your deposit details.',
+  confirmDetails:  'Please confirm your investment details.',
   cancel:          'Cancel',
   confirm:         'Confirm',
   depositInitiated:'Deposit Initiated!',
