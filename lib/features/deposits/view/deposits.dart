@@ -252,7 +252,7 @@ class _DepositPageState extends State<DepositPage> {
       final funds = await FundsRepository().fetchFunds();
       setState(() {
         _funds          = funds;
-        _selectedFund   = funds.isNotEmpty ? funds.first : null;
+        _selectedFund   = null; // Start with no selection — user must pick
         _isLoadingFunds = false;
       });
     } catch (_) {
@@ -279,14 +279,13 @@ class _DepositPageState extends State<DepositPage> {
           'APIUsername': 'User2',
           'APIPassword': 'CBZ1234#2',
           'cdsNumber':   _cdsNumber,
-          'PhoneNumber': _mobileController.text.trim(),   // ← correct field name
+          'PhoneNumber': _mobileController.text.trim(),
           'Fund':        _selectedFund!.fundingName ?? '',
           'Amount':      _amountController.text,
         }),
       );
       final data = jsonDecode(res.body);
       if (res.statusCode == 200 && data['status'] == 'success') {
-        // Persist edited mobile for next visit
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_mobile', _mobileController.text.trim());
         setState(() => _mobile = _mobileController.text.trim());
@@ -534,29 +533,47 @@ class _DepositPageState extends State<DepositPage> {
                       _dropdown(bg: inputBg, border: border,
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<Fund>(
-                            value: _selectedFund, isExpanded: true,
+                            value: _selectedFund,
+                            isExpanded: true,
                             dropdownColor: cardBg,
                             icon: Icon(Icons.keyboard_arrow_down_rounded, color: txtS),
+                            // ── Placeholder shown when nothing is selected ──
+                            hint: Row(children: [
+                              const SizedBox(width: 2),
+                              Text(
+                                s.selectFund,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: txtH,
+                                ),
+                              ),
+                            ]),
                             items: _funds.map((f) => DropdownMenuItem<Fund>(
                               value: f,
                               child: Row(children: [
-                                Container(width: 8, height: 8,
-                                    decoration: BoxDecoration(
-                                        color: f.status?.toLowerCase() == 'active'
-                                            ? const Color(0xFF22C55E) : Colors.orange,
-                                        shape: BoxShape.circle)),
+                                Container(
+                                  width: 8, height: 8,
+                                  decoration: BoxDecoration(
+                                    color: f.status?.toLowerCase() == 'active'
+                                        ? const Color(0xFF22C55E)
+                                        : Colors.orange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
                                 const SizedBox(width: 10),
-                                Expanded(child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min, children: [
-                                  Text(f.fundingName ?? s.noFunds,
-                                      style: TextStyle(fontWeight: FontWeight.w600,
-                                          fontSize: 14, color: txtP),
-                                      overflow: TextOverflow.ellipsis),
-                                  if (f.issuer != null)
-                                    Text(f.issuer!, style: TextStyle(
-                                        fontSize: 11, color: txtS)),
-                                ])),
+                                // ── Fund name only — issuer removed ──
+                                Expanded(
+                                  child: Text(
+                                    f.fundingName ?? s.noFunds,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: txtP,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ]),
                             )).toList(),
                             onChanged: (f) => setState(() => _selectedFund = f),

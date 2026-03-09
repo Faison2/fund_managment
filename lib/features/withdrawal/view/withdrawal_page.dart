@@ -146,9 +146,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
 
   // ── UI state ───────────────────────────────────────────────────────────────
   bool _isSubmitting        = false;
-  bool _bankingDetailsOpen  = false;   // expand/collapse accordion
+  bool _bankingDetailsOpen  = false;
 
-  // Animation controller for the banking details accordion
   late final AnimationController _accordionCtrl;
   late final Animation<double>   _accordionAnim;
 
@@ -200,10 +199,10 @@ class _WithdrawalPageState extends State<WithdrawalPage>
       final funds = await FundsRepository().fetchFunds();
       setState(() {
         _funds          = funds;
-        _selectedFund   = funds.isNotEmpty ? funds.first : null;
+        _selectedFund   = null; // Start with no selection — user must pick
         _isLoadingFunds = false;
       });
-      if (_selectedFund != null) _fetchAvailableBalance();
+      // Do NOT auto-fetch balance; wait for user to select a fund
     } catch (_) {
       setState(() { _fundsError = _s.failedLoadFunds; _isLoadingFunds = false; });
     }
@@ -244,7 +243,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     }
   }
 
-  // ── Toggle banking accordion ───────────────────────────────────────────────
   void _toggleBankingDetails() {
     setState(() => _bankingDetailsOpen = !_bankingDetailsOpen);
     if (_bankingDetailsOpen) {
@@ -254,7 +252,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     }
   }
 
-  // ── Withdrawal API ─────────────────────────────────────────────────────────
   Future<void> _processWithdrawal() async {
     if (_amountController.text.isEmpty || _selectedFund == null) return;
     final confirmed = await _showConfirmationDialog();
@@ -285,7 +282,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     }
   }
 
-  // ── Confirmation dialog ────────────────────────────────────────────────────
   Future<bool> _showConfirmationDialog() async {
     final dark   = Provider.of<ThemeProvider>(context, listen: false).isDark;
     final s      = Provider.of<LocaleProvider>(context, listen: false).isSwahili
@@ -377,7 +373,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
         ]),
       );
 
-  // ── Result dialog ──────────────────────────────────────────────────────────
   void _showResultDialog({required bool success, required String message}) {
     final dark   = Provider.of<ThemeProvider>(context, listen: false).isDark;
     final s      = Provider.of<LocaleProvider>(context, listen: false).isSwahili
@@ -433,13 +428,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     );
   }
 
-  void _snackErr(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(msg), backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 4)),
-  );
-
   String _fmt(String v) {
     if (v.isEmpty) return '0.00';
     final d = double.tryParse(v) ?? 0;
@@ -453,7 +441,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
           _selectedFund != null &&
           !_isSubmitting;
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     context.watch<ThemeProvider>();
@@ -511,7 +498,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
           )),
         ),
 
-        // ── Available balance banner (inside header area) ────────────────────
+        // ── Available balance banner ─────────────────────────────────────────
         Container(
           decoration: BoxDecoration(
             gradient: dark
@@ -583,29 +570,47 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                       _dropdown(bg: inputBg, border: border,
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<Fund>(
-                            value: _selectedFund, isExpanded: true,
+                            value: _selectedFund,
+                            isExpanded: true,
                             dropdownColor: cardBg,
                             icon: Icon(Icons.keyboard_arrow_down_rounded, color: txtS),
+                            // ── Placeholder shown when nothing is selected ──
+                            hint: Row(children: [
+                              const SizedBox(width: 2),
+                              Text(
+                                s.selectFund,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: txtH,
+                                ),
+                              ),
+                            ]),
                             items: _funds.map((f) => DropdownMenuItem<Fund>(
                               value: f,
                               child: Row(children: [
-                                Container(width: 8, height: 8,
-                                    decoration: BoxDecoration(
-                                        color: f.status?.toLowerCase() == 'active'
-                                            ? const Color(0xFF22C55E) : Colors.orange,
-                                        shape: BoxShape.circle)),
+                                Container(
+                                  width: 8, height: 8,
+                                  decoration: BoxDecoration(
+                                    color: f.status?.toLowerCase() == 'active'
+                                        ? const Color(0xFF22C55E)
+                                        : Colors.orange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
                                 const SizedBox(width: 10),
-                                Expanded(child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min, children: [
-                                  Text(f.fundingName ?? s.noFunds,
-                                      style: TextStyle(fontWeight: FontWeight.w600,
-                                          fontSize: 14, color: txtP),
-                                      overflow: TextOverflow.ellipsis),
-                                  if (f.issuer != null)
-                                    Text(f.issuer!, style: TextStyle(
-                                        fontSize: 11, color: txtS)),
-                                ])),
+                                // ── Fund name only — issuer removed ──
+                                Expanded(
+                                  child: Text(
+                                    f.fundingName ?? s.noFunds,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: txtP,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ]),
                             )).toList(),
                             onChanged: (f) {
@@ -780,19 +785,15 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                         ),
                         child: _bank.isEmpty && _accountNo.isEmpty &&
                             _accountName.isEmpty && _branch.isEmpty
-                        // ── No data saved ────────────────────────────────
                             ? Padding(
                           padding: const EdgeInsets.all(20),
                           child: Row(children: [
-                            Icon(Icons.info_outline,
-                                color: txtH, size: 18),
+                            Icon(Icons.info_outline, color: txtH, size: 18),
                             const SizedBox(width: 10),
                             Text(s.noBankingDetails,
-                                style: TextStyle(color: txtH,
-                                    fontSize: 13)),
+                                style: TextStyle(color: txtH, fontSize: 13)),
                           ]),
                         )
-                        // ── Show saved banking details ────────────────────
                             : Padding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                           child: Column(children: [
@@ -807,8 +808,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                                 orange, txtP, txtS, border, dark),
                             _bankRow(Icons.store_outlined,
                                 s.branch, _branch.isNotEmpty ? _branch : s.notSet,
-                                orange, txtP, txtS, border, dark,
-                                last: true),
+                                orange, txtP, txtS, border, dark, last: true),
                           ]),
                         ),
                       ),
@@ -850,7 +850,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     );
   }
 
-  // ── Banking detail row ─────────────────────────────────────────────────────
   Widget _bankRow(IconData icon, String label, String value,
       Color orange, Color txtP, Color txtS, Color border, bool dark,
       {bool last = false}) =>
@@ -883,7 +882,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
         ]),
       );
 
-  // ── Shared helpers ─────────────────────────────────────────────────────────
   Widget _secLabel(String t, Color c) => Padding(
       padding: const EdgeInsets.only(left: 2),
       child: Text(t.toUpperCase(), style: TextStyle(fontSize: 11,
