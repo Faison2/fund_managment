@@ -17,12 +17,12 @@ import 'homescreen.dart';
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _DS {
   final String funds, home, portfolio, profile,
-      marketWatch, accNo, accNotAvailable,
+      accNo, accNotAvailable,
       accNotFound, errorLoading, failedToLoad;
   const _DS({
     required this.funds,           required this.home,
     required this.portfolio,       required this.profile,
-    required this.marketWatch,     required this.accNo,
+    required this.accNo,
     required this.accNotAvailable, required this.accNotFound,
     required this.errorLoading,    required this.failedToLoad,
   });
@@ -33,7 +33,6 @@ const _dsEn = _DS(
   home:            'Home',
   portfolio:       'Portfolio',
   profile:         'Profile',
-  marketWatch:     'DSE TRADEs',
   accNo:           'Acc No',
   accNotAvailable: 'Acc No: Not available',
   accNotFound:     'Acc No Not Found',
@@ -46,7 +45,6 @@ const _dsSw = _DS(
   home:            'Nyumbani',
   portfolio:       'Mkoba',
   profile:         'Wasifu',
-  marketWatch:     'Biashara DSE',
   accNo:           'Nambari ya Akaunti',
   accNotAvailable: 'Akaunti: Haipatikani',
   accNotFound:     'Nambari ya Akaunti Haikupatikana',
@@ -99,9 +97,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     _fabController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
     _fabScale = CurvedAnimation(parent: _fabController, curve: Curves.elasticOut);
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) _fabController.forward();
-    });
   }
 
   @override
@@ -206,18 +201,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_cdsNumber.isNotEmpty) await _fetchUserDetails(_cdsNumber);
   }
 
-  void _openMarketWatch() {
-    Navigator.of(context).push(PageRouteBuilder(
-      pageBuilder: (_, __, ___) => const TradeDashboard(),
-      transitionsBuilder: (_, animation, __, child) => SlideTransition(
-        position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-            .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-        child: child,
-      ),
-      transitionDuration: const Duration(milliseconds: 380),
-    ));
-  }
-
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -225,7 +208,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     context.watch<LocaleProvider>();
     final s = _s;
 
-    // Keep status bar icons readable against the app bar background
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarBrightness: _dark ? Brightness.dark : Brightness.light,
       statusBarIconBrightness: _dark ? Brightness.light : Brightness.dark,
@@ -296,26 +278,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         onNavigationChanged: (i) => setState(() => _currentIndex = i),
       ),
       body: _pages[_currentIndex],
-      floatingActionButton: ScaleTransition(
-        scale: _fabScale,
-        child: FloatingActionButton.extended(
-          onPressed: _openMarketWatch,
-          backgroundColor: _dark ? const Color(0xFF1E3320) : Colors.teal.shade700,
-          foregroundColor: Colors.white,
-          elevation: _dark ? 0 : 6,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-            side: _dark
-                ? BorderSide(color: Colors.teal.shade700.withOpacity(0.5), width: 1)
-                : BorderSide.none,
-          ),
-          icon: const Icon(Icons.candlestick_chart_outlined, size: 20),
-          label: Text(s.marketWatch,
-              style: const TextStyle(fontWeight: FontWeight.w700,
-                  fontSize: 13, letterSpacing: 0.3)),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: _buildNavBar(s),
     );
   }
@@ -330,8 +292,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       (Icons.person_outline,                  Icons.person),
     ];
 
-    // ── DARK  → frosted glass pill ──────────────────────────────────────────
-    // ── LIGHT → solid dark green pill (original) ────────────────────────────
     final Widget navPill = _dark
         ? _glassPill(labels, icons)
         : _solidPill(labels, icons);
@@ -379,7 +339,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ── Solid pill (light mode — original style) ───────────────────────────────
+  // ── Solid pill (light mode) ────────────────────────────────────────────────
   Widget _solidPill(List<String> labels,
       List<(IconData, IconData)> icons) {
     return Container(

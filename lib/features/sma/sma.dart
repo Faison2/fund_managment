@@ -163,7 +163,7 @@ class _SMAPageState extends State<SMAPage>
   bool   _showAll    = false;
   bool   _showAllCash = false;
   String _cdsNumber  = '';
-  int    _tabIndex   = 0; // 0 = Investments, 1 = Cash
+  int    _tabIndex   = 1; // 0 = Investments, 1 = Cash
 
   late AnimationController _entryCtrl;
   late Animation<double>   _entryFade;

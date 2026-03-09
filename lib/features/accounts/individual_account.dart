@@ -52,6 +52,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+  // ─── NEW: Client type selection ───────────────────────────────────────────────
+  // null = not yet chosen, 'new' = new client, 'existing' = existing client
+  String? _clientType;
+  final TextEditingController _fcNumberController = TextEditingController();
+  bool _isFcLookupLoading = false;
+  String? _fcLookupError;
+
   // ─── Controllers ─────────────────────────────────────────────────────────────
   final TextEditingController _titleController =
   TextEditingController(text: "Mr");
@@ -67,7 +74,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   final TextEditingController _validityDateController =
   TextEditingController();
   final TextEditingController _issuingAuthorityController =
-  TextEditingController(); // used for non-TZ custom entry
+  TextEditingController();
 
   // Address
   final TextEditingController _houseNumberController = TextEditingController();
@@ -106,27 +113,18 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   String _selectedIdType = 'National ID';
   String _selectedPaymentMethod = 'Cash';
   String _selectedGender = 'Male';
-  // FIX #6 – only Individual / Minor
   String _selectedAccountType = 'Individual';
   String _selectedBankType = 'Local';
   String _selectedAmountCurrency = 'TZS';
   String? _cdsNumber;
 
-  // FIX #1 – Nationality dropdown
   String _selectedNationality = '';
-  // FIX #1 – Issuing authority dropdown (Tanzania)
   String _selectedIssuingAuthority = '';
-
-  // FIX #2 – Country dropdown for address
   String _selectedCountry = '';
-  // FIX #2 – Tanzania sub-fields
   String _selectedRegion = '';
   String _selectedDistrict = '';
-
-  // FIX #8 – Source of funds dropdown
   String _selectedSourceOfFunds = '';
 
-  // Inline errors (#9)
   final Map<String, String?> _errors = {};
 
   // ID Upload
@@ -135,345 +133,82 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   String? _idFileExtension;
 
   // ─── Static Data ─────────────────────────────────────────────────────────────
-
-  // Common countries list (abbreviated – extend as needed)
   static const List<String> _countries = [
-    'Tanzania',
-    'Kenya',
-    'Uganda',
-    'Rwanda',
-    'Burundi',
-    'South Africa',
-    'Zimbabwe',
-    'Zambia',
-    'Malawi',
-    'Mozambique',
-    'Ethiopia',
-    'Nigeria',
-    'Ghana',
-    'Egypt',
-    'United Kingdom',
-    'United States',
-    'Germany',
-    'France',
-    'China',
-    'India',
-    'Other',
+    'Tanzania', 'Kenya', 'Uganda', 'Rwanda', 'Burundi', 'South Africa',
+    'Zimbabwe', 'Zambia', 'Malawi', 'Mozambique', 'Ethiopia', 'Nigeria',
+    'Ghana', 'Egypt', 'United Kingdom', 'United States', 'Germany',
+    'France', 'China', 'India', 'Other',
   ];
 
-  // Common nationalities
   static const List<String> _nationalities = [
-    'Tanzanian',
-    'Kenyan',
-    'Ugandan',
-    'Rwandan',
-    'Burundian',
-    'South African',
-    'Zimbabwean',
-    'Zambian',
-    'Malawian',
-    'Mozambican',
-    'Ethiopian',
-    'Nigerian',
-    'Ghanaian',
-    'Egyptian',
-    'British',
-    'American',
-    'German',
-    'French',
-    'Chinese',
-    'Indian',
-    'Other',
+    'Tanzanian', 'Kenyan', 'Ugandan', 'Rwandan', 'Burundian', 'South African',
+    'Zimbabwean', 'Zambian', 'Malawian', 'Mozambican', 'Ethiopian', 'Nigerian',
+    'Ghanaian', 'Egyptian', 'British', 'American', 'German', 'French',
+    'Chinese', 'Indian', 'Other',
   ];
 
-  // FIX #1 – Tanzania issuing authorities
   static const List<String> _tzIssuingAuthorities = [
-    'NIDA',
-    'TRA',
-    'NEC',
-    'ZCSRA',
+    'NIDA', 'TRA', 'NEC', 'ZCSRA',
   ];
 
-  // FIX #2 – Tanzania regions
   static const List<String> _tanzaniaRegions = [
-    'Arusha',
-    'Dar es Salaam',
-    'Dodoma',
-    'Geita',
-    'Iringa',
-    'Kagera',
-    'Katavi',
-    'Kigoma',
-    'Kilimanjaro',
-    'Lindi',
-    'Manyara',
-    'Mara',
-    'Mbeya',
-    'Morogoro',
-    'Mtwara',
-    'Mwanza',
-    'Njombe',
-    'Pemba North',
-    'Pemba South',
-    'Pwani',
-    'Rukwa',
-    'Ruvuma',
-    'Shinyanga',
-    'Simiyu',
-    'Singida',
-    'Songwe',
-    'Tabora',
-    'Tanga',
-    'Zanzibar North',
-    'Zanzibar South',
-    'Zanzibar West',
+    'Arusha', 'Dar es Salaam', 'Dodoma', 'Geita', 'Iringa', 'Kagera',
+    'Katavi', 'Kigoma', 'Kilimanjaro', 'Lindi', 'Manyara', 'Mara', 'Mbeya',
+    'Morogoro', 'Mtwara', 'Mwanza', 'Njombe', 'Pemba North', 'Pemba South',
+    'Pwani', 'Rukwa', 'Ruvuma', 'Shinyanga', 'Simiyu', 'Singida', 'Songwe',
+    'Tabora', 'Tanga', 'Zanzibar North', 'Zanzibar South', 'Zanzibar West',
   ];
 
   static const Map<String, List<String>> _tanzaniaDistricts = {
-    'Arusha': [
-      'Arusha City',
-      'Arusha DC',
-      'Karatu',
-      'Longido',
-      'Monduli',
-      'Ngorongoro'
-    ],
-    'Dar es Salaam': [
-      'Ilala',
-      'Kinondoni',
-      'Temeke',
-      'Ubungo',
-      'Kigamboni'
-    ],
-    'Dodoma': [
-      'Dodoma City',
-      'Bahi',
-      'Chamwino',
-      'Chemba',
-      'Kondoa',
-      'Kongwa',
-      'Mpwapwa'
-    ],
-    'Geita': [
-      'Geita DC',
-      'Geita Town',
-      'Bukombe',
-      'Chato',
-      'Mbogwe',
-      "Nyang'hwale"
-    ],
-    'Iringa': [
-      'Iringa DC',
-      'Iringa Municipal',
-      'Kilolo',
-      'Mafinga Town'
-    ],
-    'Kagera': [
-      'Bukoba DC',
-      'Bukoba Municipal',
-      'Biharamulo',
-      'Karagwe',
-      'Kyerwa',
-      'Missenyi',
-      'Muleba',
-      'Ngara'
-    ],
+    'Arusha': ['Arusha City', 'Arusha DC', 'Karatu', 'Longido', 'Monduli', 'Ngorongoro'],
+    'Dar es Salaam': ['Ilala', 'Kinondoni', 'Temeke', 'Ubungo', 'Kigamboni'],
+    'Dodoma': ['Dodoma City', 'Bahi', 'Chamwino', 'Chemba', 'Kondoa', 'Kongwa', 'Mpwapwa'],
+    'Geita': ['Geita DC', 'Geita Town', 'Bukombe', 'Chato', 'Mbogwe', "Nyang'hwale"],
+    'Iringa': ['Iringa DC', 'Iringa Municipal', 'Kilolo', 'Mafinga Town'],
+    'Kagera': ['Bukoba DC', 'Bukoba Municipal', 'Biharamulo', 'Karagwe', 'Kyerwa', 'Missenyi', 'Muleba', 'Ngara'],
     'Katavi': ['Mlele', 'Mpanda DC', 'Mpanda Town'],
-    'Kigoma': [
-      'Kigoma DC',
-      'Kigoma-Ujiji Municipal',
-      'Buhigwe',
-      'Kakonko',
-      'Kasulu DC',
-      'Kasulu Town',
-      'Kibondo',
-      'Uvinza'
-    ],
-    'Kilimanjaro': [
-      'Moshi DC',
-      'Moshi Municipal',
-      'Hai',
-      'Mwanga',
-      'Rombo',
-      'Same',
-      'Siha'
-    ],
-    'Lindi': [
-      'Lindi DC',
-      'Lindi Municipal',
-      'Kilwa',
-      'Liwale',
-      'Nachingwea',
-      'Ruangwa'
-    ],
-    'Manyara': [
-      'Babati DC',
-      'Babati Town',
-      'Hanang',
-      'Kiteto',
-      'Mbulu',
-      'Simanjiro'
-    ],
-    'Mara': [
-      'Musoma DC',
-      'Musoma Municipal',
-      'Bunda',
-      'Butiama',
-      'Rorya',
-      'Serengeti',
-      'Tarime DC',
-      'Tarime Town'
-    ],
-    'Mbeya': [
-      'Mbeya City',
-      'Mbeya DC',
-      'Busokelo',
-      'Chunya',
-      'Kyela',
-      'Rungwe'
-    ],
-    'Morogoro': [
-      'Morogoro DC',
-      'Morogoro Municipal',
-      'Gairo',
-      'Ifakara Town',
-      'Kilombero',
-      'Kilosa',
-      'Malinyi',
-      'Mvomero',
-      'Ulanga'
-    ],
-    'Mtwara': [
-      'Mtwara DC',
-      'Mtwara Municipal',
-      'Masasi DC',
-      'Masasi Town',
-      'Nanyumbu',
-      'Newala',
-      'Tandahimba'
-    ],
-    'Mwanza': [
-      'Mwanza City',
-      'Ilemela',
-      'Kwimba',
-      'Magu',
-      'Misungwi',
-      'Nyamagana',
-      'Sengerema',
-      'Ukerewe'
-    ],
-    'Njombe': [
-      'Njombe DC',
-      'Njombe Town',
-      'Ludewa',
-      'Makete',
-      "Wanging'ombe"
-    ],
+    'Kigoma': ['Kigoma DC', 'Kigoma-Ujiji Municipal', 'Buhigwe', 'Kakonko', 'Kasulu DC', 'Kasulu Town', 'Kibondo', 'Uvinza'],
+    'Kilimanjaro': ['Moshi DC', 'Moshi Municipal', 'Hai', 'Mwanga', 'Rombo', 'Same', 'Siha'],
+    'Lindi': ['Lindi DC', 'Lindi Municipal', 'Kilwa', 'Liwale', 'Nachingwea', 'Ruangwa'],
+    'Manyara': ['Babati DC', 'Babati Town', 'Hanang', 'Kiteto', 'Mbulu', 'Simanjiro'],
+    'Mara': ['Musoma DC', 'Musoma Municipal', 'Bunda', 'Butiama', 'Rorya', 'Serengeti', 'Tarime DC', 'Tarime Town'],
+    'Mbeya': ['Mbeya City', 'Mbeya DC', 'Busokelo', 'Chunya', 'Kyela', 'Rungwe'],
+    'Morogoro': ['Morogoro DC', 'Morogoro Municipal', 'Gairo', 'Ifakara Town', 'Kilombero', 'Kilosa', 'Malinyi', 'Mvomero', 'Ulanga'],
+    'Mtwara': ['Mtwara DC', 'Mtwara Municipal', 'Masasi DC', 'Masasi Town', 'Nanyumbu', 'Newala', 'Tandahimba'],
+    'Mwanza': ['Mwanza City', 'Ilemela', 'Kwimba', 'Magu', 'Misungwi', 'Nyamagana', 'Sengerema', 'Ukerewe'],
+    'Njombe': ['Njombe DC', 'Njombe Town', 'Ludewa', 'Makete', "Wanging'ombe"],
     'Pemba North': ['Micheweni', 'Wete'],
     'Pemba South': ['Chake Chake', 'Mkoani'],
-    'Pwani': [
-      'Kibaha DC',
-      'Kibaha Town',
-      'Bagamoyo',
-      'Mafia',
-      'Mkuranga',
-      'Rufiji'
-    ],
+    'Pwani': ['Kibaha DC', 'Kibaha Town', 'Bagamoyo', 'Mafia', 'Mkuranga', 'Rufiji'],
     'Rukwa': ['Sumbawanga DC', 'Sumbawanga Municipal', 'Kalambo', 'Nkasi'],
-    'Ruvuma': [
-      'Songea DC',
-      'Songea Municipal',
-      'Mbinga DC',
-      'Mbinga Town',
-      'Namtumbo',
-      'Nyasa',
-      'Tunduru'
-    ],
-    'Shinyanga': [
-      'Shinyanga DC',
-      'Shinyanga Municipal',
-      'Kahama DC',
-      'Kahama Town',
-      'Kishapu'
-    ],
-    'Simiyu': [
-      'Bariadi DC',
-      'Bariadi Town',
-      'Busega',
-      'Itilima',
-      'Maswa',
-      'Meatu'
-    ],
-    'Singida': [
-      'Singida DC',
-      'Singida Municipal',
-      'Ikungi',
-      'Iramba',
-      'Manyoni',
-      'Mkalama'
-    ],
+    'Ruvuma': ['Songea DC', 'Songea Municipal', 'Mbinga DC', 'Mbinga Town', 'Namtumbo', 'Nyasa', 'Tunduru'],
+    'Shinyanga': ['Shinyanga DC', 'Shinyanga Municipal', 'Kahama DC', 'Kahama Town', 'Kishapu'],
+    'Simiyu': ['Bariadi DC', 'Bariadi Town', 'Busega', 'Itilima', 'Maswa', 'Meatu'],
+    'Singida': ['Singida DC', 'Singida Municipal', 'Ikungi', 'Iramba', 'Manyoni', 'Mkalama'],
     'Songwe': ['Mbozi', 'Momba', 'Songwe DC', 'Tunduma Town'],
-    'Tabora': [
-      'Tabora Municipal',
-      'Igunga',
-      'Kaliua',
-      'Nzega DC',
-      'Nzega Town',
-      'Sikonge',
-      'Urambo',
-      'Uyui'
-    ],
-    'Tanga': [
-      'Tanga City',
-      'Handeni DC',
-      'Handeni Town',
-      'Kilindi',
-      'Korogwe DC',
-      'Korogwe Town',
-      'Lushoto',
-      'Mkinga',
-      'Muheza',
-      'Pangani'
-    ],
+    'Tabora': ['Tabora Municipal', 'Igunga', 'Kaliua', 'Nzega DC', 'Nzega Town', 'Sikonge', 'Urambo', 'Uyui'],
+    'Tanga': ['Tanga City', 'Handeni DC', 'Handeni Town', 'Kilindi', 'Korogwe DC', 'Korogwe Town', 'Lushoto', 'Mkinga', 'Muheza', 'Pangani'],
     'Zanzibar North': ['Kaskazini A', 'Kaskazini B'],
     'Zanzibar South': ['Kati', 'Kusini'],
     'Zanzibar West': ['Magharibi', 'Mjini'],
   };
 
-  // FIX #8 – Source of funds options
   static const List<String> _sourcesOfFunds = [
-    'Employment / Salary',
-    'Business Income',
-    'Investments / Dividends',
-    'Inheritance',
-    'Property Sale',
-    'Savings',
-    'Pension / Retirement',
-    'Gift / Donation',
-    'Loan',
-    'Other',
+    'Employment / Salary', 'Business Income', 'Investments / Dividends',
+    'Inheritance', 'Property Sale', 'Savings', 'Pension / Retirement',
+    'Gift / Donation', 'Loan', 'Other',
   ];
 
-  // FIX #6 – Account types limited to Individual and Minor
   final List<String> _accountTypes = ['Individual', 'Minor'];
-
   final List<String> _identificationTypes = [
-    'National ID',
-    'Passport',
-    "Driver's License",
-    "Voter's ID",
+    'National ID', 'Passport', "Driver's License", "Voter's ID",
   ];
   final List<String> _genders = ['Male', 'Female'];
   final List<String> _titles = ['Mr', 'Mrs', 'Miss', 'Dr', 'Prof'];
-  final List<String> _paymentMethods = [
-    'Cash',
-    'Cheque',
-    'Direct Fund Transfer',
-  ];
+  final List<String> _paymentMethods = ['Cash', 'Cheque', 'Direct Fund Transfer'];
   final List<String> _bankTypes = ['Local', 'Savings', 'Current', 'Corporate'];
   final List<String> _currencies = ['TZS', 'USD', 'ZWL', 'EUR', 'GBP'];
 
-  // FIX #7 – Removed "Investment Preferences" step entirely
   final List<Map<String, dynamic>> _steps = [
     {'title': 'Personal Info', 'icon': Icons.person_outline_rounded},
     {'title': 'Identification', 'icon': Icons.badge_outlined},
@@ -587,10 +322,647 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     _idFileExtension = null;
   });
 
+  // ─── NEW: Show existing client FC Number dialog ────────────────────────────────
+
+  void _showExistingClientDialog() {
+    _fcNumberController.clear();
+    _fcLookupError = null;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24)),
+            child: Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Header ──────────────────────────────────────────
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: _softMint,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.person_search_rounded,
+                            color: _primaryGreen, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Existing Client',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _textDark),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Enter your FC Number to continue',
+                              style: TextStyle(
+                                  fontSize: 12, color: _textMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close_rounded,
+                              size: 18, color: _textMuted),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Info banner ──────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8E1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: Colors.amber.withOpacity(0.4), width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded,
+                            color: Colors.amber[700], size: 18),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Your FC Number can be found on your account statement or previous correspondence.',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF7B6200),
+                                height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── FC Number input ──────────────────────────────────
+                  const Text(
+                    'FC Number',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _textDark),
+                  ),
+                  const SizedBox(height: 8),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _fcLookupError != null
+                            ? _errorRed
+                            : _fcNumberController.text.isNotEmpty
+                            ? _primaryGreen.withOpacity(0.5)
+                            : Colors.grey.withOpacity(0.25),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: TextField(
+                      controller: _fcNumberController,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.characters,
+                      style: const TextStyle(
+                          fontSize: 16,
+                          color: _textDark,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.2),
+                      onChanged: (_) =>
+                          setDialogState(() => _fcLookupError = null),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. FC-123456',
+                        hintStyle: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 15,
+                            fontWeight: FontWeight.normal,
+                            letterSpacing: 0),
+                        prefixIcon: const Icon(Icons.tag_rounded,
+                            color: _primaryGreen, size: 20),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 16),
+                      ),
+                    ),
+                  ),
+
+                  // ── Inline error ─────────────────────────────────────
+                  if (_fcLookupError != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            size: 14, color: _errorRed),
+                        const SizedBox(width: 5),
+                        Text(
+                          _fcLookupError!,
+                          style: const TextStyle(
+                              fontSize: 12, color: _errorRed),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // ── Action buttons ───────────────────────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                                color: Colors.grey[300]!, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: _textMuted),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: _isFcLookupLoading
+                              ? null
+                              : () => _handleExistingClientLookup(
+                              ctx, setDialogState),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _primaryGreen,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                          ),
+                          child: _isFcLookupLoading
+                              ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5),
+                          )
+                              : const Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.search_rounded, size: 18),
+                              SizedBox(width: 6),
+                              Text(
+                                'Look Up Client',
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Handles the FC Number lookup for existing clients.
+  /// Replace the body of this method with your actual API call.
+  Future<void> _handleExistingClientLookup(
+      BuildContext dialogCtx, StateSetter setDialogState) async {
+    final fcNumber = _fcNumberController.text.trim();
+    if (fcNumber.isEmpty) {
+      setDialogState(() => _fcLookupError = 'Please enter your FC Number');
+      return;
+    }
+
+    setDialogState(() {
+      _isFcLookupLoading = true;
+      _fcLookupError = null;
+    });
+
+    try {
+      // ── TODO: Replace with your real API endpoint ──────────────────
+      // Example:
+      // final response = await http.post(
+      //   Uri.parse('$cSharpApi/GetClientByFC'),
+      //   headers: {'Content-Type': 'application/json'},
+      //   body: json.encode({
+      //     'APIUsername': _apiUsername,
+      //     'APIPassword': _apiPassword,
+      //     'FCNumber': fcNumber,
+      //   }),
+      // );
+      // if (response.statusCode == 200) { ... }
+
+      // ── Simulated delay for demonstration ─────────────────────────
+      await Future.delayed(const Duration(seconds: 2));
+
+      // ── Simulate a successful lookup ───────────────────────────────
+      // On success, close the dialog and navigate to the existing
+      // client's dashboard / next screen as appropriate.
+      if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+
+      _showExistingClientSuccessDialog(fcNumber);
+    } catch (e) {
+      setDialogState(
+              () => _fcLookupError = 'Lookup failed. Please try again.');
+    } finally {
+      setDialogState(() => _isFcLookupLoading = false);
+    }
+  }
+
+  /// Shows a success confirmation after a valid FC Number is found.
+  void _showExistingClientSuccessDialog(String fcNumber) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: Colors.white,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration:
+                const BoxDecoration(color: _softMint, shape: BoxShape.circle),
+                child: const Icon(Icons.how_to_reg_rounded,
+                    color: _primaryGreen, size: 48),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Client Found!',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: _textDark),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'We found your profile associated with FC Number:',
+                textAlign: TextAlign.center,
+                style:
+                TextStyle(color: _textMuted, fontSize: 14, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 14),
+                decoration: BoxDecoration(
+                  color: _softMint,
+                  borderRadius: BorderRadius.circular(14),
+                  border:
+                  Border.all(color: _primaryGreen.withOpacity(0.3)),
+                ),
+                child: Text(
+                  fcNumber,
+                  style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: _primaryGreen,
+                      letterSpacing: 2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your existing account details have been loaded.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: _textMuted),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    // TODO: Navigate to the existing client's account screen
+                    // e.g. Navigator.pushReplacement(context,
+                    //   MaterialPageRoute(builder: (_) => ExistingClientScreen(fcNumber: fcNumber)));
+                    Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const LoginScreen()));
+                  },
+                  child: const Text('Continue to Account',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── NEW: Client type selection screen ────────────────────────────────────────
+
+  Widget _buildClientTypeSelection() {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF7FFFD4),
+              Color(0xFF98FB98),
+              Color(0xFFAFEEEE),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // ── Back button ───────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen())),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: _textDark, size: 18),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Hero section ──────────────────────────────
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                    color:
+                                    _primaryGreen.withOpacity(0.15),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8))
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.account_circle_outlined,
+                              size: 64,
+                              color: _deepGreen,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        const Center(
+                          child: Text(
+                            'Individual Account',
+                            style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: _textDark),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: Text(
+                            'Are you a new or existing client?',
+                            style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.grey[600],
+                                height: 1.4),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+
+                        // ── New Client card ───────────────────────────
+                        _buildClientTypeCard(
+                          type: 'new',
+                          icon: Icons.person_add_outlined,
+                          title: 'New Client',
+                          subtitle:
+                          'I\'m opening an account for the first time',
+                          badgeText: 'Register',
+                          badgeColor: _primaryGreen,
+                          onTap: () {
+                            _animationController.reset();
+                            setState(() => _clientType = 'new');
+                            _animationController.forward();
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // ── Existing Client card ──────────────────────
+                        _buildClientTypeCard(
+                          type: 'existing',
+                          icon: Icons.manage_accounts_outlined,
+                          title: 'Existing Client',
+                          subtitle:
+                          'I already have an account and have my FC Number',
+                          badgeText: 'Sign In',
+                          badgeColor: const Color(0xFF5C6BC0),
+                          onTap: () => _showExistingClientDialog(),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // ── Footer note ───────────────────────────────
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.lock_outline_rounded,
+                                  color: _textMuted, size: 18),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Your information is secured and encrypted. We are regulated by CMSA Tanzania.',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: _textMuted,
+                                      height: 1.4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClientTypeCard({
+    required String type,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String badgeText,
+    required Color badgeColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 4))
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon circle
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: badgeColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: badgeColor, size: 28),
+            ),
+            const SizedBox(width: 16),
+            // Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: _textDark),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          badgeText,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: badgeColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                        fontSize: 13, color: _textMuted, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios_rounded,
+                color: Colors.grey[400], size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ─── Navigation ───────────────────────────────────────────────────────────────
 
   void _nextStep() {
-    // FIX #9 – validate inline before proceeding
     if (_validateCurrentStep()) {
       if (_currentStep < _steps.length - 1) {
         _animationController.reset();
@@ -613,12 +985,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     }
   }
 
-  // FIX #9 – Inline validation: sets _errors and returns false when invalid
   bool _validateCurrentStep() {
     final Map<String, String?> newErrors = {};
 
     switch (_currentStep) {
-      case 0: // Personal Info
+      case 0:
         if (_firstNameController.text.trim().isEmpty) {
           newErrors['firstName'] = 'First name is required';
         }
@@ -632,38 +1003,27 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           newErrors['occupation'] = 'Occupation is required';
         }
         break;
-
-      case 1: // Identification
+      case 1:
         if (_selectedNationality.isEmpty) {
           newErrors['nationality'] = 'Please select your nationality';
         }
         if (_identificationNumberController.text.trim().isEmpty) {
           newErrors['idNumber'] = 'Identification number is required';
         }
-        // Issuing authority required for Tanzania
         if (_selectedNationality == 'Tanzanian' &&
             _selectedIssuingAuthority.isEmpty) {
           newErrors['issuingAuthority'] = 'Please select an issuing authority';
         }
         break;
-
-      case 2: // Address
+      case 2:
         if (_selectedCountry.isEmpty) {
           newErrors['country'] = 'Please select your country';
         }
         if (_selectedCountry == 'Tanzania') {
-          if (_selectedRegion.isEmpty) {
-            newErrors['region'] = 'Please select your region';
-          }
-          if (_selectedDistrict.isEmpty) {
-            newErrors['district'] = 'Please select your district';
-          }
-          if (_wardController.text.trim().isEmpty) {
-            newErrors['ward'] = 'Ward is required';
-          }
-          if (_houseNumberController.text.trim().isEmpty) {
-            newErrors['houseNumber'] = 'House number is required';
-          }
+          if (_selectedRegion.isEmpty) newErrors['region'] = 'Please select your region';
+          if (_selectedDistrict.isEmpty) newErrors['district'] = 'Please select your district';
+          if (_wardController.text.trim().isEmpty) newErrors['ward'] = 'Ward is required';
+          if (_houseNumberController.text.trim().isEmpty) newErrors['houseNumber'] = 'House number is required';
         } else {
           if (_physicalAddressController.text.trim().isEmpty) {
             newErrors['address'] = 'Physical address is required';
@@ -677,8 +1037,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           newErrors['phone'] = 'Phone number is required';
         }
         break;
-
-      case 3: // Bank Details
+      case 3:
         if (_accountNumberController.text.trim().isEmpty) {
           newErrors['accountNumber'] = 'Account number is required';
         }
@@ -686,12 +1045,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           newErrors['bankName'] = 'Please select your bank';
         }
         break;
-
-      case 4: // Investment
-      // Initial amount optional – no required fields here beyond dropdowns
+      case 4:
         break;
-
-      case 5: // Final Details
+      case 5:
         if (_selectedSourceOfFunds.isEmpty) {
           newErrors['sourceOfFunds'] = 'Please select a source of funds';
         }
@@ -712,12 +1068,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     return true;
   }
 
-  // ─── Computed address string for API ─────────────────────────────────────────
   String get _resolvedAddress {
     if (_selectedCountry == 'Tanzania') {
       final parts = [
-        if (_houseNumberController.text.isNotEmpty)
-          _houseNumberController.text,
+        if (_houseNumberController.text.isNotEmpty) _houseNumberController.text,
         if (_streetController.text.isNotEmpty) _streetController.text,
         if (_wardController.text.isNotEmpty) _wardController.text,
         if (_selectedDistrict.isNotEmpty) _selectedDistrict,
@@ -729,8 +1083,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     return _physicalAddressController.text;
   }
 
-  // ─── Submit ───────────────────────────────────────────────────────────────────
-
   Future<void> _submitApplication() async {
     setState(() => _isLoading = true);
     try {
@@ -738,9 +1090,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           ? _selectedIssuingAuthority
           : _issuingAuthorityController.text;
 
-      // Strip commas from amount
-      final rawAmount =
-      _initialAmountController.text.replaceAll(',', '');
+      final rawAmount = _initialAmountController.text.replaceAll(',', '');
 
       final requestBody = {
         "APIUsername": _apiUsername,
@@ -834,8 +1184,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                    color: _softMint, shape: BoxShape.circle),
+                decoration:
+                const BoxDecoration(color: _softMint, shape: BoxShape.circle),
                 child: const Icon(Icons.check_rounded,
                     color: _primaryGreen, size: 48),
               ),
@@ -851,8 +1201,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               const Text(
                 "Your individual account application has been submitted successfully.",
                 textAlign: TextAlign.center,
-                style:
-                TextStyle(color: _textMuted, fontSize: 14, height: 1.5),
+                style: TextStyle(color: _textMuted, fontSize: 14, height: 1.5),
               ),
               if (_cdsNumber != null) ...[
                 const SizedBox(height: 20),
@@ -868,8 +1217,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   child: Column(
                     children: [
                       const Text("CDS Number",
-                          style:
-                          TextStyle(color: _textMuted, fontSize: 13)),
+                          style: TextStyle(color: _textMuted, fontSize: 13)),
                       const SizedBox(height: 6),
                       Text(
                         _cdsNumber!,
@@ -966,8 +1314,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 borderRadius:
                 BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              padding:
-              const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1035,8 +1382,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 14),
                             decoration: BoxDecoration(
-                              color:
-                              selected ? _softMint : Colors.grey[50],
+                              color: selected ? _softMint : Colors.grey[50],
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: selected
@@ -1058,10 +1404,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                                                 ? _primaryGreen
                                                 : _textDark))),
                                 if (selected)
-                                  const Icon(
-                                      Icons.check_circle_rounded,
-                                      color: _primaryGreen,
-                                      size: 20),
+                                  const Icon(Icons.check_circle_rounded,
+                                      color: _primaryGreen, size: 20),
                               ],
                             ),
                           ),
@@ -1078,7 +1422,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     );
   }
 
-  // ─── FIX #3 – Bank search bottom sheet ────────────────────────────────────────
   void _showBankSearchPicker() {
     final TextEditingController searchCtrl = TextEditingController();
     List filteredBanks = List.from(_bankController.banks);
@@ -1099,8 +1442,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 borderRadius:
                 BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              padding:
-              const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               child: Column(
                 children: [
                   Container(
@@ -1117,7 +1459,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           fontWeight: FontWeight.bold,
                           color: _textDark)),
                   const SizedBox(height: 14),
-                  // Search field
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[100],
@@ -1158,38 +1499,30 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       itemBuilder: (_, i) {
                         final bank = filteredBanks[i];
                         final bool selected =
-                            _bankController.selectedBank ==
-                                bank.bankName;
+                            _bankController.selectedBank == bank.bankName;
                         return InkWell(
                           onTap: () {
                             setState(() {
-                              _bankController
-                                  .selectBank(bank.bankName);
-                              _bankNameController.text =
-                                  bank.bankName;
+                              _bankController.selectBank(bank.bankName);
+                              _bankNameController.text = bank.bankName;
                               _errors.remove('bankName');
-                              // Auto-populate SWIFT/BIC code when bank selected
                               try {
-                                _swiftCodeController.text = bank.bicCode ?? '';
+                                _swiftCodeController.text =
+                                    bank.bicCode ?? '';
                               } catch (e) {
                                 _swiftCodeController.text = '';
                               }
                             });
                             Navigator.pop(context);
                           },
-                          borderRadius:
-                          BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12),
                           child: Container(
-                            margin:
-                            const EdgeInsets.only(bottom: 8),
+                            margin: const EdgeInsets.only(bottom: 8),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 14),
                             decoration: BoxDecoration(
-                              color: selected
-                                  ? _softMint
-                                  : Colors.grey[50],
-                              borderRadius:
-                              BorderRadius.circular(12),
+                              color: selected ? _softMint : Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: selected
                                     ? _primaryGreen
@@ -1211,10 +1544,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                                               : _textDark)),
                                 ),
                                 if (selected)
-                                  const Icon(
-                                      Icons.check_circle_rounded,
-                                      color: _primaryGreen,
-                                      size: 20),
+                                  const Icon(Icons.check_circle_rounded,
+                                      color: _primaryGreen, size: 20),
                               ],
                             ),
                           ),
@@ -1235,20 +1566,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   Widget _buildCurrentStep() {
     switch (_currentStep) {
-      case 0:
-        return _buildPersonalInformationStep();
-      case 1:
-        return _buildIdentificationStep();
-      case 2:
-        return _buildAddressInformationStep();
-      case 3:
-        return _buildBankInformationStep();
-      case 4:
-        return _buildInvestmentMandateStep();
-      case 5:
-        return _buildFinalDetailsStep();
-      default:
-        return Container();
+      case 0: return _buildPersonalInformationStep();
+      case 1: return _buildIdentificationStep();
+      case 2: return _buildAddressInformationStep();
+      case 3: return _buildBankInformationStep();
+      case 4: return _buildInvestmentMandateStep();
+      case 5: return _buildFinalDetailsStep();
+      default: return Container();
     }
   }
 
@@ -1264,12 +1588,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               child: _buildDropdownTile(
                 label: 'Title',
                 value: _titleController.text,
-                onTap: () => _showDropdownPicker(
-                  'Select Title',
-                  _titles,
-                  _titleController.text,
-                      (v) => setState(() => _titleController.text = v),
-                ),
+                onTap: () => _showDropdownPicker('Select Title', _titles,
+                    _titleController.text,
+                        (v) => setState(() => _titleController.text = v)),
               ),
             ),
             const SizedBox(width: 12),
@@ -1277,65 +1598,26 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               child: _buildDropdownTile(
                 label: 'Gender',
                 value: _selectedGender,
-                onTap: () => _showDropdownPicker(
-                  'Select Gender',
-                  _genders,
-                  _selectedGender,
-                      (v) => setState(() => _selectedGender = v),
-                ),
+                onTap: () => _showDropdownPicker('Select Gender', _genders,
+                    _selectedGender,
+                        (v) => setState(() => _selectedGender = v)),
               ),
             ),
           ],
         ),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _firstNameController,
-          label: 'First Name',
-          icon: Icons.person_outline_rounded,
-          required: true,
-          errorText: _errors['firstName'],
-          onChanged: (_) => setState(() => _errors.remove('firstName')),
-        ),
+        _buildInputField(controller: _firstNameController, label: 'First Name', icon: Icons.person_outline_rounded, required: true, errorText: _errors['firstName'], onChanged: (_) => setState(() => _errors.remove('firstName'))),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _middleNameController,
-          label: 'Middle Name',
-          icon: Icons.person_outline_rounded,
-        ),
+        _buildInputField(controller: _middleNameController, label: 'Middle Name', icon: Icons.person_outline_rounded),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _lastNameController,
-          label: 'Last Name (Surname)',
-          icon: Icons.person_outline_rounded,
-          required: true,
-          errorText: _errors['lastName'],
-          onChanged: (_) => setState(() => _errors.remove('lastName')),
-        ),
+        _buildInputField(controller: _lastNameController, label: 'Last Name (Surname)', icon: Icons.person_outline_rounded, required: true, errorText: _errors['lastName'], onChanged: (_) => setState(() => _errors.remove('lastName'))),
         const SizedBox(height: 20),
         _buildSectionLabel('Personal Details'),
-        _buildDateField(
-          controller: _dateOfBirthController,
-          label: 'Date of Birth',
-          firstDate: DateTime(1900),
-          lastDate: DateTime.now(),
-          required: true,
-          errorText: _errors['dob'],
-        ),
+        _buildDateField(controller: _dateOfBirthController, label: 'Date of Birth', firstDate: DateTime(1900), lastDate: DateTime.now(), required: true, errorText: _errors['dob']),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _placeOfBirthController,
-          label: 'Place of Birth',
-          icon: Icons.location_city_rounded,
-        ),
+        _buildInputField(controller: _placeOfBirthController, label: 'Place of Birth', icon: Icons.location_city_rounded),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _occupationController,
-          label: 'Occupation / Objective',
-          icon: Icons.work_outline_rounded,
-          required: true,
-          errorText: _errors['occupation'],
-          onChanged: (_) => setState(() => _errors.remove('occupation')),
-        ),
+        _buildInputField(controller: _occupationController, label: 'Occupation / Objective', icon: Icons.work_outline_rounded, required: true, errorText: _errors['occupation'], onChanged: (_) => setState(() => _errors.remove('occupation'))),
       ],
     );
   }
@@ -1344,28 +1626,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   Widget _buildIdentificationStep() {
     final bool isTanzanian = _selectedNationality == 'Tanzanian';
-
     return _buildStepCard(
       children: [
         _buildSectionLabel('Identity Details'),
-
-        // FIX #1 – Nationality as searchable dropdown
         _buildDropdownTile(
           label: 'Nationality *',
-          value: _selectedNationality.isEmpty
-              ? 'Select nationality'
-              : _selectedNationality,
-          onTap: () => _showDropdownPicker(
-            'Select Nationality',
-            _nationalities,
-            _selectedNationality,
-                (v) => setState(() {
-              _selectedNationality = v;
-              _selectedIssuingAuthority = '';
-              _errors.remove('nationality');
-            }),
-            searchable: true,
-          ),
+          value: _selectedNationality.isEmpty ? 'Select nationality' : _selectedNationality,
+          onTap: () => _showDropdownPicker('Select Nationality', _nationalities, _selectedNationality,
+                  (v) => setState(() { _selectedNationality = v; _selectedIssuingAuthority = ''; _errors.remove('nationality'); }), searchable: true),
           errorText: _errors['nationality'],
           highlighted: _selectedNationality.isNotEmpty,
         ),
@@ -1373,63 +1641,29 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         _buildDropdownTile(
           label: 'Identification Type',
           value: _selectedIdType,
-          onTap: () => _showDropdownPicker(
-            'Select ID Type',
-            _identificationTypes,
-            _selectedIdType,
-                (v) => setState(() => _selectedIdType = v),
-          ),
+          onTap: () => _showDropdownPicker('Select ID Type', _identificationTypes, _selectedIdType,
+                  (v) => setState(() => _selectedIdType = v)),
         ),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _identificationNumberController,
-          label: 'Identification Number',
-          icon: Icons.numbers_rounded,
-          required: true,
-          errorText: _errors['idNumber'],
-          onChanged: (_) => setState(() => _errors.remove('idNumber')),
-        ),
+        _buildInputField(controller: _identificationNumberController, label: 'Identification Number', icon: Icons.numbers_rounded, required: true, errorText: _errors['idNumber'], onChanged: (_) => setState(() => _errors.remove('idNumber'))),
         const SizedBox(height: 14),
-        _buildDateField(
-          controller: _validityDateController,
-          label: 'Expiry / Validity Date',
-          firstDate: DateTime.now(),
-          lastDate: DateTime(2100),
-        ),
+        _buildDateField(controller: _validityDateController, label: 'Expiry / Validity Date', firstDate: DateTime.now(), lastDate: DateTime(2100)),
         const SizedBox(height: 14),
-
-        // FIX #1 – If Tanzanian → dropdown; else free-text
         if (isTanzanian) ...[
           _buildDropdownTile(
             label: 'Issuing Authority *',
-            value: _selectedIssuingAuthority.isEmpty
-                ? 'Select authority'
-                : _selectedIssuingAuthority,
-            onTap: () => _showDropdownPicker(
-              'Select Issuing Authority',
-              _tzIssuingAuthorities,
-              _selectedIssuingAuthority,
-                  (v) => setState(() {
-                _selectedIssuingAuthority = v;
-                _errors.remove('issuingAuthority');
-              }),
-            ),
+            value: _selectedIssuingAuthority.isEmpty ? 'Select authority' : _selectedIssuingAuthority,
+            onTap: () => _showDropdownPicker('Select Issuing Authority', _tzIssuingAuthorities, _selectedIssuingAuthority,
+                    (v) => setState(() { _selectedIssuingAuthority = v; _errors.remove('issuingAuthority'); })),
             errorText: _errors['issuingAuthority'],
             highlighted: _selectedIssuingAuthority.isNotEmpty,
           ),
         ] else ...[
-          _buildInputField(
-            controller: _issuingAuthorityController,
-            label: 'Issuing Authority & Country',
-            icon: Icons.verified_outlined,
-          ),
+          _buildInputField(controller: _issuingAuthorityController, label: 'Issuing Authority & Country', icon: Icons.verified_outlined),
         ],
         const SizedBox(height: 20),
         _buildSectionLabel('Upload ID Document'),
-        Text(
-          'Upload a photo or PDF of your identification (optional)',
-          style: TextStyle(fontSize: 13, color: _textMuted),
-        ),
+        Text('Upload a photo or PDF of your identification (optional)', style: TextStyle(fontSize: 13, color: _textMuted)),
         const SizedBox(height: 12),
         _idFile == null ? _buildUploadButton() : _buildUploadedFileCard(),
       ],
@@ -1445,32 +1679,20 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         decoration: BoxDecoration(
           color: _softMint,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: _primaryGreen.withOpacity(0.4),
-              width: 1.5,
-              style: BorderStyle.solid),
+          border: Border.all(color: _primaryGreen.withOpacity(0.4), width: 1.5, style: BorderStyle.solid),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _primaryGreen.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.upload_file_rounded,
-                  size: 28, color: _primaryGreen),
+              decoration: BoxDecoration(color: _primaryGreen.withOpacity(0.15), shape: BoxShape.circle),
+              child: const Icon(Icons.upload_file_rounded, size: 28, color: _primaryGreen),
             ),
             const SizedBox(height: 10),
-            const Text('Tap to upload',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: _primaryGreen)),
+            const Text('Tap to upload', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: _primaryGreen)),
             const SizedBox(height: 4),
-            Text('JPG, PNG or PDF supported',
-                style: TextStyle(fontSize: 12, color: _textMuted)),
+            Text('JPG, PNG or PDF supported', style: TextStyle(fontSize: 12, color: _textMuted)),
           ],
         ),
       ),
@@ -1478,73 +1700,45 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   }
 
   Widget _buildUploadedFileCard() {
-    final bool isImage = _idFileExtension == 'jpg' ||
-        _idFileExtension == 'jpeg' ||
-        _idFileExtension == 'png';
+    final bool isImage = _idFileExtension == 'jpg' || _idFileExtension == 'jpeg' || _idFileExtension == 'png';
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _primaryGreen.withOpacity(0.5), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-              color: _primaryGreen.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4))
-        ],
+        boxShadow: [BoxShadow(color: _primaryGreen.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
           if (isImage)
             ClipRRect(
-              borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(14)),
-              child: Image.file(_idFile!,
-                  width: double.infinity, height: 180, fit: BoxFit.cover),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              child: Image.file(_idFile!, width: double.infinity, height: 180, fit: BoxFit.cover),
             ),
           Padding(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isImage
-                        ? Colors.blue.withOpacity(0.1)
-                        : Colors.red.withOpacity(0.1),
+                    color: isImage ? Colors.blue.withOpacity(0.1) : Colors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    isImage
-                        ? Icons.image_rounded
-                        : Icons.picture_as_pdf_rounded,
-                    color: isImage ? Colors.blue : Colors.red[700],
-                    size: 22,
-                  ),
+                  child: Icon(isImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded,
+                      color: isImage ? Colors.blue : Colors.red[700], size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_idFileName ?? 'Uploaded file',
-                          style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500),
-                          overflow: TextOverflow.ellipsis),
-                      Text('Document uploaded',
-                          style:
-                          TextStyle(fontSize: 12, color: _textMuted)),
+                      Text(_idFileName ?? 'Uploaded file', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                      Text('Document uploaded', style: TextStyle(fontSize: 12, color: _textMuted)),
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: _removeIdFile,
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      color: Colors.red),
-                  tooltip: 'Remove file',
-                ),
+                IconButton(onPressed: _removeIdFile, icon: const Icon(Icons.delete_outline_rounded, color: Colors.red), tooltip: 'Remove file'),
               ],
             ),
           ),
@@ -1564,49 +1758,24 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   Widget _buildAddressInformationStep() {
     final bool isTanzania = _selectedCountry == 'Tanzania';
-
     return _buildStepCard(
       children: [
         _buildSectionLabel('Location'),
-
-        // FIX #2 – Country dropdown FIRST
         _buildDropdownTile(
           label: 'Country *',
           value: _selectedCountry.isEmpty ? 'Select country' : _selectedCountry,
-          onTap: () => _showDropdownPicker(
-            'Select Country',
-            _countries,
-            _selectedCountry,
-                (v) => setState(() {
-              _selectedCountry = v;
-              _selectedRegion = '';
-              _selectedDistrict = '';
-              _errors.remove('country');
-            }),
-            searchable: true,
-          ),
+          onTap: () => _showDropdownPicker('Select Country', _countries, _selectedCountry,
+                  (v) => setState(() { _selectedCountry = v; _selectedRegion = ''; _selectedDistrict = ''; _errors.remove('country'); }), searchable: true),
           errorText: _errors['country'],
           highlighted: _selectedCountry.isNotEmpty,
         ),
         const SizedBox(height: 14),
-
-        // FIX #2 – Tanzania-specific sub-fields
         if (isTanzania) ...[
           _buildDropdownTile(
             label: 'Region *',
-            value:
-            _selectedRegion.isEmpty ? 'Select region' : _selectedRegion,
-            onTap: () => _showDropdownPicker(
-              'Select Region',
-              _tanzaniaRegions,
-              _selectedRegion,
-                  (v) => setState(() {
-                _selectedRegion = v;
-                _selectedDistrict = '';
-                _errors.remove('region');
-              }),
-              searchable: true,
-            ),
+            value: _selectedRegion.isEmpty ? 'Select region' : _selectedRegion,
+            onTap: () => _showDropdownPicker('Select Region', _tanzaniaRegions, _selectedRegion,
+                    (v) => setState(() { _selectedRegion = v; _selectedDistrict = ''; _errors.remove('region'); }), searchable: true),
             errorText: _errors['region'],
             highlighted: _selectedRegion.isNotEmpty,
           ),
@@ -1614,88 +1783,29 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           if (_selectedRegion.isNotEmpty) ...[
             _buildDropdownTile(
               label: 'District *',
-              value: _selectedDistrict.isEmpty
-                  ? 'Select district'
-                  : _selectedDistrict,
-              onTap: () => _showDropdownPicker(
-                'Select District',
-                _tanzaniaDistricts[_selectedRegion] ?? [],
-                _selectedDistrict,
-                    (v) => setState(() {
-                  _selectedDistrict = v;
-                  _errors.remove('district');
-                }),
-                searchable: true,
-              ),
+              value: _selectedDistrict.isEmpty ? 'Select district' : _selectedDistrict,
+              onTap: () => _showDropdownPicker('Select District', _tanzaniaDistricts[_selectedRegion] ?? [], _selectedDistrict,
+                      (v) => setState(() { _selectedDistrict = v; _errors.remove('district'); }), searchable: true),
               errorText: _errors['district'],
               highlighted: _selectedDistrict.isNotEmpty,
             ),
             const SizedBox(height: 14),
           ],
-          _buildInputField(
-            controller: _wardController,
-            label: 'Ward *',
-            icon: Icons.location_on_outlined,
-            required: true,
-            errorText: _errors['ward'],
-            onChanged: (_) => setState(() => _errors.remove('ward')),
-          ),
+          _buildInputField(controller: _wardController, label: 'Ward *', icon: Icons.location_on_outlined, required: true, errorText: _errors['ward'], onChanged: (_) => setState(() => _errors.remove('ward'))),
           const SizedBox(height: 14),
-          _buildInputField(
-            controller: _houseNumberController,
-            label: 'House Number *',
-            icon: Icons.home_outlined,
-            required: true,
-            errorText: _errors['houseNumber'],
-            onChanged: (_) =>
-                setState(() => _errors.remove('houseNumber')),
-          ),
+          _buildInputField(controller: _houseNumberController, label: 'House Number *', icon: Icons.home_outlined, required: true, errorText: _errors['houseNumber'], onChanged: (_) => setState(() => _errors.remove('houseNumber'))),
           const SizedBox(height: 14),
-          _buildInputField(
-            controller: _streetController,
-            label: 'Street Name',
-            icon: Icons.alt_route_outlined,
-          ),
+          _buildInputField(controller: _streetController, label: 'Street Name', icon: Icons.alt_route_outlined),
         ] else ...[
-          // Non-Tanzania: city + address
-          _buildInputField(
-            controller: _cityController,
-            label: 'City',
-            icon: Icons.location_city_rounded,
-          ),
+          _buildInputField(controller: _cityController, label: 'City', icon: Icons.location_city_rounded),
           const SizedBox(height: 14),
-          _buildInputField(
-            controller: _physicalAddressController,
-            label: 'Physical Address *',
-            icon: Icons.home_outlined,
-            maxLines: 2,
-            required: true,
-            errorText: _errors['address'],
-            onChanged: (_) => setState(() => _errors.remove('address')),
-          ),
+          _buildInputField(controller: _physicalAddressController, label: 'Physical Address *', icon: Icons.home_outlined, maxLines: 2, required: true, errorText: _errors['address'], onChanged: (_) => setState(() => _errors.remove('address'))),
         ],
-
         const SizedBox(height: 20),
         _buildSectionLabel('Contact Details'),
-        _buildInputField(
-          controller: _emailController,
-          label: 'Email Address',
-          icon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress,
-          required: true,
-          errorText: _errors['email'],
-          onChanged: (_) => setState(() => _errors.remove('email')),
-        ),
+        _buildInputField(controller: _emailController, label: 'Email Address', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress, required: true, errorText: _errors['email'], onChanged: (_) => setState(() => _errors.remove('email'))),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _phoneController,
-          label: 'Phone Number',
-          icon: Icons.phone_outlined,
-          keyboardType: TextInputType.phone,
-          required: true,
-          errorText: _errors['phone'],
-          onChanged: (_) => setState(() => _errors.remove('phone')),
-        ),
+        _buildInputField(controller: _phoneController, label: 'Phone Number', icon: Icons.phone_outlined, keyboardType: TextInputType.phone, required: true, errorText: _errors['phone'], onChanged: (_) => setState(() => _errors.remove('phone'))),
       ],
     );
   }
@@ -1709,79 +1819,38 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         _buildDropdownTile(
           label: 'Bank Type',
           value: _selectedBankType,
-          onTap: () => _showDropdownPicker(
-            'Select Bank Type',
-            _bankTypes,
-            _selectedBankType,
-                (v) => setState(() => _selectedBankType = v),
-          ),
+          onTap: () => _showDropdownPicker('Select Bank Type', _bankTypes, _selectedBankType,
+                  (v) => setState(() => _selectedBankType = v)),
         ),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _accountNumberController,
-          label: 'Account Number',
-          icon: Icons.credit_card_rounded,
-          keyboardType: TextInputType.number,
-          required: true,
-          errorText: _errors['accountNumber'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('accountNumber')),
-        ),
+        _buildInputField(controller: _accountNumberController, label: 'Account Number', icon: Icons.credit_card_rounded, keyboardType: TextInputType.number, required: true, errorText: _errors['accountNumber'], onChanged: (_) => setState(() => _errors.remove('accountNumber'))),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _accountHolderNameController,
-          label: 'Account Holder Name',
-          icon: Icons.person_outline_rounded,
-        ),
+        _buildInputField(controller: _accountHolderNameController, label: 'Account Holder Name', icon: Icons.person_outline_rounded),
         const SizedBox(height: 20),
         _buildSectionLabel('Bank Details'),
-
-        // FIX #3 – Bank search picker
         GestureDetector(
           onTap: _showBankSearchPicker,
           child: Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               color: _cardBg,
               borderRadius: BorderRadius.circular(14),
-              border: _errors['bankName'] != null
-                  ? Border.all(color: _errorRed, width: 1.5)
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
-              ],
+              border: _errors['bankName'] != null ? Border.all(color: _errorRed, width: 1.5) : null,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
             ),
             child: Row(
               children: [
-                Icon(Icons.account_balance_outlined,
-                    color: _primaryGreen, size: 20),
+                Icon(Icons.account_balance_outlined, color: _primaryGreen, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Bank Name *',
-                          style: TextStyle(
-                              fontSize: 12, color: _textMuted)),
+                      Text('Bank Name *', style: TextStyle(fontSize: 12, color: _textMuted)),
                       const SizedBox(height: 4),
                       Text(
-                        _bankController.selectedBank ??
-                            (_bankController.isLoading
-                                ? 'Loading banks...'
-                                : 'Tap to search & select'),
-                        style: TextStyle(
-                            fontSize: 15,
-                            color: _bankController.selectedBank != null
-                                ? _textDark
-                                : _textMuted,
-                            fontWeight: _bankController.selectedBank !=
-                                null
-                                ? FontWeight.w500
-                                : FontWeight.normal),
+                        _bankController.selectedBank ?? (_bankController.isLoading ? 'Loading banks...' : 'Tap to search & select'),
+                        style: TextStyle(fontSize: 15, color: _bankController.selectedBank != null ? _textDark : _textMuted, fontWeight: _bankController.selectedBank != null ? FontWeight.w500 : FontWeight.normal),
                       ),
                     ],
                   ),
@@ -1794,22 +1863,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         if (_errors['bankName'] != null)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
-            child: Text(_errors['bankName']!,
-                style:
-                const TextStyle(color: _errorRed, fontSize: 12)),
+            child: Text(_errors['bankName']!, style: const TextStyle(color: _errorRed, fontSize: 12)),
           ),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _branchController,
-          label: 'Branch',
-          icon: Icons.business_outlined,
-        ),
+        _buildInputField(controller: _branchController, label: 'Branch', icon: Icons.business_outlined),
         const SizedBox(height: 14),
-        _buildInputField(
-          controller: _swiftCodeController,
-          label: 'SWIFT Code',
-          icon: Icons.code_rounded,
-        ),
+        _buildInputField(controller: _swiftCodeController, label: 'SWIFT Code', icon: Icons.code_rounded),
       ],
     );
   }
@@ -1820,27 +1879,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     return _buildStepCard(
       children: [
         _buildSectionLabel('Initial Investment'),
-        // FIX #5 – Comma separators on amount field
-        _buildInputFieldFormatted(
-          controller: _initialAmountController,
-          label: 'Initial Amount (optional)',
-          icon: Icons.attach_money_rounded,
-          formatter: _ThousandsInputFormatter(),
-        ),
+        _buildInputFieldFormatted(controller: _initialAmountController, label: 'Initial Amount (optional)', icon: Icons.attach_money_rounded, formatter: _ThousandsInputFormatter()),
         const SizedBox(height: 14),
         _buildDropdownTile(
           label: 'Currency',
           value: _selectedAmountCurrency,
-          onTap: () => _showDropdownPicker(
-            'Select Currency',
-            _currencies,
-            _selectedAmountCurrency,
-                (v) => setState(() => _selectedAmountCurrency = v),
-          ),
+          onTap: () => _showDropdownPicker('Select Currency', _currencies, _selectedAmountCurrency,
+                  (v) => setState(() => _selectedAmountCurrency = v)),
         ),
         const SizedBox(height: 20),
         _buildSectionLabel('Account Type'),
-        // FIX #6 – Only Individual / Minor
         Column(
           children: _accountTypes.map((type) {
             final bool selected = _selectedAccountType == type;
@@ -1849,57 +1897,23 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: selected ? _softMint : Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: selected
-                        ? _primaryGreen
-                        : Colors.grey.withOpacity(0.2),
-                    width: selected ? 1.5 : 1,
-                  ),
-                  boxShadow: selected
-                      ? [
-                    BoxShadow(
-                        color: _primaryGreen.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2))
-                  ]
-                      : [],
+                  border: Border.all(color: selected ? _primaryGreen : Colors.grey.withOpacity(0.2), width: selected ? 1.5 : 1),
+                  boxShadow: selected ? [BoxShadow(color: _primaryGreen.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))] : [],
                 ),
                 child: Row(
                   children: [
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: selected
-                            ? _primaryGreen
-                            : Colors.transparent,
-                        border: Border.all(
-                          color: selected
-                              ? _primaryGreen
-                              : Colors.grey[400]!,
-                          width: 2,
-                        ),
-                      ),
-                      child: selected
-                          ? const Icon(Icons.check_rounded,
-                          size: 14, color: Colors.white)
-                          : null,
+                      width: 22, height: 22,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: selected ? _primaryGreen : Colors.transparent, border: Border.all(color: selected ? _primaryGreen : Colors.grey[400]!, width: 2)),
+                      child: selected ? const Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
                     ),
                     const SizedBox(width: 14),
-                    Text(type,
-                        style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color: selected ? _primaryGreen : _textDark)),
+                    Text(type, style: TextStyle(fontSize: 15, fontWeight: selected ? FontWeight.w600 : FontWeight.normal, color: selected ? _primaryGreen : _textDark)),
                   ],
                 ),
               ),
@@ -1916,58 +1930,23 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: selected ? _softMint : Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: selected
-                        ? _primaryGreen
-                        : Colors.grey.withOpacity(0.2),
-                    width: selected ? 1.5 : 1,
-                  ),
-                  boxShadow: selected
-                      ? [
-                    BoxShadow(
-                        color: _primaryGreen.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2))
-                  ]
-                      : [],
+                  border: Border.all(color: selected ? _primaryGreen : Colors.grey.withOpacity(0.2), width: selected ? 1.5 : 1),
+                  boxShadow: selected ? [BoxShadow(color: _primaryGreen.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))] : [],
                 ),
                 child: Row(
                   children: [
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: selected
-                            ? _primaryGreen
-                            : Colors.transparent,
-                        border: Border.all(
-                          color: selected
-                              ? _primaryGreen
-                              : Colors.grey[400]!,
-                          width: 2,
-                        ),
-                      ),
-                      child: selected
-                          ? const Icon(Icons.check_rounded,
-                          size: 14, color: Colors.white)
-                          : null,
+                      width: 22, height: 22,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: selected ? _primaryGreen : Colors.transparent, border: Border.all(color: selected ? _primaryGreen : Colors.grey[400]!, width: 2)),
+                      child: selected ? const Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
                     ),
                     const SizedBox(width: 14),
-                    Text(method,
-                        style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color:
-                            selected ? _primaryGreen : _textDark)),
+                    Text(method, style: TextStyle(fontSize: 15, fontWeight: selected ? FontWeight.w600 : FontWeight.normal, color: selected ? _primaryGreen : _textDark)),
                   ],
                 ),
               ),
@@ -1979,36 +1958,19 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   }
 
   // ─── Step 5: Final Details ────────────────────────────────────────────────────
-  // FIX #7 – Investor type, service & period and risk tolerance removed entirely
 
   Widget _buildFinalDetailsStep() {
     return _buildStepCard(
       children: [
         _buildSectionLabel('Investment Purpose'),
-        _buildInputField(
-          controller: _investmentPurposeController,
-          label: 'Purpose of Investment (e.g. Wealth Creation)',
-          icon: Icons.flag_outlined,
-          maxLines: 2,
-        ),
+        _buildInputField(controller: _investmentPurposeController, label: 'Purpose of Investment (e.g. Wealth Creation)', icon: Icons.flag_outlined, maxLines: 2),
         const SizedBox(height: 20),
         _buildSectionLabel('Source of Funds'),
-        // FIX #8 – Source of funds as dropdown
         _buildDropdownTile(
           label: 'Source of Funds *',
-          value: _selectedSourceOfFunds.isEmpty
-              ? 'Select source'
-              : _selectedSourceOfFunds,
-          onTap: () => _showDropdownPicker(
-            'Source of Funds',
-            _sourcesOfFunds,
-            _selectedSourceOfFunds,
-                (v) => setState(() {
-              _selectedSourceOfFunds = v;
-              _fundsSourceController.text = v;
-              _errors.remove('sourceOfFunds');
-            }),
-          ),
+          value: _selectedSourceOfFunds.isEmpty ? 'Select source' : _selectedSourceOfFunds,
+          onTap: () => _showDropdownPicker('Source of Funds', _sourcesOfFunds, _selectedSourceOfFunds,
+                  (v) => setState(() { _selectedSourceOfFunds = v; _fundsSourceController.text = v; _errors.remove('sourceOfFunds'); })),
           errorText: _errors['sourceOfFunds'],
           highlighted: _selectedSourceOfFunds.isNotEmpty,
         ),
@@ -2019,61 +1981,34 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           decoration: BoxDecoration(
             color: Colors.orange.withOpacity(0.05),
             borderRadius: BorderRadius.circular(16),
-            border:
-            Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
+            border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.info_outline_rounded,
-                      color: Colors.orange[600], size: 18),
+                  Icon(Icons.info_outline_rounded, color: Colors.orange[600], size: 18),
                   const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Politically Exposed Person (PEP)',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                  ),
+                  const Expanded(child: Text('Politically Exposed Person (PEP)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
                 ],
               ),
               const SizedBox(height: 10),
               Text(
                 'Are you or any immediate family member related to a senior government official, military officer (general+), president of a state-owned company, head of a government agency, supreme court judge, or political party representative?',
-                style: TextStyle(
-                    fontSize: 12, color: _textMuted, height: 1.5),
+                style: TextStyle(fontSize: 12, color: _textMuted, height: 1.5),
               ),
               const SizedBox(height: 14),
               Row(
                 children: [
-                  _buildToggleOption(
-                    label: 'Yes',
-                    selected: _isPoliticallyExposed,
-                    onTap: () =>
-                        setState(() => _isPoliticallyExposed = true),
-                  ),
+                  _buildToggleOption(label: 'Yes', selected: _isPoliticallyExposed, onTap: () => setState(() => _isPoliticallyExposed = true)),
                   const SizedBox(width: 12),
-                  _buildToggleOption(
-                    label: 'No',
-                    selected: !_isPoliticallyExposed,
-                    onTap: () =>
-                        setState(() => _isPoliticallyExposed = false),
-                  ),
+                  _buildToggleOption(label: 'No', selected: !_isPoliticallyExposed, onTap: () => setState(() => _isPoliticallyExposed = false)),
                 ],
               ),
               if (_isPoliticallyExposed) ...[
                 const SizedBox(height: 14),
-                _buildInputField(
-                  controller: _positionController,
-                  label: 'Position Held',
-                  icon: Icons.badge_outlined,
-                  required: true,
-                  errorText: _errors['position'],
-                  onChanged: (_) =>
-                      setState(() => _errors.remove('position')),
-                ),
+                _buildInputField(controller: _positionController, label: 'Position Held', icon: Icons.badge_outlined, required: true, errorText: _errors['position'], onChanged: (_) => setState(() => _errors.remove('position'))),
               ],
             ],
           ),
@@ -2082,11 +2017,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     );
   }
 
-  Widget _buildToggleOption({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildToggleOption({required String label, required bool selected, required VoidCallback onTap}) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -2096,21 +2027,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           decoration: BoxDecoration(
             color: selected ? _primaryGreen : Colors.white,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected
-                  ? _primaryGreen
-                  : Colors.grey.withOpacity(0.3),
-            ),
+            border: Border.all(color: selected ? _primaryGreen : Colors.grey.withOpacity(0.3)),
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: selected ? Colors.white : _textMuted,
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-          ),
+          child: Text(label, textAlign: TextAlign.center, style: TextStyle(color: selected ? Colors.white : _textMuted, fontWeight: FontWeight.w600, fontSize: 15)),
         ),
       ),
     );
@@ -2123,10 +2042,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       opacity: _fadeAnimation,
       child: Container(
         margin: const EdgeInsets.only(bottom: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: children,
-        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
       ),
     );
   }
@@ -2136,19 +2052,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Container(
-              width: 3,
-              height: 16,
-              decoration: BoxDecoration(
-                  color: _primaryGreen,
-                  borderRadius: BorderRadius.circular(2))),
+          Container(width: 3, height: 16, decoration: BoxDecoration(color: _primaryGreen, borderRadius: BorderRadius.circular(2))),
           const SizedBox(width: 8),
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: _textDark,
-                  letterSpacing: 0.3)),
+          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _textDark, letterSpacing: 0.3)),
         ],
       ),
     );
@@ -2174,15 +2080,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           decoration: BoxDecoration(
             color: _cardBg,
             borderRadius: BorderRadius.circular(14),
-            border: hasError
-                ? Border.all(color: _errorRed, width: 1.5)
-                : null,
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2))
-            ],
+            border: hasError ? Border.all(color: _errorRed, width: 1.5) : null,
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
           ),
           child: TextField(
             controller: controller,
@@ -2193,17 +2092,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             style: const TextStyle(fontSize: 15, color: _textDark),
             decoration: InputDecoration(
               labelText: required ? '$label *' : label,
-              labelStyle: TextStyle(
-                  color: hasError ? _errorRed : _textMuted,
-                  fontSize: 14),
-              prefixIcon: icon != null
-                  ? Icon(icon,
-                  color: hasError ? _errorRed : _primaryGreen,
-                  size: 20)
-                  : null,
+              labelStyle: TextStyle(color: hasError ? _errorRed : _textMuted, fontSize: 14),
+              prefixIcon: icon != null ? Icon(icon, color: hasError ? _errorRed : _primaryGreen, size: 20) : null,
               border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(
-                  horizontal: icon != null ? 4 : 18, vertical: 16),
+              contentPadding: EdgeInsets.symmetric(horizontal: icon != null ? 4 : 18, vertical: 16),
               floatingLabelBehavior: FloatingLabelBehavior.auto,
             ),
           ),
@@ -2213,12 +2105,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             padding: const EdgeInsets.only(top: 4, left: 4),
             child: Row(
               children: [
-                const Icon(Icons.error_outline,
-                    size: 13, color: _errorRed),
+                const Icon(Icons.error_outline, size: 13, color: _errorRed),
                 const SizedBox(width: 4),
-                Text(errorText,
-                    style: const TextStyle(
-                        fontSize: 12, color: _errorRed)),
+                Text(errorText, style: const TextStyle(fontSize: 12, color: _errorRed)),
               ],
             ),
           ),
@@ -2226,7 +2115,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     );
   }
 
-  // FIX #5 – Formatted amount field
   Widget _buildInputFieldFormatted({
     required TextEditingController controller,
     required String label,
@@ -2237,31 +2125,19 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       decoration: BoxDecoration(
         color: _cardBg,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: TextField(
         controller: controller,
-        keyboardType:
-        const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
-          formatter,
-        ],
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')), formatter],
         style: const TextStyle(fontSize: 15, color: _textDark),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(color: _textMuted, fontSize: 14),
-          prefixIcon: icon != null
-              ? Icon(icon, color: _primaryGreen, size: 20)
-              : null,
+          prefixIcon: icon != null ? Icon(icon, color: _primaryGreen, size: 20) : null,
           border: InputBorder.none,
-          contentPadding:
-          const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
         ),
       ),
     );
@@ -2281,8 +2157,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       children: [
         GestureDetector(
           onTap: () {
-            _selectDate(controller,
-                firstDate: firstDate, lastDate: lastDate);
+            _selectDate(controller, firstDate: firstDate, lastDate: lastDate);
             setState(() => _errors.remove('dob'));
           },
           child: AnimatedContainer(
@@ -2290,15 +2165,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             decoration: BoxDecoration(
               color: _cardBg,
               borderRadius: BorderRadius.circular(14),
-              border: hasError
-                  ? Border.all(color: _errorRed, width: 1.5)
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
-              ],
+              border: hasError ? Border.all(color: _errorRed, width: 1.5) : null,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
             ),
             child: TextField(
               controller: controller,
@@ -2306,17 +2174,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               style: const TextStyle(fontSize: 15, color: _textDark),
               decoration: InputDecoration(
                 labelText: required ? '$label *' : label,
-                labelStyle: TextStyle(
-                    color: hasError ? _errorRed : _textMuted,
-                    fontSize: 14),
-                prefixIcon: Icon(Icons.calendar_today_outlined,
-                    color: hasError ? _errorRed : _primaryGreen,
-                    size: 20),
-                suffixIcon: const Icon(Icons.arrow_forward_ios_rounded,
-                    color: _textMuted, size: 14),
+                labelStyle: TextStyle(color: hasError ? _errorRed : _textMuted, fontSize: 14),
+                prefixIcon: Icon(Icons.calendar_today_outlined, color: hasError ? _errorRed : _primaryGreen, size: 20),
+                suffixIcon: const Icon(Icons.arrow_forward_ios_rounded, color: _textMuted, size: 14),
                 border: InputBorder.none,
-                contentPadding:
-                const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
                 disabledBorder: InputBorder.none,
               ),
             ),
@@ -2327,12 +2189,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             padding: const EdgeInsets.only(top: 4, left: 4),
             child: Row(
               children: [
-                const Icon(Icons.error_outline,
-                    size: 13, color: _errorRed),
+                const Icon(Icons.error_outline, size: 13, color: _errorRed),
                 const SizedBox(width: 4),
-                Text(errorText,
-                    style: const TextStyle(
-                        fontSize: 12, color: _errorRed)),
+                Text(errorText, style: const TextStyle(fontSize: 12, color: _errorRed)),
               ],
             ),
           ),
@@ -2355,24 +2214,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               color: highlighted ? _softMint : _cardBg,
               borderRadius: BorderRadius.circular(14),
-              border: hasError
-                  ? Border.all(color: _errorRed, width: 1.5)
-                  : highlighted
-                  ? Border.all(
-                  color: _primaryGreen.withOpacity(0.4),
-                  width: 1)
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
-              ],
+              border: hasError ? Border.all(color: _errorRed, width: 1.5) : highlighted ? Border.all(color: _primaryGreen.withOpacity(0.4), width: 1) : null,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
             ),
             child: Row(
               children: [
@@ -2380,25 +2227,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label,
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: hasError ? _errorRed : _textMuted)),
+                      Text(label, style: TextStyle(fontSize: 12, color: hasError ? _errorRed : _textMuted)),
                       const SizedBox(height: 4),
-                      Text(value,
-                          style: TextStyle(
-                              fontSize: 15,
-                              color: highlighted ? _primaryGreen : _textDark,
-                              fontWeight: highlighted
-                                  ? FontWeight.w600
-                                  : FontWeight.w500)),
+                      Text(value, style: TextStyle(fontSize: 15, color: highlighted ? _primaryGreen : _textDark, fontWeight: highlighted ? FontWeight.w600 : FontWeight.w500)),
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: hasError ? _errorRed : _textMuted,
-                ),
+                Icon(Icons.keyboard_arrow_down_rounded, color: hasError ? _errorRed : _textMuted),
               ],
             ),
           ),
@@ -2408,12 +2243,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             padding: const EdgeInsets.only(top: 4, left: 4),
             child: Row(
               children: [
-                const Icon(Icons.error_outline,
-                    size: 13, color: _errorRed),
+                const Icon(Icons.error_outline, size: 13, color: _errorRed),
                 const SizedBox(width: 4),
-                Text(errorText,
-                    style: const TextStyle(
-                        fontSize: 12, color: _errorRed)),
+                Text(errorText, style: const TextStyle(fontSize: 12, color: _errorRed)),
               ],
             ),
           ),
@@ -2437,59 +2269,26 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             onTap: () {
               if (index < _currentStep) {
                 _animationController.reset();
-                setState(() {
-                  _currentStep = index;
-                  _errors.clear();
-                });
+                setState(() { _currentStep = index; _errors.clear(); });
                 _animationController.forward();
               }
             },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isCompleted
-                    ? _primaryGreen
-                    : isCurrent
-                    ? Colors.white
-                    : Colors.white.withOpacity(0.5),
+                color: isCompleted ? _primaryGreen : isCurrent ? Colors.white : Colors.white.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(20),
-                border: isCurrent
-                    ? Border.all(color: _primaryGreen, width: 1.5)
-                    : null,
-                boxShadow: isCurrent
-                    ? [
-                  BoxShadow(
-                      color: _primaryGreen.withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2))
-                ]
-                    : [],
+                border: isCurrent ? Border.all(color: _primaryGreen, width: 1.5) : null,
+                boxShadow: isCurrent ? [BoxShadow(color: _primaryGreen.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2))] : [],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    isCompleted
-                        ? Icons.check_rounded
-                        : _steps[index]['icon'] as IconData,
-                    size: 16,
-                    color: isCompleted
-                        ? Colors.white
-                        : isCurrent
-                        ? _primaryGreen
-                        : _textMuted,
-                  ),
+                  Icon(isCompleted ? Icons.check_rounded : _steps[index]['icon'] as IconData, size: 16, color: isCompleted ? Colors.white : isCurrent ? _primaryGreen : _textMuted),
                   if (isCurrent) ...[
                     const SizedBox(width: 6),
-                    Text(
-                      _steps[index]['title'] as String,
-                      style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _primaryGreen),
-                    ),
+                    Text(_steps[index]['title'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _primaryGreen)),
                   ],
                 ],
               ),
@@ -2504,6 +2303,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Show selection screen first if no client type chosen yet
+    if (_clientType == null) {
+      return _buildClientTypeSelection();
+    }
+
+    // Otherwise show the normal multi-step form
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -2512,11 +2317,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF7FFFD4),
-              Color(0xFF98FB98),
-              Color(0xFFAFEEEE),
-            ],
+            colors: [Color(0xFF7FFFD4), Color(0xFF98FB98), Color(0xFFAFEEEE)],
           ),
         ),
         child: SafeArea(
@@ -2530,10 +2331,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     GestureDetector(
                       onTap: () {
                         if (_currentStep == 0) {
-                          Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const LoginScreen()));
+                          // Go back to client type selection
+                          _animationController.reset();
+                          setState(() => _clientType = null);
+                          _animationController.forward();
                         } else {
                           _previousStep();
                         }
@@ -2544,8 +2345,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           color: Colors.white.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: _textDark, size: 18),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded, color: _textDark, size: 18),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -2553,35 +2353,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Individual Account',
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: _textDark),
-                          ),
-                          Text(
-                            _steps[_currentStep]['title'] as String,
-                            style:
-                            TextStyle(fontSize: 13, color: Colors.grey[600]),
-                          ),
+                          const Text('Individual Account', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textDark)),
+                          Text(_steps[_currentStep]['title'] as String, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${_currentStep + 1} / ${_steps.length}',
-                        style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: _textDark),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.3), borderRadius: BorderRadius.circular(20)),
+                      child: Text('${_currentStep + 1} / ${_steps.length}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _textDark)),
                     ),
                   ],
                 ),
@@ -2595,19 +2375,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   child: LinearProgressIndicator(
                     value: (_currentStep + 1) / _steps.length,
                     backgroundColor: Colors.white.withOpacity(0.3),
-                    valueColor:
-                    const AlwaysStoppedAnimation<Color>(_deepGreen),
+                    valueColor: const AlwaysStoppedAnimation<Color>(_deepGreen),
                     minHeight: 5,
                   ),
                 ),
               ),
               const SizedBox(height: 12),
 
-              // ── Step Chips ────────────────────────────────────────────────
               _buildStepIndicator(),
               const SizedBox(height: 4),
 
-              // ── Form Content ──────────────────────────────────────────────
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -2620,8 +2397,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
-                  borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: Row(
                   children: [
@@ -2631,20 +2407,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         child: OutlinedButton(
                           onPressed: _previousStep,
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(
-                                color: _primaryGreen, width: 1.5),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor:
-                            Colors.white.withOpacity(0.5),
+                            side: const BorderSide(color: _primaryGreen, width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.white.withOpacity(0.5),
                           ),
-                          child: const Text('Back',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: _primaryGreen)),
+                          child: const Text('Back', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: _primaryGreen)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -2656,36 +2424,20 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _primaryGreen,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                          padding:
-                          const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           elevation: 0,
                         ),
                         child: _isLoading
-                            ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2.5))
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
                             : Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              _currentStep == _steps.length - 1
-                                  ? 'Submit Application'
-                                  : 'Continue',
-                              style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700),
-                            ),
-                            if (_currentStep < _steps.length - 1)
+                            Text(_currentStep == _steps.length - 1 ? 'Submit Application' : 'Continue', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                            if (_currentStep < _steps.length - 1) ...[
                               const SizedBox(width: 6),
-                            if (_currentStep < _steps.length - 1)
-                              const Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 18),
+                              const Icon(Icons.arrow_forward_rounded, size: 18),
+                            ],
                           ],
                         ),
                       ),
@@ -2703,6 +2455,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _fcNumberController.dispose();
     _titleController.dispose();
     _firstNameController.dispose();
     _middleNameController.dispose();
@@ -2733,4 +2486,3 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     super.dispose();
   }
 }
-
