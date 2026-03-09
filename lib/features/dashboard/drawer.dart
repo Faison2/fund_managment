@@ -8,7 +8,7 @@ import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../auth/login/view/login.dart';
 import '../contact_us/contact.dart';
-import '../payments/payment_confamation.dart';
+import '../payments/my_orders.dart';
 import '../payments/view/payment.dart';
 import '../trade/dashboad/trade_dashboad.dart';
 
@@ -297,7 +297,7 @@ class _AppDrawerState extends State<AppDrawer>
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const PaymentMethodsPage()));
+                            builder: (_) => const BankingDetailsPage()));
                   },
                 ),
                 _item(
@@ -890,11 +890,11 @@ const _en = _DS(
   accountNumber: 'Account No.',
   home: 'Home',
   myOrders: 'My Orders',
-  paymentMethods: 'Payment Methods',
+  paymentMethods: 'Banking Details',
   clientStatement: 'Client Statement',
   settings: 'Settings',
   about: 'About',
-  contactUs: 'Contact Us', // ← NEW
+  contactUs: 'Contact Us',
   logout: 'Logout',
   logoutTitle: 'Logout',
   logoutMsg: 'Are you sure you want to logout?',
@@ -908,11 +908,11 @@ const _sw = _DS(
   accountNumber: 'Nambari ya Akaunti',
   home: 'Nyumbani',
   myOrders: 'Maagizo Yangu',
-  paymentMethods: 'Njia za Malipo',
+  paymentMethods: 'Maelezo ya Benki',
   clientStatement: 'Taarifa ya Mteja',
   settings: 'Mipangilio',
   about: 'Kuhusu',
-  contactUs: 'Wasiliana Nasi', // ← NEW
+  contactUs: 'Wasiliana Nasi',
   logout: 'Toka',
   logoutTitle: 'Toka?',
   logoutMsg: 'Una uhakika unataka kutoka?',
