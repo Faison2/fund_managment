@@ -53,7 +53,7 @@ class _HS {
 
 const _hsEn = _HS(
   deposit:                'Invest',
-  unitPrices:             'Unit Prices',
+  unitPrices:             'SMA Portifolios',
   withdrawal:             'Redeem',
   transactions:           'Transactions',
   portfolioValue:         'Portfolio Value',
@@ -453,7 +453,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Widget? page;
     switch (key) {
       case _kDeposit:      page = const DepositPage(); break;
-      case _kUnitPrices:   page = const FundsScreen(); break;
+      case _kUnitPrices:   page = const SMAPage(); break;
       case _kWithdrawal:   page = const WithdrawalPage(); break;
       case _kTransactions: page = const ClientStatementPage(); break;
     }
