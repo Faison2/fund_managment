@@ -22,8 +22,8 @@ class _ContactUsPageState extends State<ContactUsPage>
   // ── Office details ─────────────────────────────────────────────────────────
   static const double _lat = -6.7819676;
   static const double _lng = 39.2744252;
-  static const String _phone = '+255 710 010 101';
-  static const String _email = 'info@tslinvestment.co.tz';
+  static const String _phone = '+255 753011994';
+  static const String _email = 'tanzaniasecuritieslimited@gmail.com';
 
   @override
   void initState() {

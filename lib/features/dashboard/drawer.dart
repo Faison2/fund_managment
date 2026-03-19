@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:tsl/features/settings/settings.dart';
 import 'package:tsl/features/statement /client_statement.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../auth/login/view/login.dart';
 import '../contact_us/contact.dart';
-import '../payments/my_orders.dart';
 import '../payments/view/payment.dart';
 import '../trade/dashboad/trade_dashboad.dart';
 
@@ -66,23 +66,18 @@ class _AppDrawerState extends State<AppDrawer>
 
   // ── Theme helpers ──────────────────────────────────────────────────────────
   bool get _dark => context.watch<ThemeProvider>().isDark;
-  _DS get _s =>
-      context.watch<LocaleProvider>().isSwahili ? _sw : _en;
+  _DS get _s => context.watch<LocaleProvider>().isSwahili ? _sw : _en;
 
-  Color get _drawerBg =>
-      _dark ? const Color(0xFF0F1F10) : Colors.white;
+  Color get _drawerBg => _dark ? const Color(0xFF0F1F10) : Colors.white;
 
   Color get _accent => _isTradeMode
       ? (_dark ? const Color(0xFFFFB347) : const Color(0xFFE67E22))
       : (_dark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D99));
 
   Color get _accentGreen => const Color(0xFF4CAF50);
-  Color get _txtPrim =>
-      _dark ? Colors.white : const Color(0xFF1A1A2E);
-  Color get _txtSec =>
-      _dark ? Colors.white54 : Colors.grey.shade500;
-  Color get _divider =>
-      _dark ? Colors.white12 : Colors.grey.shade100;
+  Color get _txtPrim => _dark ? Colors.white : const Color(0xFF1A1A2E);
+  Color get _txtSec => _dark ? Colors.white54 : Colors.grey.shade500;
+  Color get _divider => _dark ? Colors.white12 : Colors.grey.shade100;
 
   String get _greeting {
     final h = DateTime.now().hour;
@@ -111,6 +106,27 @@ class _AppDrawerState extends State<AppDrawer>
     if (parts.isEmpty) return 'T';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
+  // ── Open Privacy Policy in browser ────────────────────────────────────────
+  Future<void> _openPrivacyPolicy() async {
+    final uri = Uri.parse('https://www.tsl.co.tz/privacy');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Could not open Privacy Policy'),
+            backgroundColor: const Color(0xFF2E7D99),
+            behavior: SnackBarBehavior.floating,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -207,18 +223,6 @@ class _AppDrawerState extends State<AppDrawer>
     }
   }
 
-  void _showAboutDialog(BuildContext context) {
-    Navigator.pop(context);
-    showAboutDialog(
-      context: context,
-      applicationName: 'TSL Investment',
-      applicationVersion: '1.0.0',
-      applicationLegalese: '© 2024 TSL Investment App',
-      applicationIcon:
-      Icon(Icons.account_balance, size: 48, color: _accent),
-    );
-  }
-
   void _switchToTrade() {
     HapticFeedback.mediumImpact();
     setState(() => _isTradeMode = true);
@@ -274,24 +278,10 @@ class _AppDrawerState extends State<AppDrawer>
                 _sectionLabel('NAVIGATION'),
                 const SizedBox(height: 4),
                 _item(
-                  icon: Icons.receipt_long_outlined,
-                  label: s.myOrders,
-                  color: const Color(0xFF2E7D99),
-                  delay: 0,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                            const MyOrdersPage(transactionData: {})));
-                  },
-                ),
-                _item(
                   icon: Icons.credit_card_outlined,
                   label: s.paymentMethods,
                   color: const Color(0xFF388E3C),
-                  delay: 50,
+                  delay: 0,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -304,7 +294,7 @@ class _AppDrawerState extends State<AppDrawer>
                   icon: Icons.description_outlined,
                   label: s.clientStatement,
                   color: const Color(0xFF2E7D99),
-                  delay: 100,
+                  delay: 50,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -320,7 +310,7 @@ class _AppDrawerState extends State<AppDrawer>
                   icon: Icons.settings_outlined,
                   label: s.settings,
                   color: const Color(0xFF388E3C),
-                  delay: 150,
+                  delay: 100,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -329,19 +319,23 @@ class _AppDrawerState extends State<AppDrawer>
                             builder: (_) => const SettingsPage()));
                   },
                 ),
+                // ── Privacy Policy ───────────────────────────────────────
                 _item(
-                  icon: Icons.info_outline_rounded,
-                  label: s.about,
+                  icon: Icons.privacy_tip_outlined,
+                  label: s.privacyPolicy,
                   color: const Color(0xFF2E7D99),
-                  delay: 200,
-                  onTap: () => _showAboutDialog(context),
+                  delay: 150,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openPrivacyPolicy();
+                  },
                 ),
                 // ── Contact Us ───────────────────────────────────────────
                 _item(
                   icon: Icons.contact_support_outlined,
                   label: s.contactUs,
                   color: const Color(0xFF4CAF50),
-                  delay: 250,
+                  delay: 200,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -461,22 +455,18 @@ class _AppDrawerState extends State<AppDrawer>
                               Icon(
                                 Icons.account_balance_outlined,
                                 size: 14,
-                                color: !_isTradeMode
-                                    ? Colors.white
-                                    : _txtSec,
+                                color: !_isTradeMode ? Colors.white : _txtSec,
                               ),
                               const SizedBox(width: 5),
                               AnimatedDefaultTextStyle(
-                                duration:
-                                const Duration(milliseconds: 200),
+                                duration: const Duration(milliseconds: 200),
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: !_isTradeMode
                                       ? FontWeight.w800
                                       : FontWeight.w500,
-                                  color: !_isTradeMode
-                                      ? Colors.white
-                                      : _txtSec,
+                                  color:
+                                  !_isTradeMode ? Colors.white : _txtSec,
                                   letterSpacing: 0.3,
                                 ),
                                 child: const Text('FMS'),
@@ -503,16 +493,14 @@ class _AppDrawerState extends State<AppDrawer>
                               ),
                               const SizedBox(width: 5),
                               AnimatedDefaultTextStyle(
-                                duration:
-                                const Duration(milliseconds: 200),
+                                duration: const Duration(milliseconds: 200),
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: _isTradeMode
                                       ? FontWeight.w800
                                       : FontWeight.w500,
-                                  color: _isTradeMode
-                                      ? Colors.white
-                                      : _txtSec,
+                                  color:
+                                  _isTradeMode ? Colors.white : _txtSec,
                                   letterSpacing: 0.3,
                                 ),
                                 child: const Text('Trade'),
@@ -630,9 +618,7 @@ class _AppDrawerState extends State<AppDrawer>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _formattedName.isNotEmpty
-                        ? _formattedName
-                        : 'TSL Investor',
+                    _formattedName.isNotEmpty ? _formattedName : 'TSL Investor',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -643,33 +629,6 @@ class _AppDrawerState extends State<AppDrawer>
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.14),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.25), width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.badge_outlined,
-                            size: 13, color: Colors.white70),
-                        const SizedBox(width: 5),
-                        Text(
-                          _cdsNumber.isNotEmpty
-                              ? '${s.accountNumber}: $_cdsNumber'
-                              : 'TSL Investment',
-                          style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -744,8 +703,7 @@ class _AppDrawerState extends State<AppDrawer>
             splashColor: color.withOpacity(0.12),
             highlightColor: color.withOpacity(0.06),
             child: Padding(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
               child: Row(
                 children: [
                   Container(
@@ -763,9 +721,8 @@ class _AppDrawerState extends State<AppDrawer>
                       label,
                       style: TextStyle(
                         color: selected ? color : _txtPrim,
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
+                        fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
                         fontSize: 14,
                         letterSpacing: 0.1,
                       ),
@@ -782,8 +739,7 @@ class _AppDrawerState extends State<AppDrawer>
                     )
                   else
                     Icon(Icons.chevron_right_rounded,
-                        size: 16,
-                        color: _txtSec.withOpacity(0.4)),
+                        size: 16, color: _txtSec.withOpacity(0.4)),
                 ],
               ),
             ),
@@ -854,12 +810,11 @@ class _DS {
       goodEvening,
       accountNumber,
       home,
-      myOrders,
       paymentMethods,
       clientStatement,
       settings,
-      about,
-      contactUs, // ← NEW
+      privacyPolicy,
+      contactUs,
       logout,
       logoutTitle,
       logoutMsg,
@@ -870,12 +825,11 @@ class _DS {
     required this.goodEvening,
     required this.accountNumber,
     required this.home,
-    required this.myOrders,
     required this.paymentMethods,
     required this.clientStatement,
     required this.settings,
-    required this.about,
-    required this.contactUs, // ← NEW
+    required this.privacyPolicy,
+    required this.contactUs,
     required this.logout,
     required this.logoutTitle,
     required this.logoutMsg,
@@ -889,11 +843,10 @@ const _en = _DS(
   goodEvening: 'Good Evening',
   accountNumber: 'Account No.',
   home: 'Home',
-  myOrders: 'My Orders',
   paymentMethods: 'Banking Details',
   clientStatement: 'Client Statement',
   settings: 'Settings',
-  about: 'About',
+  privacyPolicy: 'Privacy Policy',
   contactUs: 'Contact Us',
   logout: 'Logout',
   logoutTitle: 'Logout',
@@ -907,11 +860,10 @@ const _sw = _DS(
   goodEvening: 'Habari za Jioni',
   accountNumber: 'Nambari ya Akaunti',
   home: 'Nyumbani',
-  myOrders: 'Maagizo Yangu',
   paymentMethods: 'Maelezo ya Benki',
   clientStatement: 'Taarifa ya Mteja',
   settings: 'Mipangilio',
-  about: 'Kuhusu',
+  privacyPolicy: 'Sera ya Faragha',
   contactUs: 'Wasiliana Nasi',
   logout: 'Toka',
   logoutTitle: 'Toka?',

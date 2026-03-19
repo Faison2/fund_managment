@@ -96,7 +96,7 @@ const _hsEn = _HS(
 );
 
 const _hsSw = _HS(
-  deposit:                'Weka Fedha',
+  deposit:                'Wekeza',
   unitPrices:             'Bei za Vitengo',
   withdrawal:             'Toa Fedha',
   transactions:           'Miamala',

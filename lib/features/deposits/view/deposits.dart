@@ -75,7 +75,7 @@ const _dsEn = _DS(
 );
 
 const _dsSw = _DS(
-  depositFunds:    'Weka Fedha',
+  depositFunds:    'Wekeza',
   chooseFund:      'Chagua fedha na kiasi cha kuweka',
   selectFund:      'Chagua Fedha',
   enterAmount:     'Ingiza Kiasi',

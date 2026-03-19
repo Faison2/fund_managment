@@ -41,7 +41,7 @@ const _dsEn = _DS(
 );
 
 const _dsSw = _DS(
-  funds:           'Fedha',
+  funds:           'Kidude',
   home:            'Nyumbani',
   portfolio:       'Mkoba',
   profile:         'Wasifu',
@@ -241,14 +241,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                         child: CircularProgressIndicator(strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(_txtSec))),
                 ]),
-                Text(
-                  _cdsNumber.isNotEmpty
-                      ? '${s.accNo}: $_cdsNumber'
-                      : s.accNotAvailable,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
-                      color: _txtSec),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                // Text(
+                //   _cdsNumber.isNotEmpty
+                //       ? '${s.accNo}: $_cdsNumber'
+                //       : s.accNotAvailable,
+                //   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
+                //       color: _txtSec),
+                //   overflow: TextOverflow.ellipsis,
+                // ),
               ],
             )),
           ]),

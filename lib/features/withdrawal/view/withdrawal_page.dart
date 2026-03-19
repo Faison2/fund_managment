@@ -85,7 +85,7 @@ const _wsSw = _WS(
   quickSelect:       'Chaguo la Haraka',
   availableBalance:  'Salio Linalopatikana',
   units:             'vitengo',
-  bankingDetails:    'Maelezo ya Benki',
+  bankingDetails:    'Taarifa za Benki',
   bank:              'Benki',
   accountNo:         'Nambari ya Akaunti',
   accountName:       'Jina la Akaunti',

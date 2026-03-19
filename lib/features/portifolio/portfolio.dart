@@ -67,7 +67,7 @@ const _psSw = _PS(
   portfolio:           'Mkoba',
   totalPortfolioValue: 'Jumla ya Thamani ya Mkoba',
   accNo:               'Nambari ya Akaunti',
-  funds:               'Fedha',
+  funds:               'Kidude',
   active:              'Hai',
   totalUnits:          'Jumla ya Vitengo',
   overview:            'Muhtasari',

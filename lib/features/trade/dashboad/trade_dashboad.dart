@@ -6,6 +6,49 @@ import '../markets /markets.dart';
 import '../profile/trade_profile.dart';
 import '../trade/trade_shared.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// THEME COLORS  — matched to FMS green / teal palette
+// ─────────────────────────────────────────────────────────────────────────────
+class PastelColors {
+  // Backgrounds
+  static const Color bg      = Color(0xFFEAF5F0);   // soft mint
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color card    = Color(0xFFFFFFFF);
+
+  // Borders & dividers
+  static const Color border  = Color(0xFFCDE9DE);
+
+  // Primary accent — FMS teal-green
+  static const Color accent   = Color(0xFF2E7D99);   // FMS teal
+  static const Color accent2  = Color(0xFF2E7D32);   // FMS forest green
+  static const Color accentLt = Color(0xFFE0F4F0);   // tinted bg
+
+  // Semantic
+  static const Color green   = Color(0xFF34C759);
+  static const Color greenLt = Color(0xFFEBFBF2);
+  static const Color red     = Color(0xFFFF6B8A);
+  static const Color redLt   = Color(0xFFFFEEF2);
+  static const Color gold    = Color(0xFFF5A623);
+  static const Color goldLt  = Color(0xFFFFF8EC);
+
+  // Text
+  static const Color txtPrim = Color(0xFF0F2318);
+  static const Color txtSec  = Color(0xFF5E8A7A);
+  static const Color txtHint = Color(0xFFA0C4B8);
+
+  // Hero card gradient — mirrors FMS drawer header
+  static const List<Color> heroGrad = [
+    Color(0xFF2E7D99),   // FMS teal
+    Color(0xFF1A5F77),   // FMS dark teal
+    Color(0xFF2E7D32),   // FMS forest green
+  ];
+
+  // FAB / button gradients
+  static const List<Color> fabGrad  = [Color(0xFF2E7D99), Color(0xFF1A5F77)];
+  static const List<Color> buyGrad  = [Color(0xFF4CAF50), Color(0xFF2E7D32)];
+  static const List<Color> sellGrad = [Color(0xFFFF8AA8), Color(0xFFFF6B8A)];
+}
+
 class TradeDashboard extends StatefulWidget {
   const TradeDashboard({Key? key}) : super(key: key);
 
@@ -31,8 +74,7 @@ class _TradeDashboardState extends State<TradeDashboard>
     _pageAnim = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600))
       ..forward();
-    _pageFade =
-        CurvedAnimation(parent: _pageAnim, curve: Curves.easeOut);
+    _pageFade = CurvedAnimation(parent: _pageAnim, curve: Curves.easeOut);
   }
 
   @override
@@ -46,7 +88,6 @@ class _TradeDashboardState extends State<TradeDashboard>
   void _onNavTap(int index) {
     HapticFeedback.selectionClick();
     if (_fabExpanded) _toggleFab();
-
     switch (index) {
       case 1:
         _push(const MarketsPage());
@@ -68,8 +109,8 @@ class _TradeDashboardState extends State<TradeDashboard>
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => page,
         transitionsBuilder: (_, animation, __, child) {
-          final curved = CurvedAnimation(
-              parent: animation, curve: Curves.easeInOut);
+          final curved =
+          CurvedAnimation(parent: animation, curve: Curves.easeInOut);
           return FadeTransition(
             opacity: curved,
             child: SlideTransition(
@@ -86,14 +127,13 @@ class _TradeDashboardState extends State<TradeDashboard>
   }
 
   // ─────────────────────────────── BUILD ────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: TradeColors.bg,
+        backgroundColor: PastelColors.bg,
         extendBody: true,
         drawer: _TradeDrawer(onSwitchToFms: () {
           Navigator.pop(context);
@@ -121,7 +161,9 @@ class _TradeDashboardState extends State<TradeDashboard>
           child: Column(
             children: [
               _buildPortfolioCard(),
-              _buildBuySellButtons(), // ← NEW
+              _buildBuySellButtons(),
+              const SizedBox(height: 16),
+              _buildFmsShortcut(),
               const SizedBox(height: 24),
               _buildPerformanceSection(),
               const SizedBox(height: 24),
@@ -139,7 +181,7 @@ class _TradeDashboardState extends State<TradeDashboard>
   // ── App bar ────────────────────────────────────────────────────────────────
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      backgroundColor: TradeColors.bg,
+      backgroundColor: PastelColors.bg,
       expandedHeight: 70,
       floating: true,
       pinned: true,
@@ -149,24 +191,36 @@ class _TradeDashboardState extends State<TradeDashboard>
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: TradeColors.surface,
+            color: PastelColors.surface,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: TradeColors.border),
+            border: Border.all(color: PastelColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: PastelColors.accent.withOpacity(0.10),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: const Icon(Icons.menu_rounded,
-              size: 16, color: TradeColors.txtPrim),
+              size: 16, color: PastelColors.txtPrim),
         ),
         onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       title: Row(
         children: [
           Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                  colors: [TradeColors.teal, Color(0xFF0080FF)]),
+              gradient: const LinearGradient(colors: PastelColors.fabGrad),
               borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: PastelColors.accent.withOpacity(0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: const Text('TRADE',
                 style: TextStyle(
@@ -178,7 +232,7 @@ class _TradeDashboardState extends State<TradeDashboard>
           const SizedBox(width: 10),
           const Text('Portfolio',
               style: TextStyle(
-                  color: TradeColors.txtPrim,
+                  color: PastelColors.txtPrim,
                   fontSize: 18,
                   fontWeight: FontWeight.w800)),
         ],
@@ -188,12 +242,31 @@ class _TradeDashboardState extends State<TradeDashboard>
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: TradeColors.surface,
+              color: PastelColors.surface,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: TradeColors.border),
+              border: Border.all(color: PastelColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: PastelColors.accent.withOpacity(0.10),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: const Icon(Icons.notifications_none_rounded,
-                size: 18, color: TradeColors.txtPrim),
+            child: Stack(children: [
+              const Icon(Icons.notifications_none_rounded,
+                  size: 18, color: PastelColors.txtPrim),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                      color: Colors.red, shape: BoxShape.circle),
+                ),
+              ),
+            ]),
           ),
           onPressed: () {},
         ),
@@ -211,34 +284,47 @@ class _TradeDashboardState extends State<TradeDashboard>
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0D3D5C),
-              Color(0xFF0A2840),
-              Color(0xFF061820),
-            ],
+            colors: PastelColors.heroGrad,
           ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-              color: TradeColors.teal.withOpacity(0.2), width: 1),
+          border:
+          Border.all(color: Colors.white.withOpacity(0.25), width: 1.5),
           boxShadow: [
             BoxShadow(
-                color: TradeColors.teal.withOpacity(0.08),
-                blurRadius: 24,
-                offset: const Offset(0, 8)),
+              color: PastelColors.accent.withOpacity(0.30),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
           ],
         ),
         child: Stack(
           children: [
+            // decorative blobs
             Positioned(
-              top: -30,
-              right: -30,
+              top: -20,
+              right: -20,
               child: Container(
-                width: 160,
-                height: 160,
+                width: 140,
+                height: 140,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(colors: [
-                    TradeColors.teal.withOpacity(0.08),
+                    Colors.white.withOpacity(0.18),
+                    Colors.transparent,
+                  ]),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -30,
+              left: 20,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(colors: [
+                    Colors.white.withOpacity(0.10),
                     Colors.transparent,
                   ]),
                 ),
@@ -254,38 +340,45 @@ class _TradeDashboardState extends State<TradeDashboard>
                     children: [
                       const Text('Total Portfolio Value',
                           style: TextStyle(
-                              color: TradeColors.txtSec,
+                              color: Colors.white70,
                               fontSize: 13,
                               fontWeight: FontWeight.w500)),
-                      _changeChip('+5.8% today', TradeColors.green),
+                      _changeChip('+5.8% today', PastelColors.green),
                     ],
                   ),
                   const SizedBox(height: 10),
                   const Text('TZS 21,200,000',
                       style: TextStyle(
-                          color: TradeColors.txtPrim,
+                          color: Colors.white,
                           fontSize: 34,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.5)),
                   const SizedBox(height: 4),
-                  Row(children: [
-                    const Icon(Icons.trending_up_rounded,
-                        size: 16, color: TradeColors.green),
-                    const SizedBox(width: 4),
-                    const Text('+TZS 1,160,000 this month',
+                  Row(children: const [
+                    Icon(Icons.trending_up_rounded,
+                        size: 16, color: Color(0xFF4ADE80)),
+                    SizedBox(width: 4),
+                    Text('+TZS 1,160,000 this month',
                         style: TextStyle(
-                            color: TradeColors.green, fontSize: 13)),
+                            color: Color(0xFF4ADE80), fontSize: 13)),
                   ]),
                   const SizedBox(height: 20),
-                  Row(children: [
-                    _miniStat(
-                        'Day P&L', '+TZS 48,200', TradeColors.green),
-                    _vDivider(),
-                    _miniStat(
-                        'Invested', 'TZS 18.5M', TradeColors.txtSec),
-                    _vDivider(),
-                    _miniStat('Returns', '+14.6%', TradeColors.gold),
-                  ]),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(children: [
+                      _miniStat(
+                          'Day P&L', '+TZS 48,200', const Color(0xFF4ADE80)),
+                      _vDivider(),
+                      _miniStat('Invested', 'TZS 18.5M', Colors.white70),
+                      _vDivider(),
+                      _miniStat('Returns', '+14.6%', PastelColors.gold),
+                    ]),
+                  ),
                 ],
               ),
             ),
@@ -299,9 +392,9 @@ class _TradeDashboardState extends State<TradeDashboard>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: Colors.white.withOpacity(0.18),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.arrow_upward_rounded, size: 11, color: color),
@@ -319,8 +412,7 @@ class _TradeDashboardState extends State<TradeDashboard>
     return Expanded(
       child: Column(children: [
         Text(label,
-            style: const TextStyle(
-                color: TradeColors.txtSec, fontSize: 11)),
+            style: const TextStyle(color: Colors.white60, fontSize: 11)),
         const SizedBox(height: 4),
         Text(value,
             style: TextStyle(
@@ -331,8 +423,8 @@ class _TradeDashboardState extends State<TradeDashboard>
     );
   }
 
-  Widget _vDivider() => Container(
-      height: 32, width: 1, color: Colors.white.withOpacity(0.08));
+  Widget _vDivider() =>
+      Container(height: 32, width: 1, color: Colors.white24);
 
   // ── Buy / Sell buttons ─────────────────────────────────────────────────────
   Widget _buildBuySellButtons() {
@@ -351,14 +443,14 @@ class _TradeDashboardState extends State<TradeDashboard>
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF00C896), Color(0xFF00A878)],
+                    colors: PastelColors.buyGrad,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: TradeColors.green.withOpacity(0.35),
+                      color: PastelColors.accent2.withOpacity(0.35),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -393,14 +485,14 @@ class _TradeDashboardState extends State<TradeDashboard>
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFFF4D6A), Color(0xFFE0003C)],
+                    colors: PastelColors.sellGrad,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: TradeColors.red.withOpacity(0.35),
+                      color: PastelColors.red.withOpacity(0.3),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -428,7 +520,124 @@ class _TradeDashboardState extends State<TradeDashboard>
     );
   }
 
-  // ── Performance chart section ──────────────────────────────────────────────
+  // ── FMS Shortcut Button ────────────────────────────────────────────────────
+  Widget _buildFmsShortcut() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          Navigator.pop(context);
+        },
+        child: Container(
+          width: double.infinity,
+          padding:
+          const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFD4EEF9),
+                Color(0xFFE8F5E9),
+                Color(0xFFB8E6D3),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: PastelColors.accent.withOpacity(0.25),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: PastelColors.accent.withOpacity(0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: PastelColors.fabGrad,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: PastelColors.accent.withOpacity(0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.account_balance_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Fund Management System',
+                      style: TextStyle(
+                        color: PastelColors.txtPrim,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Tap to open FMS dashboard →',
+                      style: TextStyle(
+                        color: PastelColors.accent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: PastelColors.accent.withOpacity(0.25)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: PastelColors.accent.withOpacity(0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: PastelColors.accent,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Performance section ────────────────────────────────────────────────────
   Widget _buildPerformanceSection() {
     return Column(
       children: [
@@ -452,32 +661,37 @@ class _TradeDashboardState extends State<TradeDashboard>
     return Column(
       children: [
         const TradeSectionHeader(
-            title: 'Allocation',
-            icon: Icons.pie_chart_outline_rounded),
+            title: 'Allocation', icon: Icons.pie_chart_outline_rounded),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: TradeColors.card,
+              color: PastelColors.card,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: TradeColors.border),
+              border: Border.all(color: PastelColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: PastelColors.accent.withOpacity(0.07),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 SizedBox(
                   width: 120,
                   height: 120,
-                  child:
-                  CustomPaint(painter: DonutPainter(stocks: kStocks)),
+                  child: CustomPaint(
+                      painter: DonutPainter(stocks: kStocks)),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Column(
                     children: kStocks.map((s) {
                       return Padding(
-                        padding:
-                        const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(children: [
                           Container(
                             width: 10,
@@ -491,7 +705,7 @@ class _TradeDashboardState extends State<TradeDashboard>
                           Expanded(
                             child: Text(s.symbol,
                                 style: const TextStyle(
-                                    color: TradeColors.txtPrim,
+                                    color: PastelColors.txtPrim,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600)),
                           ),
@@ -513,7 +727,7 @@ class _TradeDashboardState extends State<TradeDashboard>
     );
   }
 
-  // ── Quick holdings preview ─────────────────────────────────────────────────
+  // ── Quick holdings ─────────────────────────────────────────────────────────
   Widget _buildQuickHoldings() {
     return Column(
       children: [
@@ -523,17 +737,17 @@ class _TradeDashboardState extends State<TradeDashboard>
           trailing: GestureDetector(
             onTap: () => _push(const HoldingsPage()),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 5),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: TradeColors.teal.withOpacity(0.1),
+                color: PastelColors.accentLt,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: TradeColors.teal.withOpacity(0.3)),
+                    color: PastelColors.accent.withOpacity(0.25)),
               ),
               child: const Text('See All',
                   style: TextStyle(
-                      color: TradeColors.teal,
+                      color: PastelColors.accent,
                       fontSize: 12,
                       fontWeight: FontWeight.w700)),
             ),
@@ -551,21 +765,22 @@ class _TradeDashboardState extends State<TradeDashboard>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
-                color: TradeColors.surface,
+                color: PastelColors.accentLt,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: TradeColors.border),
+                border: Border.all(
+                    color: PastelColors.accent.withOpacity(0.2)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
                   Text('View All Holdings',
                       style: TextStyle(
-                          color: TradeColors.teal,
+                          color: PastelColors.accent,
                           fontSize: 13,
                           fontWeight: FontWeight.w700)),
                   SizedBox(width: 6),
                   Icon(Icons.arrow_forward_rounded,
-                      size: 14, color: TradeColors.teal),
+                      size: 14, color: PastelColors.accent),
                 ],
               ),
             ),
@@ -588,7 +803,7 @@ class _TradeDashboardState extends State<TradeDashboard>
               _fabAction(
                 label: 'Sell',
                 icon: Icons.trending_down_rounded,
-                color: TradeColors.red,
+                color: PastelColors.red,
                 offset: Offset(0, -80 * t),
                 onTap: () {
                   _toggleFab();
@@ -598,7 +813,7 @@ class _TradeDashboardState extends State<TradeDashboard>
               _fabAction(
                 label: 'Buy',
                 icon: Icons.trending_up_rounded,
-                color: TradeColors.green,
+                color: PastelColors.green,
                 offset: Offset(0, -40 * t),
                 onTap: () {
                   _toggleFab();
@@ -615,16 +830,16 @@ class _TradeDashboardState extends State<TradeDashboard>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: _fabExpanded
-                        ? [TradeColors.red, const Color(0xFFFF0040)]
-                        : [TradeColors.teal, const Color(0xFF0080FF)],
+                        ? [PastelColors.red, const Color(0xFFFF4D79)]
+                        : PastelColors.fabGrad,
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
                       color: (_fabExpanded
-                          ? TradeColors.red
-                          : TradeColors.teal)
-                          .withOpacity(0.45),
+                          ? PastelColors.red
+                          : PastelColors.accent)
+                          .withOpacity(0.4),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -660,12 +875,19 @@ class _TradeDashboardState extends State<TradeDashboard>
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: TradeColors.surface,
+                color: PastelColors.surface,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: color.withOpacity(0.3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Text(label,
                   style: TextStyle(
@@ -680,7 +902,7 @@ class _TradeDashboardState extends State<TradeDashboard>
               decoration: BoxDecoration(
                 color: color.withOpacity(0.12),
                 shape: BoxShape.circle,
-                border: Border.all(color: color.withOpacity(0.4)),
+                border: Border.all(color: color.withOpacity(0.35)),
               ),
               child: Icon(icon, color: color, size: 20),
             ),
@@ -699,21 +921,28 @@ class _TradeDashboardState extends State<TradeDashboard>
   // ── Bottom Nav ─────────────────────────────────────────────────────────────
   Widget _buildBottomNav() {
     return BottomAppBar(
-      color: TradeColors.surface,
+      color: PastelColors.surface,
       elevation: 0,
       notchMargin: 10,
       shape: const CircularNotchedRectangle(),
-      child: SizedBox(
-        height: 64,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _navItem(0, Icons.pie_chart_rounded, 'Portfolio'),
-            _navItem(1, Icons.bar_chart_rounded, 'Markets'),
-            const SizedBox(width: 60),
-            _navItem(3, Icons.star_rounded, 'Watchlist'),
-            _navItem(4, Icons.person_rounded, 'Profile'),
-          ],
+      child: Container(
+        decoration: const BoxDecoration(
+          border: Border(
+            top: BorderSide(color: PastelColors.border, width: 1),
+          ),
+        ),
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _navItem(0, Icons.pie_chart_rounded, 'Portfolio'),
+              _navItem(1, Icons.bar_chart_rounded, 'Markets'),
+              const SizedBox(width: 60),
+              _navItem(3, Icons.star_rounded, 'Watchlist'),
+              _navItem(4, Icons.person_rounded, 'Profile'),
+            ],
+          ),
         ),
       ),
     );
@@ -725,12 +954,9 @@ class _TradeDashboardState extends State<TradeDashboard>
       onTap: () => _onNavTap(idx),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding:
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: sel
-              ? TradeColors.teal.withOpacity(0.1)
-              : Colors.transparent,
+          color: sel ? PastelColors.accentLt : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -738,16 +964,13 @@ class _TradeDashboardState extends State<TradeDashboard>
           children: [
             Icon(icon,
                 size: 22,
-                color: sel
-                    ? TradeColors.teal
-                    : TradeColors.txtSec.withOpacity(0.6)),
+                color:
+                sel ? PastelColors.accent : PastelColors.txtHint),
             const SizedBox(height: 2),
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
               style: TextStyle(
-                color: sel
-                    ? TradeColors.teal
-                    : TradeColors.txtSec.withOpacity(0.6),
+                color: sel ? PastelColors.accent : PastelColors.txtHint,
                 fontSize: 10,
                 fontWeight:
                 sel ? FontWeight.w700 : FontWeight.w500,
@@ -781,9 +1004,16 @@ class _PeriodChartState extends State<_PeriodChart> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: TradeColors.card,
+        color: PastelColors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: TradeColors.border),
+        border: Border.all(color: PastelColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: PastelColors.accent.withOpacity(0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -801,18 +1031,17 @@ class _PeriodChartState extends State<_PeriodChart> {
                         horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
                       gradient: sel
-                          ? const LinearGradient(colors: [
-                        TradeColors.teal,
-                        Color(0xFF0080FF)
-                      ])
+                          ? const LinearGradient(
+                          colors: PastelColors.fabGrad)
                           : null,
-                      color: sel ? null : TradeColors.surface,
+                      color: sel ? null : PastelColors.bg,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(_periods[i],
                         style: TextStyle(
-                            color:
-                            sel ? Colors.white : TradeColors.txtSec,
+                            color: sel
+                                ? Colors.white
+                                : PastelColors.txtSec,
                             fontSize: 12,
                             fontWeight: sel
                                 ? FontWeight.w700
@@ -828,8 +1057,8 @@ class _PeriodChartState extends State<_PeriodChart> {
             child: CustomPaint(
               painter: LineChartPainter(
                 data: widget.data,
-                lineColor: TradeColors.teal,
-                fillColor: TradeColors.teal.withOpacity(0.08),
+                lineColor: PastelColors.accent,
+                fillColor: PastelColors.accent.withOpacity(0.08),
               ),
               size: Size.infinite,
             ),
@@ -883,7 +1112,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: const Color(0xFF0D1F2D),
+      backgroundColor: PastelColors.surface,
       width: MediaQuery.of(context).size.width * 0.80,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
@@ -905,29 +1134,32 @@ class _TradeDrawerState extends State<_TradeDrawer>
                 _item(
                   icon: Icons.pie_chart_rounded,
                   label: 'Portfolio',
-                  color: TradeColors.teal,
+                  color: PastelColors.accent,
                   delay: 0,
                   onTap: () => Navigator.pop(context),
                 ),
                 _item(
                   icon: Icons.bar_chart_rounded,
                   label: 'Markets',
-                  color: const Color(0xFF4CAF50),
+                  color: PastelColors.accent2,
                   delay: 50,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const MarketsPage()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const MarketsPage()));
                   },
                 ),
                 _item(
                   icon: Icons.star_rounded,
                   label: 'Watchlist',
-                  color: TradeColors.gold,
+                  color: PastelColors.gold,
                   delay: 100,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context,
+                    Navigator.push(
+                        context,
                         MaterialPageRoute(
                             builder: (_) => const WatchlistPage()));
                   },
@@ -935,11 +1167,12 @@ class _TradeDrawerState extends State<_TradeDrawer>
                 _item(
                   icon: Icons.list_alt_rounded,
                   label: 'Holdings',
-                  color: TradeColors.teal,
+                  color: PastelColors.accent,
                   delay: 150,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context,
+                    Navigator.push(
+                        context,
                         MaterialPageRoute(
                             builder: (_) => const HoldingsPage()));
                   },
@@ -947,11 +1180,12 @@ class _TradeDrawerState extends State<_TradeDrawer>
                 _item(
                   icon: Icons.person_rounded,
                   label: 'Profile',
-                  color: const Color(0xFFAB47BC),
+                  color: PastelColors.accent2,
                   delay: 200,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context,
+                    Navigator.push(
+                        context,
                         MaterialPageRoute(
                             builder: (_) => const ProfilePage()));
                   },
@@ -966,6 +1200,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
     );
   }
 
+  // ── Drawer Header — mirrors FMS drawer gradient ────────────────────────────
   Widget _buildHeader() {
     return SlideTransition(
       position: _headerSlide,
@@ -977,10 +1212,11 @@ class _TradeDrawerState extends State<_TradeDrawer>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
+              // exact same stops as FMS AppDrawer header
               colors: [
-                Color(0xFF004D66),
-                Color(0xFF003D55),
-                Color(0xFF001F2E),
+                Color(0xFF2E7D99),
+                Color(0xFF1A5F77),
+                Color(0xFF2E7D32),
               ],
             ),
             borderRadius: BorderRadius.only(
@@ -1002,13 +1238,21 @@ class _TradeDrawerState extends State<_TradeDrawer>
                         height: 64,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [TradeColors.teal, Color(0xFF0080FF)],
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.28),
+                              Colors.white.withOpacity(0.10),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          border: Border.all(
+                              color: Colors.white.withOpacity(0.5),
+                              width: 2.5),
                           boxShadow: [
                             BoxShadow(
-                              color: TradeColors.teal.withOpacity(0.4),
-                              blurRadius: 16,
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
                           ],
@@ -1028,10 +1272,10 @@ class _TradeDrawerState extends State<_TradeDrawer>
                         child: Container(
                           padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
-                            color: TradeColors.green,
+                            color: const Color(0xFF4CAF50),
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: const Color(0xFF003D55), width: 2),
+                                color: const Color(0xFF1A5F77), width: 2),
                           ),
                           child: const Icon(Icons.check,
                               size: 10, color: Colors.white),
@@ -1049,7 +1293,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
                   const SizedBox(height: 4),
                   const Text('Trade Account',
                       style: TextStyle(
-                          color: TradeColors.teal,
+                          color: Colors.white70,
                           fontSize: 13,
                           fontWeight: FontWeight.w500)),
                   const SizedBox(height: 10),
@@ -1057,16 +1301,16 @@ class _TradeDrawerState extends State<_TradeDrawer>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
+                      color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.15), width: 1),
+                          color: Colors.white.withOpacity(0.25), width: 1),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: const [
                         Icon(Icons.account_balance_wallet_outlined,
-                            size: 12, color: TradeColors.teal),
+                            size: 12, color: Colors.white70),
                         SizedBox(width: 5),
                         Text('TZS 21,200,000',
                             style: TextStyle(
@@ -1085,6 +1329,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
     );
   }
 
+  // ── Environment toggle — same style as FMS drawer ──────────────────────────
   Widget _buildEnvToggle() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
@@ -1099,7 +1344,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
                   width: 3,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: TradeColors.gold,
+                    color: PastelColors.gold,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1108,7 +1353,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
                     style: TextStyle(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w700,
-                        color: TradeColors.txtSec,
+                        color: PastelColors.txtSec,
                         letterSpacing: 1.8)),
               ],
             ),
@@ -1116,13 +1361,13 @@ class _TradeDrawerState extends State<_TradeDrawer>
           Container(
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
+              color: PastelColors.bg,
               borderRadius: BorderRadius.circular(14),
-              border:
-              Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: PastelColors.border),
             ),
             child: Stack(
               children: [
+                // active pill — right side = Trade
                 Align(
                   alignment: Alignment.centerRight,
                   child: FractionallySizedBox(
@@ -1131,13 +1376,12 @@ class _TradeDrawerState extends State<_TradeDrawer>
                       margin: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFE67E22), Color(0xFFFFB347)],
+                          colors: PastelColors.buyGrad,
                         ),
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                            const Color(0xFFE67E22).withOpacity(0.4),
+                            color: PastelColors.accent2.withOpacity(0.35),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           ),
@@ -1159,13 +1403,13 @@ class _TradeDrawerState extends State<_TradeDrawer>
                             mainAxisSize: MainAxisSize.min,
                             children: const [
                               Icon(Icons.account_balance_outlined,
-                                  size: 14, color: TradeColors.txtSec),
+                                  size: 14, color: PastelColors.txtSec),
                               SizedBox(width: 5),
                               Text('FMS',
                                   style: TextStyle(
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w500,
-                                      color: TradeColors.txtSec,
+                                      color: PastelColors.txtSec,
                                       letterSpacing: 0.3)),
                             ],
                           ),
@@ -1209,7 +1453,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
             width: 3,
             height: 12,
             decoration: BoxDecoration(
-              color: TradeColors.teal,
+              color: PastelColors.accent,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -1218,7 +1462,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
               style: const TextStyle(
                   fontSize: 9.5,
                   fontWeight: FontWeight.w700,
-                  color: TradeColors.txtSec,
+                  color: PastelColors.txtSec,
                   letterSpacing: 1.8)),
         ],
       ),
@@ -1249,8 +1493,8 @@ class _TradeDrawerState extends State<_TradeDrawer>
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(14),
-            splashColor: color.withOpacity(0.12),
-            highlightColor: color.withOpacity(0.06),
+            splashColor: color.withOpacity(0.1),
+            highlightColor: color.withOpacity(0.05),
             child: Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: 12, vertical: 13),
@@ -1260,7 +1504,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
+                      color: color.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, color: color, size: 20),
@@ -1269,14 +1513,13 @@ class _TradeDrawerState extends State<_TradeDrawer>
                   Expanded(
                     child: Text(label,
                         style: const TextStyle(
-                            color: TradeColors.txtPrim,
+                            color: PastelColors.txtPrim,
                             fontWeight: FontWeight.w500,
                             fontSize: 14,
                             letterSpacing: 0.1)),
                   ),
-                  Icon(Icons.chevron_right_rounded,
-                      size: 16,
-                      color: TradeColors.txtSec.withOpacity(0.4)),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 16, color: PastelColors.txtHint),
                 ],
               ),
             ),
@@ -1286,6 +1529,7 @@ class _TradeDrawerState extends State<_TradeDrawer>
     );
   }
 
+  // ── Switch to FMS button ───────────────────────────────────────────────────
   Widget _buildSwitchToFms() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1297,16 +1541,16 @@ class _TradeDrawerState extends State<_TradeDrawer>
         child: Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0D3D5C), Color(0xFF0A2840)],
+              colors: [Color(0xFFD4EEF9), Color(0xFFE8F5E9)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-                color: TradeColors.teal.withOpacity(0.3), width: 1),
+                color: PastelColors.accent.withOpacity(0.25), width: 1),
             boxShadow: [
               BoxShadow(
-                color: TradeColors.teal.withOpacity(0.1),
+                color: PastelColors.accent.withOpacity(0.10),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -1322,13 +1566,11 @@ class _TradeDrawerState extends State<_TradeDrawer>
                   height: 40,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF2E7D99), Color(0xFF4CAF50)],
-                    ),
+                        colors: PastelColors.fabGrad),
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color:
-                        const Color(0xFF2E7D99).withOpacity(0.35),
+                        color: PastelColors.accent.withOpacity(0.30),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -1344,24 +1586,24 @@ class _TradeDrawerState extends State<_TradeDrawer>
                     children: const [
                       Text('Switch to FMS',
                           style: TextStyle(
-                              color: Colors.white,
+                              color: PastelColors.txtPrim,
                               fontWeight: FontWeight.w700,
                               fontSize: 14)),
                       SizedBox(height: 2),
                       Text('Fund Management System',
                           style: TextStyle(
-                              color: TradeColors.txtSec, fontSize: 11)),
+                              color: PastelColors.txtSec, fontSize: 11)),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: TradeColors.teal.withOpacity(0.12),
+                    color: PastelColors.accentLt,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.swap_horiz_rounded,
-                      size: 16, color: TradeColors.teal),
+                      size: 16, color: PastelColors.accent),
                 ),
               ],
             ),
