@@ -8,6 +8,9 @@ import '../trade/trade_shared.dart';
 import 'drawer.dart';
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// THEME COLORS  — matched to FMS green / teal palette
+// ─────────────────────────────────────────────────────────────────────────────
 class PastelColors {
   // Backgrounds
   static const Color bg      = Color(0xFFEAF5F0);
@@ -58,18 +61,14 @@ class TradeDashboard extends StatefulWidget {
 class _TradeDashboardState extends State<TradeDashboard>
     with TickerProviderStateMixin {
   int _navIndex = 0;
-  bool _fabExpanded = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  late AnimationController _fabAnim;
   late AnimationController _pageAnim;
   late Animation<double> _pageFade;
 
   @override
   void initState() {
     super.initState();
-    _fabAnim = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 280));
     _pageAnim = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600))
       ..forward();
@@ -78,7 +77,6 @@ class _TradeDashboardState extends State<TradeDashboard>
 
   @override
   void dispose() {
-    _fabAnim.dispose();
     _pageAnim.dispose();
     super.dispose();
   }
@@ -86,13 +84,12 @@ class _TradeDashboardState extends State<TradeDashboard>
   // ── Navigation ─────────────────────────────────────────────────────────────
   void _onNavTap(int index) {
     HapticFeedback.selectionClick();
-    if (_fabExpanded) _toggleFab();
     switch (index) {
       case 1:
         _push(const MarketsPage());
         break;
       case 3:
-        _push(const WatchlistPage());
+        _push(const DseMarketWatchPage());
         break;
       case 4:
         _push(const ProfilePage());
@@ -772,132 +769,39 @@ class _TradeDashboardState extends State<TradeDashboard>
     );
   }
 
-  // ── FAB ────────────────────────────────────────────────────────────────────
+  // ── FAB — opens Market Watch ───────────────────────────────────────────────
   Widget _buildFab() {
-    return AnimatedBuilder(
-      animation: _fabAnim,
-      builder: (_, __) {
-        final t = _fabAnim.value;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_fabExpanded) ...[
-              _fabAction(
-                label: 'Sell',
-                icon: Icons.trending_down_rounded,
-                color: PastelColors.red,
-                offset: Offset(0, -80 * t),
-                onTap: () {
-                  _toggleFab();
-                  showTradeSheet(context, kStocks.first, isBuy: false);
-                },
-              ),
-              _fabAction(
-                label: 'Buy',
-                icon: Icons.trending_up_rounded,
-                color: PastelColors.green,
-                offset: Offset(0, -40 * t),
-                onTap: () {
-                  _toggleFab();
-                  showTradeSheet(context, kStocks.first, isBuy: true);
-                },
-              ),
-            ],
-            GestureDetector(
-              onTap: _toggleFab,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 280),
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: _fabExpanded
-                        ? [PastelColors.red, const Color(0xFFFF4D79)]
-                        : PastelColors.fabGrad,
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (_fabExpanded
-                          ? PastelColors.red
-                          : PastelColors.accent)
-                          .withOpacity(0.4),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: AnimatedRotation(
-                  turns: _fabExpanded ? 0.125 : 0,
-                  duration: const Duration(milliseconds: 280),
-                  child: const Icon(Icons.add_rounded,
-                      color: Colors.white, size: 28),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-        );
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        _push(const DseMarketWatchPage());
       },
-    );
-  }
-
-  Widget _fabAction({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required Offset offset,
-    required VoidCallback onTap,
-  }) {
-    return Transform.translate(
-      offset: offset,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: PastelColors.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: color.withOpacity(0.3)),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.12),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Text(label,
-                  style: TextStyle(
-                      color: color,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700)),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-                border: Border.all(color: color.withOpacity(0.35)),
-              ),
-              child: Icon(icon, color: color, size: 20),
+      child: Container(
+        width: 60,
+        height: 60,
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: PastelColors.fabGrad,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: PastelColors.accent.withOpacity(0.45),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
+        child: const Icon(
+          Icons.bar_chart_rounded,
+          color: Colors.white,
+          size: 26,
+        ),
       ),
     );
-  }
-
-  void _toggleFab() {
-    HapticFeedback.lightImpact();
-    setState(() => _fabExpanded = !_fabExpanded);
-    _fabExpanded ? _fabAnim.forward() : _fabAnim.reverse();
   }
 
   // ── Bottom Nav ─────────────────────────────────────────────────────────────

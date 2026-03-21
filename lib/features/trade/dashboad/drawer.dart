@@ -188,18 +188,18 @@ class _TradeDrawerState extends State<TradeDrawer>
                         MaterialPageRoute(builder: (_) => const MarketsPage()));
                   },
                 ),
-                _item(
-                  icon: Icons.star_rounded,
-                  label: 'Watchlist',
-                  color: PastelColors.gold,
-                  delay: 100,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context,
-                        MaterialPageRoute(
-                            builder: (_) => const WatchlistPage()));
-                  },
-                ),
+                // _item(
+                //   icon: Icons.star_rounded,
+                //   label: 'Watchlist',
+                //   color: PastelColors.gold,
+                //   delay: 100,
+                //   // onTap: () {
+                //   //   Navigator.pop(context);
+                //   //   Navigator.push(context,
+                //   //       MaterialPageRoute(
+                //   //           builder: (_) => const WatchlistPage()));
+                //   // },
+                // ),
                 _item(
                   icon: Icons.list_alt_rounded,
                   label: 'Holdings',

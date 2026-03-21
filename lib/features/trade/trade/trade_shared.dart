@@ -19,6 +19,7 @@ class TradeColors {
   static const gold    = Color(0xFFFFB347);
   static const txtPrim = Colors.white;
   static const txtSec  = Color(0xFF8899AA);
+  static const txtHint = Color(0xFF556677);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
