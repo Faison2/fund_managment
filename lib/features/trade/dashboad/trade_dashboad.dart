@@ -5,13 +5,12 @@ import '../market_watch/market_watch.dart';
 import '../markets /markets.dart';
 import '../profile/trade_profile.dart';
 import '../trade/trade_shared.dart';
+import 'drawer.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// THEME COLORS  — matched to FMS green / teal palette
-// ─────────────────────────────────────────────────────────────────────────────
+
 class PastelColors {
   // Backgrounds
-  static const Color bg      = Color(0xFFEAF5F0);   // soft mint
+  static const Color bg      = Color(0xFFEAF5F0);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color card    = Color(0xFFFFFFFF);
 
@@ -19,9 +18,9 @@ class PastelColors {
   static const Color border  = Color(0xFFCDE9DE);
 
   // Primary accent — FMS teal-green
-  static const Color accent   = Color(0xFF2E7D99);   // FMS teal
-  static const Color accent2  = Color(0xFF2E7D32);   // FMS forest green
-  static const Color accentLt = Color(0xFFE0F4F0);   // tinted bg
+  static const Color accent   = Color(0xFF2E7D99);
+  static const Color accent2  = Color(0xFF2E7D32);
+  static const Color accentLt = Color(0xFFE0F4F0);
 
   // Semantic
   static const Color green   = Color(0xFF34C759);
@@ -36,11 +35,11 @@ class PastelColors {
   static const Color txtSec  = Color(0xFF5E8A7A);
   static const Color txtHint = Color(0xFFA0C4B8);
 
-  // Hero card gradient — mirrors FMS drawer header
+  // Hero card gradient
   static const List<Color> heroGrad = [
-    Color(0xFF2E7D99),   // FMS teal
-    Color(0xFF1A5F77),   // FMS dark teal
-    Color(0xFF2E7D32),   // FMS forest green
+    Color(0xFF2E7D99),
+    Color(0xFF1A5F77),
+    Color(0xFF2E7D32),
   ];
 
   // FAB / button gradients
@@ -135,10 +134,13 @@ class _TradeDashboardState extends State<TradeDashboard>
         key: _scaffoldKey,
         backgroundColor: PastelColors.bg,
         extendBody: true,
-        drawer: _TradeDrawer(onSwitchToFms: () {
-          Navigator.pop(context);
-          Navigator.pop(context);
-        }),
+        // ── Uses the extracted TradeDrawer ──
+        drawer: TradeDrawer(
+          onSwitchToFms: () {
+            Navigator.pop(context);
+            Navigator.pop(context);
+          },
+        ),
         body: FadeTransition(
           opacity: _pageFade,
           child: _buildPortfolioBody(),
@@ -299,7 +301,6 @@ class _TradeDashboardState extends State<TradeDashboard>
         ),
         child: Stack(
           children: [
-            // decorative blobs
             Positioned(
               top: -20,
               right: -20,
@@ -401,9 +402,7 @@ class _TradeDashboardState extends State<TradeDashboard>
         const SizedBox(width: 3),
         Text(label,
             style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w700)),
+                color: color, fontSize: 11, fontWeight: FontWeight.w700)),
       ]),
     );
   }
@@ -416,9 +415,7 @@ class _TradeDashboardState extends State<TradeDashboard>
         const SizedBox(height: 4),
         Text(value,
             style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.w700)),
+                color: color, fontSize: 13, fontWeight: FontWeight.w700)),
       ]),
     );
   }
@@ -432,7 +429,6 @@ class _TradeDashboardState extends State<TradeDashboard>
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
         children: [
-          // BUY
           Expanded(
             child: GestureDetector(
               onTap: () {
@@ -474,7 +470,6 @@ class _TradeDashboardState extends State<TradeDashboard>
             ),
           ),
           const SizedBox(width: 12),
-          // SELL
           Expanded(
             child: GestureDetector(
               onTap: () {
@@ -531,8 +526,7 @@ class _TradeDashboardState extends State<TradeDashboard>
         },
         child: Container(
           width: double.infinity,
-          padding:
-          const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
@@ -576,35 +570,26 @@ class _TradeDashboardState extends State<TradeDashboard>
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.account_balance_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
+                child: const Icon(Icons.account_balance_rounded,
+                    color: Colors.white, size: 26),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    Text(
-                      'Fund Management System',
-                      style: TextStyle(
-                        color: PastelColors.txtPrim,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.1,
-                      ),
-                    ),
+                    Text('Fund Management System',
+                        style: TextStyle(
+                            color: PastelColors.txtPrim,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.1)),
                     SizedBox(height: 3),
-                    Text(
-                      'Tap to open FMS dashboard →',
-                      style: TextStyle(
-                        color: PastelColors.accent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Text('Tap to open FMS dashboard →',
+                        style: TextStyle(
+                            color: PastelColors.accent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -624,11 +609,8 @@ class _TradeDashboardState extends State<TradeDashboard>
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: PastelColors.accent,
-                  size: 18,
-                ),
+                child: const Icon(Icons.arrow_forward_rounded,
+                    color: PastelColors.accent, size: 18),
               ),
             ],
           ),
@@ -964,16 +946,14 @@ class _TradeDashboardState extends State<TradeDashboard>
           children: [
             Icon(icon,
                 size: 22,
-                color:
-                sel ? PastelColors.accent : PastelColors.txtHint),
+                color: sel ? PastelColors.accent : PastelColors.txtHint),
             const SizedBox(height: 2),
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
               style: TextStyle(
                 color: sel ? PastelColors.accent : PastelColors.txtHint,
                 fontSize: 10,
-                fontWeight:
-                sel ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
               ),
               child: Text(label),
             ),
@@ -1039,9 +1019,8 @@ class _PeriodChartState extends State<_PeriodChart> {
                     ),
                     child: Text(_periods[i],
                         style: TextStyle(
-                            color: sel
-                                ? Colors.white
-                                : PastelColors.txtSec,
+                            color:
+                            sel ? Colors.white : PastelColors.txtSec,
                             fontSize: 12,
                             fontWeight: sel
                                 ? FontWeight.w700
@@ -1065,550 +1044,6 @@ class _PeriodChartState extends State<_PeriodChart> {
           ),
           const SizedBox(height: 8),
         ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TRADE DRAWER
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _TradeDrawer extends StatefulWidget {
-  final VoidCallback onSwitchToFms;
-  const _TradeDrawer({required this.onSwitchToFms});
-
-  @override
-  State<_TradeDrawer> createState() => _TradeDrawerState();
-}
-
-class _TradeDrawerState extends State<_TradeDrawer>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _headerAnim;
-  late Animation<double> _headerFade;
-  late Animation<Offset> _headerSlide;
-
-  @override
-  void initState() {
-    super.initState();
-    _headerAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..forward();
-    _headerFade =
-        CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut);
-    _headerSlide =
-        Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero)
-            .animate(CurvedAnimation(
-            parent: _headerAnim, curve: Curves.easeOut));
-  }
-
-  @override
-  void dispose() {
-    _headerAnim.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: PastelColors.surface,
-      width: MediaQuery.of(context).size.width * 0.80,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-      ),
-      child: Column(
-        children: [
-          _buildHeader(),
-          _buildEnvToggle(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              physics: const BouncingScrollPhysics(),
-              children: [
-                _sectionLabel('TRADE NAVIGATION'),
-                const SizedBox(height: 4),
-                _item(
-                  icon: Icons.pie_chart_rounded,
-                  label: 'Portfolio',
-                  color: PastelColors.accent,
-                  delay: 0,
-                  onTap: () => Navigator.pop(context),
-                ),
-                _item(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Markets',
-                  color: PastelColors.accent2,
-                  delay: 50,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const MarketsPage()));
-                  },
-                ),
-                _item(
-                  icon: Icons.star_rounded,
-                  label: 'Watchlist',
-                  color: PastelColors.gold,
-                  delay: 100,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const WatchlistPage()));
-                  },
-                ),
-                _item(
-                  icon: Icons.list_alt_rounded,
-                  label: 'Holdings',
-                  color: PastelColors.accent,
-                  delay: 150,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const HoldingsPage()));
-                  },
-                ),
-                _item(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
-                  color: PastelColors.accent2,
-                  delay: 200,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ProfilePage()));
-                  },
-                ),
-              ],
-            ),
-          ),
-          _buildSwitchToFms(),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  // ── Drawer Header — mirrors FMS drawer gradient ────────────────────────────
-  Widget _buildHeader() {
-    return SlideTransition(
-      position: _headerSlide,
-      child: FadeTransition(
-        opacity: _headerFade,
-        child: Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              // exact same stops as FMS AppDrawer header
-              colors: [
-                Color(0xFF2E7D99),
-                Color(0xFF1A5F77),
-                Color(0xFF2E7D32),
-              ],
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(5),
-              bottomRight: Radius.circular(5),
-            ),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.28),
-                              Colors.white.withOpacity(0.10),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.5),
-                              width: 2.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Text('TI',
-                              style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 1.5)),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4CAF50),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: const Color(0xFF1A5F77), width: 2),
-                          ),
-                          child: const Icon(Icons.check,
-                              size: 10, color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  const Text('TSL Investor',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.2)),
-                  const SizedBox(height: 4),
-                  const Text('Trade Account',
-                      style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.25), width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.account_balance_wallet_outlined,
-                            size: 12, color: Colors.white70),
-                        SizedBox(width: 5),
-                        Text('TZS 21,200,000',
-                            style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Environment toggle — same style as FMS drawer ──────────────────────────
-  Widget _buildEnvToggle() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Row(
-              children: [
-                Container(
-                  width: 3,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: PastelColors.gold,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 7),
-                const Text('ENVIRONMENT',
-                    style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
-                        color: PastelColors.txtSec,
-                        letterSpacing: 1.8)),
-              ],
-            ),
-          ),
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: PastelColors.bg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: PastelColors.border),
-            ),
-            child: Stack(
-              children: [
-                // active pill — right side = Trade
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FractionallySizedBox(
-                    widthFactor: 0.5,
-                    child: Container(
-                      margin: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: PastelColors.buyGrad,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: PastelColors.accent2.withOpacity(0.35),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          widget.onSwitchToFms();
-                        },
-                        child: Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.account_balance_outlined,
-                                  size: 14, color: PastelColors.txtSec),
-                              SizedBox(width: 5),
-                              Text('FMS',
-                                  style: TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w500,
-                                      color: PastelColors.txtSec,
-                                      letterSpacing: 0.3)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.candlestick_chart_outlined,
-                                size: 14, color: Colors.white),
-                            SizedBox(width: 5),
-                            Text('Trade',
-                                style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: 0.3)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-      child: Row(
-        children: [
-          Container(
-            width: 3,
-            height: 12,
-            decoration: BoxDecoration(
-              color: PastelColors.accent,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 7),
-          Text(text,
-              style: const TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  color: PastelColors.txtSec,
-                  letterSpacing: 1.8)),
-        ],
-      ),
-    );
-  }
-
-  Widget _item({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-    required int delay,
-  }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 400 + delay),
-      curve: Curves.easeOut,
-      builder: (ctx, value, child) => Opacity(
-        opacity: value,
-        child: Transform.translate(
-            offset: Offset(-20 * (1 - value), 0), child: child),
-      ),
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(14),
-            splashColor: color.withOpacity(0.1),
-            highlightColor: color.withOpacity(0.05),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 13),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.10),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, color: color, size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(label,
-                        style: const TextStyle(
-                            color: PastelColors.txtPrim,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                            letterSpacing: 0.1)),
-                  ),
-                  const Icon(Icons.chevron_right_rounded,
-                      size: 16, color: PastelColors.txtHint),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Switch to FMS button ───────────────────────────────────────────────────
-  Widget _buildSwitchToFms() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          widget.onSwitchToFms();
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFD4EEF9), Color(0xFFE8F5E9)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: PastelColors.accent.withOpacity(0.25), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: PastelColors.accent.withOpacity(0.10),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: PastelColors.fabGrad),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: PastelColors.accent.withOpacity(0.30),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.account_balance_rounded,
-                      color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Switch to FMS',
-                          style: TextStyle(
-                              color: PastelColors.txtPrim,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14)),
-                      SizedBox(height: 2),
-                      Text('Fund Management System',
-                          style: TextStyle(
-                              color: PastelColors.txtSec, fontSize: 11)),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: PastelColors.accentLt,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.swap_horiz_rounded,
-                      size: 16, color: PastelColors.accent),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
