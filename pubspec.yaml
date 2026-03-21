@@ -1,7 +1,8 @@
 name: tsl
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.1+9
+version: 1.0.2
+#version: 1.0.1+9
 
 environment:
   sdk: ^3.8.1
@@ -40,7 +41,6 @@ flutter:
   assets:
     - assets/
 
-# ✅ MUST be outside flutter:
 flutter_icons:
   android: true
   ios: true
