@@ -40,6 +40,7 @@ class LoginRepository {
               'success': true,
               'cdsNumber': data['CDSNumber'] as String? ?? '',
               'accountStatus': data['accountStatus'] as String? ?? '',
+              'email': data['Email'] as String? ?? username, // Email from response or fallback to username
             };
           }
         }
@@ -49,6 +50,7 @@ class LoginRepository {
             'success': true,
             'cdsNumber': '', // Not available in old format
             'accountStatus': 'Active',
+            'email': username, // Fallback to username as email
           };
         }
 
@@ -75,6 +77,7 @@ class LoginRepository {
     required String accountStatus,
     required String username,
     required bool rememberMe,
+    String? email,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -83,6 +86,11 @@ class LoginRepository {
       await prefs.setString('accountStatus', accountStatus);
       await prefs.setString('username', username);
       await prefs.setBool('isLoggedIn', true);
+
+      // ✅ Save email to shared preferences for password change flow
+      if (email != null && email.isNotEmpty) {
+        await prefs.setString('userEmail', email);
+      }
 
       if (rememberMe) {
         await prefs.setString('savedUsername', username);

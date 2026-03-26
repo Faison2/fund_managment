@@ -49,30 +49,31 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   final String _apiUsername = "User2";
   final String _apiPassword = "CBZ1234#2";
 
+  // ─── Real API endpoint for existing client lookup ─────────────────────────
+  static const String _userDetailsUrl =
+      'https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails';
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // ─── NEW: Client type selection ───────────────────────────────────────────────
-  // null = not yet chosen, 'new' = new client, 'existing' = existing client
+  // ─── Client type selection ────────────────────────────────────────────────
   String? _clientType;
   final TextEditingController _fcNumberController = TextEditingController();
   bool _isFcLookupLoading = false;
   String? _fcLookupError;
 
-  // ─── Controllers ─────────────────────────────────────────────────────────────
+  // ─── Controllers ──────────────────────────────────────────────────────────
   final TextEditingController _titleController =
   TextEditingController(text: "Mr");
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _middleNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _dateOfBirthController = TextEditingController();
-  final TextEditingController _placeOfBirthController =
-  TextEditingController();
+  final TextEditingController _placeOfBirthController = TextEditingController();
   final TextEditingController _occupationController = TextEditingController();
   final TextEditingController _identificationNumberController =
   TextEditingController();
-  final TextEditingController _validityDateController =
-  TextEditingController();
+  final TextEditingController _validityDateController = TextEditingController();
   final TextEditingController _issuingAuthorityController =
   TextEditingController();
 
@@ -105,7 +106,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   final TextEditingController _initialAmountController =
   TextEditingController();
 
-  // ─── Form State ───────────────────────────────────────────────────────────────
+  // ─── Form State ────────────────────────────────────────────────────────────
   int _currentStep = 0;
   bool _isLoading = false;
   bool _isPoliticallyExposed = false;
@@ -132,7 +133,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   String? _idFileName;
   String? _idFileExtension;
 
-  // ─── Static Data ─────────────────────────────────────────────────────────────
+  // ─── Static Data ───────────────────────────────────────────────────────────
   static const List<String> _countries = [
     'Tanzania', 'Kenya', 'Uganda', 'Rwanda', 'Burundi', 'South Africa',
     'Zimbabwe', 'Zambia', 'Malawi', 'Mozambique', 'Ethiopia', 'Nigeria',
@@ -141,10 +142,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   ];
 
   static const List<String> _nationalities = [
-    'Tanzanian', 'Kenyan', 'Ugandan', 'Rwandan', 'Burundian', 'South African',
-    'Zimbabwean', 'Zambian', 'Malawian', 'Mozambican', 'Ethiopian', 'Nigerian',
-    'Ghanaian', 'Egyptian', 'British', 'American', 'German', 'French',
-    'Chinese', 'Indian', 'Other',
+    'Tanzanian', 'Kenyan', 'Ugandan', 'Rwandan', 'Burundian',
+    'South African', 'Zimbabwean', 'Zambian', 'Malawian', 'Mozambican',
+    'Ethiopian', 'Nigerian', 'Ghanaian', 'Egyptian', 'British', 'American',
+    'German', 'French', 'Chinese', 'Indian', 'Other',
   ];
 
   static const List<String> _tzIssuingAuthorities = [
@@ -218,7 +219,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     {'title': 'Final Details', 'icon': Icons.checklist_rounded},
   ];
 
-  // ─── Theme Colors ─────────────────────────────────────────────────────────────
+  // ─── Theme Colors ──────────────────────────────────────────────────────────
   static const Color _primaryGreen = Color(0xFF2DC98E);
   static const Color _deepGreen = Color(0xFF1A9B6C);
   static const Color _softMint = Color(0xFFE8FBF4);
@@ -227,6 +228,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   static const Color _textMuted = Color(0xFF8A9BB0);
   static const Color _errorRed = Color(0xFFE53935);
 
+  // ─── Lifecycle ─────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -241,6 +243,41 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     _loadBanks();
   }
 
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _fcNumberController.dispose();
+    _titleController.dispose();
+    _firstNameController.dispose();
+    _middleNameController.dispose();
+    _lastNameController.dispose();
+    _dateOfBirthController.dispose();
+    _placeOfBirthController.dispose();
+    _occupationController.dispose();
+    _identificationNumberController.dispose();
+    _validityDateController.dispose();
+    _issuingAuthorityController.dispose();
+    _houseNumberController.dispose();
+    _streetController.dispose();
+    _wardController.dispose();
+    _cityController.dispose();
+    _physicalAddressController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _fundsSourceController.dispose();
+    _positionController.dispose();
+    _investmentPurposeController.dispose();
+    _accountNumberController.dispose();
+    _accountHolderNameController.dispose();
+    _bankNameController.dispose();
+    _branchController.dispose();
+    _swiftCodeController.dispose();
+    _bankSearchController.dispose();
+    _initialAmountController.dispose();
+    super.dispose();
+  }
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
   Future<void> _saveCDSNumber(String cdsNumber) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -277,18 +314,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       initialDate: DateTime.now(),
       firstDate: firstDate ?? DateTime(1900),
       lastDate: lastDate ?? DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: _primaryGreen,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-            ),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: _primaryGreen,
+            onPrimary: Colors.white,
+            surface: Colors.white,
           ),
-          child: child!,
-        );
-      },
+        ),
+        child: child!,
+      ),
     );
     if (picked != null) {
       controller.text =
@@ -322,8 +357,29 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     _idFileExtension = null;
   });
 
-  // ─── NEW: Show existing client FC Number dialog ────────────────────────────────
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: _textDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  EXISTING CLIENT FLOW  ── FC lookup → profile card → login
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Opens the bottom-sheet / dialog where the user types their FC number.
   void _showExistingClientDialog() {
     _fcNumberController.clear();
     _fcLookupError = null;
@@ -332,248 +388,228 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       context: context,
       barrierDismissible: true,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24)),
-            child: Container(
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Header ──────────────────────────────────────────
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: _softMint,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.person_search_rounded,
-                            color: _primaryGreen, size: 24),
-                      ),
-                      const SizedBox(width: 14),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Existing Client',
+        builder: (ctx, setDialogState) => Dialog(
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header ─────────────────────────────────────────────
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                          color: _softMint, shape: BoxShape.circle),
+                      child: const Icon(Icons.person_search_rounded,
+                          color: _primaryGreen, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Existing Client',
                               style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: _textDark),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Enter your FC Number to continue',
-                              style: TextStyle(
-                                  fontSize: 12, color: _textMuted),
-                            ),
-                          ],
-                        ),
+                                  color: _textDark)),
+                          SizedBox(height: 2),
+                          Text('Enter your FC / CDS Number to continue',
+                              style:
+                              TextStyle(fontSize: 12, color: _textMuted)),
+                        ],
                       ),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(ctx),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.close_rounded,
-                              size: 18, color: _textMuted),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                            color: Colors.grey[100], shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded,
+                            size: 18, color: _textMuted),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // ── Info banner ─────────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: Colors.amber.withOpacity(0.4), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline_rounded,
+                          color: Colors.amber[700], size: 18),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Your FC / CDS Number can be found on your account statement or previous correspondence.',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF7B6200),
+                              height: 1.4),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                ),
+                const SizedBox(height: 20),
 
-                  // ── Info banner ──────────────────────────────────────
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF8E1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: Colors.amber.withOpacity(0.4), width: 1),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline_rounded,
-                            color: Colors.amber[700], size: 18),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: Text(
-                            'Your FC Number can be found on your account statement or previous correspondence.',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF7B6200),
-                                height: 1.4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ── FC Number input ──────────────────────────────────
-                  const Text(
-                    'FC Number',
+                // ── FC Number input ─────────────────────────────────────
+                const Text('FC / CDS Number',
                     style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: _textDark),
-                  ),
-                  const SizedBox(height: 8),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: _fcLookupError != null
-                            ? _errorRed
-                            : _fcNumberController.text.isNotEmpty
-                            ? _primaryGreen.withOpacity(0.5)
-                            : Colors.grey.withOpacity(0.25),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _fcNumberController,
-                      autofocus: true,
-                      textCapitalization: TextCapitalization.characters,
-                      style: const TextStyle(
-                          fontSize: 16,
-                          color: _textDark,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.2),
-                      onChanged: (_) =>
-                          setDialogState(() => _fcLookupError = null),
-                      decoration: InputDecoration(
-                        hintText: 'e.g. FC-123456',
-                        hintStyle: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 15,
-                            fontWeight: FontWeight.normal,
-                            letterSpacing: 0),
-                        prefixIcon: const Icon(Icons.tag_rounded,
-                            color: _primaryGreen, size: 20),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 16),
-                      ),
+                        color: _textDark)),
+                const SizedBox(height: 8),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _fcLookupError != null
+                          ? _errorRed
+                          : _fcNumberController.text.isNotEmpty
+                          ? _primaryGreen.withOpacity(0.5)
+                          : Colors.grey.withOpacity(0.25),
+                      width: 1.5,
                     ),
                   ),
-
-                  // ── Inline error ─────────────────────────────────────
-                  if (_fcLookupError != null) ...[
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Icon(Icons.error_outline_rounded,
-                            size: 14, color: _errorRed),
-                        const SizedBox(width: 5),
-                        Text(
-                          _fcLookupError!,
-                          style: const TextStyle(
-                              fontSize: 12, color: _errorRed),
-                        ),
-                      ],
+                  child: TextField(
+                    controller: _fcNumberController,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.characters,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        color: _textDark,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2),
+                    onChanged: (_) =>
+                        setDialogState(() => _fcLookupError = null),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. FC0001144',
+                      hintStyle: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 15,
+                          fontWeight: FontWeight.normal,
+                          letterSpacing: 0),
+                      prefixIcon: const Icon(Icons.tag_rounded,
+                          color: _primaryGreen, size: 20),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 16),
                     ),
-                  ],
+                  ),
+                ),
 
-                  const SizedBox(height: 24),
-
-                  // ── Action buttons ───────────────────────────────────
+                // ── Inline error ────────────────────────────────────────
+                if (_fcLookupError != null) ...[
+                  const SizedBox(height: 6),
                   Row(
                     children: [
+                      const Icon(Icons.error_outline_rounded,
+                          size: 14, color: _errorRed),
+                      const SizedBox(width: 5),
                       Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                                color: Colors.grey[300]!, width: 1.5),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: _textMuted),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: _isFcLookupLoading
-                              ? null
-                              : () => _handleExistingClientLookup(
-                              ctx, setDialogState),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _primaryGreen,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 14),
-                            elevation: 0,
-                          ),
-                          child: _isFcLookupLoading
-                              ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5),
-                          )
-                              : const Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.search_rounded, size: 18),
-                              SizedBox(width: 6),
-                              Text(
-                                'Look Up Client',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700),
-                              ),
-                            ],
-                          ),
-                        ),
+                        child: Text(_fcLookupError!,
+                            style: const TextStyle(
+                                fontSize: 12, color: _errorRed)),
                       ),
                     ],
                   ),
                 ],
-              ),
+
+                const SizedBox(height: 24),
+
+                // ── Action buttons ──────────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                              color: Colors.grey[300]!, width: 1.5),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Cancel',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: _textMuted)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: _isFcLookupLoading
+                            ? null
+                            : () => _handleExistingClientLookup(
+                            ctx, setDialogState),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryGreen,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                        child: _isFcLookupLoading
+                            ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.5),
+                        )
+                            : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.search_rounded, size: 18),
+                            SizedBox(width: 6),
+                            Text('Look Up Client',
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  /// Handles the FC Number lookup for existing clients.
-  /// Replace the body of this method with your actual API call.
+  /// Calls the real UserBasicDetails API and handles the response.
   Future<void> _handleExistingClientLookup(
       BuildContext dialogCtx, StateSetter setDialogState) async {
     final fcNumber = _fcNumberController.text.trim();
     if (fcNumber.isEmpty) {
-      setDialogState(() => _fcLookupError = 'Please enter your FC Number');
+      setDialogState(
+              () => _fcLookupError = 'Please enter your FC / CDS Number');
       return;
     }
 
@@ -583,135 +619,283 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     });
 
     try {
-      // ── TODO: Replace with your real API endpoint ──────────────────
-      // Example:
-      // final response = await http.post(
-      //   Uri.parse('$cSharpApi/GetClientByFC'),
-      //   headers: {'Content-Type': 'application/json'},
-      //   body: json.encode({
-      //     'APIUsername': _apiUsername,
-      //     'APIPassword': _apiPassword,
-      //     'FCNumber': fcNumber,
-      //   }),
-      // );
-      // if (response.statusCode == 200) { ... }
+      final response = await http.post(
+        Uri.parse(_userDetailsUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'CDSNumber': fcNumber}),
+      );
 
-      // ── Simulated delay for demonstration ─────────────────────────
-      await Future.delayed(const Duration(seconds: 2));
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
 
-      // ── Simulate a successful lookup ───────────────────────────────
-      // On success, close the dialog and navigate to the existing
-      // client's dashboard / next screen as appropriate.
-      if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+        if (responseData['status'] == 'success') {
+          final data = responseData['data'] as Map<String, dynamic>;
 
-      _showExistingClientSuccessDialog(fcNumber);
+          // Close the lookup dialog first
+          if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+
+          // Show the rich profile card
+          _showExistingClientSuccessDialog(fcNumber, data);
+        } else {
+          setDialogState(() => _fcLookupError = responseData['statusDesc'] ??
+              'No account found for this number. Please check and try again.');
+        }
+      } else {
+        setDialogState(() => _fcLookupError =
+        'Server error (${response.statusCode}). Please try again.');
+      }
     } catch (e) {
-      setDialogState(
-              () => _fcLookupError = 'Lookup failed. Please try again.');
+      setDialogState(() =>
+      _fcLookupError = 'Network error. Please check your connection.');
     } finally {
       setDialogState(() => _isFcLookupLoading = false);
     }
   }
 
-  /// Shows a success confirmation after a valid FC Number is found.
-  void _showExistingClientSuccessDialog(String fcNumber) {
+  /// Rich profile-card dialog shown after a successful FC lookup.
+  void _showExistingClientSuccessDialog(
+      String fcNumber, Map<String, dynamic> data) {
+    final String names = data['Names'] ?? '—';
+    final String email = data['Email'] ?? '—';
+    final String mobile = data['Mobile'] ?? '—';
+    final String bank = data['Bank'] ?? '—';
+    final String accountNo = data['AccountNo'] ?? '—';
+    final String accountName = data['AccountName'] ?? '—';
+    final String branch = data['Branch'] ?? '—';
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => Dialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding:
+        const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
         child: Container(
-          padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Colors.white,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration:
-                const BoxDecoration(color: _softMint, shape: BoxShape.circle),
-                child: const Icon(Icons.how_to_reg_rounded,
-                    color: _primaryGreen, size: 48),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Client Found!',
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: _textDark),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'We found your profile associated with FC Number:',
-                textAlign: TextAlign.center,
-                style:
-                TextStyle(color: _textMuted, fontSize: 14, height: 1.5),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 14),
-                decoration: BoxDecoration(
-                  color: _softMint,
-                  borderRadius: BorderRadius.circular(14),
-                  border:
-                  Border.all(color: _primaryGreen.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(24), color: Colors.white),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Animated success icon ───────────────────────────────
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                      color: _softMint, shape: BoxShape.circle),
+                  child: const Icon(Icons.how_to_reg_rounded,
+                      color: _primaryGreen, size: 48),
                 ),
-                child: Text(
-                  fcNumber,
-                  style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: _primaryGreen,
-                      letterSpacing: 2),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Your existing account details have been loaded.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: _textMuted),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primaryGreen,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
+                const SizedBox(height: 16),
+                const Text('Account Found!',
+                    style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: _textDark)),
+                const SizedBox(height: 6),
+                Text('Please verify your details below',
+                    style: TextStyle(fontSize: 13, color: _textMuted)),
+                const SizedBox(height: 20),
+
+                // ── FC Number badge ─────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: _softMint,
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                        color: _primaryGreen.withOpacity(0.35), width: 1.5),
                   ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.tag_rounded,
+                          color: _primaryGreen, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        fcNumber,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: _primaryGreen,
+                            letterSpacing: 1.2),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+
+                // ── Profile detail card ─────────────────────────────────
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFB),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: Colors.grey.withOpacity(0.12), width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildProfileRow(
+                          Icons.person_outline_rounded, 'Full Name', names),
+                      _buildProfileDivider(),
+                      _buildProfileRow(
+                          Icons.email_outlined, 'Email Address', email),
+                      _buildProfileDivider(),
+                      _buildProfileRow(
+                          Icons.phone_outlined, 'Mobile Number', mobile),
+                      _buildProfileDivider(),
+                      _buildProfileRow(
+                          Icons.account_balance_outlined, 'Bank', bank),
+                      _buildProfileDivider(),
+                      _buildProfileRow(Icons.credit_card_rounded,
+                          'Account Number', accountNo),
+                      _buildProfileDivider(),
+                      _buildProfileRow(
+                          Icons.person_pin_outlined, 'Account Name', accountName),
+                      _buildProfileDivider(),
+                      _buildProfileRow(
+                          Icons.business_outlined, 'Branch', branch),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ── Info note ───────────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: Colors.amber.withOpacity(0.4), width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.lock_outline_rounded,
+                          color: Colors.amber[700], size: 18),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Your profile has been verified. To access your account please proceed to login and sign in with your credentials.',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF7B6200),
+                              height: 1.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // ── Proceed to Login button ─────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primaryGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen()));
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.login_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Proceed to Login',
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // ── "Not you?" back option ──────────────────────────────
+                TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    // TODO: Navigate to the existing client's account screen
-                    // e.g. Navigator.pushReplacement(context,
-                    //   MaterialPageRoute(builder: (_) => ExistingClientScreen(fcNumber: fcNumber)));
-                    Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const LoginScreen()));
+                    // Re-open the FC input dialog
+                    Future.microtask(() => _showExistingClientDialog());
                   },
-                  child: const Text('Continue to Account',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Not you? Try a different number',
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: _textMuted,
+                        fontWeight: FontWeight.w500),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ─── NEW: Client type selection screen ────────────────────────────────────────
+  // ─── Profile card helpers ──────────────────────────────────────────────────
+
+  Widget _buildProfileRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _softMint,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: _primaryGreen, size: 17),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style:
+                    const TextStyle(fontSize: 11, color: _textMuted)),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: _textDark),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileDivider() => Divider(
+    height: 1,
+    thickness: 1,
+    color: Colors.grey.withOpacity(0.1),
+    indent: 16,
+    endIndent: 16,
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  CLIENT TYPE SELECTION SCREEN
+  // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _buildClientTypeSelection() {
     return Scaffold(
@@ -732,7 +916,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         child: SafeArea(
           child: Column(
             children: [
-              // ── Back button ───────────────────────────────────────────
+              // ── Back button ──────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 child: Row(
@@ -764,7 +948,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Hero section ──────────────────────────────
+                        // ── Hero ────────────────────────────────────────
                         Center(
                           child: Container(
                             padding: const EdgeInsets.all(24),
@@ -773,28 +957,22 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                    color:
-                                    _primaryGreen.withOpacity(0.15),
+                                    color: _primaryGreen.withOpacity(0.15),
                                     blurRadius: 24,
                                     offset: const Offset(0, 8))
                               ],
                             ),
-                            child: const Icon(
-                              Icons.account_circle_outlined,
-                              size: 64,
-                              color: _deepGreen,
-                            ),
+                            child: const Icon(Icons.account_circle_outlined,
+                                size: 64, color: _deepGreen),
                           ),
                         ),
                         const SizedBox(height: 28),
                         const Center(
-                          child: Text(
-                            'Individual Account',
-                            style: TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                                color: _textDark),
-                          ),
+                          child: Text('Individual Account',
+                              style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: _textDark)),
                         ),
                         const SizedBox(height: 8),
                         Center(
@@ -808,7 +986,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         ),
                         const SizedBox(height: 40),
 
-                        // ── New Client card ───────────────────────────
+                        // ── New Client card ──────────────────────────────
                         _buildClientTypeCard(
                           type: 'new',
                           icon: Icons.person_add_outlined,
@@ -825,7 +1003,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         ),
                         const SizedBox(height: 16),
 
-                        // ── Existing Client card ──────────────────────
+                        // ── Existing Client card ─────────────────────────
                         _buildClientTypeCard(
                           type: 'existing',
                           icon: Icons.manage_accounts_outlined,
@@ -839,7 +1017,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
                         const SizedBox(height: 32),
 
-                        // ── Footer note ───────────────────────────────
+                        // ── Security footer ──────────────────────────────
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -900,7 +1078,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         ),
         child: Row(
           children: [
-            // Icon circle
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -910,20 +1087,17 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               child: Icon(icon, color: badgeColor, size: 28),
             ),
             const SizedBox(width: 16),
-            // Text content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: _textDark),
-                      ),
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: _textDark)),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -932,22 +1106,18 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           color: badgeColor.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(
-                          badgeText,
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: badgeColor),
-                        ),
+                        child: Text(badgeText,
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: badgeColor)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                        fontSize: 13, color: _textMuted, height: 1.4),
-                  ),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 13, color: _textMuted, height: 1.4)),
                 ],
               ),
             ),
@@ -960,7 +1130,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     );
   }
 
-  // ─── Navigation ───────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  MULTI-STEP FORM NAVIGATION
+  // ═══════════════════════════════════════════════════════════════════════════
 
   void _nextStep() {
     if (_validateCurrentStep()) {
@@ -990,70 +1162,60 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
     switch (_currentStep) {
       case 0:
-        if (_firstNameController.text.trim().isEmpty) {
+        if (_firstNameController.text.trim().isEmpty)
           newErrors['firstName'] = 'First name is required';
-        }
-        if (_lastNameController.text.trim().isEmpty) {
+        if (_lastNameController.text.trim().isEmpty)
           newErrors['lastName'] = 'Last name is required';
-        }
-        if (_dateOfBirthController.text.isEmpty) {
+        if (_dateOfBirthController.text.isEmpty)
           newErrors['dob'] = 'Date of birth is required';
-        }
-        if (_occupationController.text.trim().isEmpty) {
+        if (_occupationController.text.trim().isEmpty)
           newErrors['occupation'] = 'Occupation is required';
-        }
         break;
       case 1:
-        if (_selectedNationality.isEmpty) {
+        if (_selectedNationality.isEmpty)
           newErrors['nationality'] = 'Please select your nationality';
-        }
-        if (_identificationNumberController.text.trim().isEmpty) {
+        if (_identificationNumberController.text.trim().isEmpty)
           newErrors['idNumber'] = 'Identification number is required';
-        }
         if (_selectedNationality == 'Tanzanian' &&
-            _selectedIssuingAuthority.isEmpty) {
-          newErrors['issuingAuthority'] = 'Please select an issuing authority';
-        }
+            _selectedIssuingAuthority.isEmpty)
+          newErrors['issuingAuthority'] =
+          'Please select an issuing authority';
         break;
       case 2:
-        if (_selectedCountry.isEmpty) {
+        if (_selectedCountry.isEmpty)
           newErrors['country'] = 'Please select your country';
-        }
         if (_selectedCountry == 'Tanzania') {
-          if (_selectedRegion.isEmpty) newErrors['region'] = 'Please select your region';
-          if (_selectedDistrict.isEmpty) newErrors['district'] = 'Please select your district';
-          if (_wardController.text.trim().isEmpty) newErrors['ward'] = 'Ward is required';
-          if (_houseNumberController.text.trim().isEmpty) newErrors['houseNumber'] = 'House number is required';
+          if (_selectedRegion.isEmpty)
+            newErrors['region'] = 'Please select your region';
+          if (_selectedDistrict.isEmpty)
+            newErrors['district'] = 'Please select your district';
+          if (_wardController.text.trim().isEmpty)
+            newErrors['ward'] = 'Ward is required';
+          if (_houseNumberController.text.trim().isEmpty)
+            newErrors['houseNumber'] = 'House number is required';
         } else {
-          if (_physicalAddressController.text.trim().isEmpty) {
+          if (_physicalAddressController.text.trim().isEmpty)
             newErrors['address'] = 'Physical address is required';
-          }
         }
         if (_emailController.text.trim().isEmpty ||
-            !_emailController.text.contains('@')) {
+            !_emailController.text.contains('@'))
           newErrors['email'] = 'Please enter a valid email address';
-        }
-        if (_phoneController.text.trim().isEmpty) {
+        if (_phoneController.text.trim().isEmpty)
           newErrors['phone'] = 'Phone number is required';
-        }
         break;
       case 3:
-        if (_accountNumberController.text.trim().isEmpty) {
+        if (_accountNumberController.text.trim().isEmpty)
           newErrors['accountNumber'] = 'Account number is required';
-        }
-        if (_bankController.selectedBank == null) {
+        if (_bankController.selectedBank == null)
           newErrors['bankName'] = 'Please select your bank';
-        }
         break;
       case 4:
         break;
       case 5:
-        if (_selectedSourceOfFunds.isEmpty) {
+        if (_selectedSourceOfFunds.isEmpty)
           newErrors['sourceOfFunds'] = 'Please select a source of funds';
-        }
-        if (_isPoliticallyExposed && _positionController.text.trim().isEmpty) {
+        if (_isPoliticallyExposed && _positionController.text.trim().isEmpty)
           newErrors['position'] = 'Please specify the position held';
-        }
         break;
     }
 
@@ -1071,7 +1233,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   String get _resolvedAddress {
     if (_selectedCountry == 'Tanzania') {
       final parts = [
-        if (_houseNumberController.text.isNotEmpty) _houseNumberController.text,
+        if (_houseNumberController.text.isNotEmpty)
+          _houseNumberController.text,
         if (_streetController.text.isNotEmpty) _streetController.text,
         if (_wardController.text.isNotEmpty) _wardController.text,
         if (_selectedDistrict.isNotEmpty) _selectedDistrict,
@@ -1089,7 +1252,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       final issuingAuthority = _selectedNationality == 'Tanzanian'
           ? _selectedIssuingAuthority
           : _issuingAuthorityController.text;
-
       final rawAmount = _initialAmountController.text.replaceAll(',', '');
 
       final requestBody = {
@@ -1164,8 +1326,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     }
   }
 
-  // ─── Dialogs & Snackbars ──────────────────────────────────────────────────────
-
+  // ─── New-client success dialog ─────────────────────────────────────────────
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -1176,27 +1337,23 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Colors.white,
-          ),
+              borderRadius: BorderRadius.circular(24), color: Colors.white),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration:
-                const BoxDecoration(color: _softMint, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                    color: _softMint, shape: BoxShape.circle),
                 child: const Icon(Icons.check_rounded,
                     color: _primaryGreen, size: 48),
               ),
               const SizedBox(height: 20),
-              const Text(
-                "Application Submitted!",
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: _textDark),
-              ),
+              const Text("Application Submitted!",
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: _textDark)),
               const SizedBox(height: 12),
               const Text(
                 "Your individual account application has been submitted successfully.",
@@ -1211,30 +1368,25 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   decoration: BoxDecoration(
                     color: _softMint,
                     borderRadius: BorderRadius.circular(14),
-                    border:
-                    Border.all(color: _primaryGreen.withOpacity(0.3)),
+                    border: Border.all(color: _primaryGreen.withOpacity(0.3)),
                   ),
                   child: Column(
                     children: [
                       const Text("CDS Number",
                           style: TextStyle(color: _textMuted, fontSize: 13)),
                       const SizedBox(height: 6),
-                      Text(
-                        _cdsNumber!,
-                        style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: _primaryGreen,
-                            letterSpacing: 1.5),
-                      ),
+                      Text(_cdsNumber!,
+                          style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: _primaryGreen,
+                              letterSpacing: 1.5)),
                     ],
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  "Save this number for future reference.",
-                  style: TextStyle(fontSize: 12, color: _textMuted),
-                ),
+                const Text("Save this number for future reference.",
+                    style: TextStyle(fontSize: 12, color: _textMuted)),
               ],
               const SizedBox(height: 24),
               SizedBox(
@@ -1256,8 +1408,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                             builder: (_) => const LoginScreen()));
                   },
                   child: const Text("Continue to Login",
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -1267,26 +1419,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     );
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.info_outline, color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: _textDark,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
-
-  // ─── Generic searchable bottom-sheet picker ────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  BOTTOM-SHEET PICKERS
+  // ═══════════════════════════════════════════════════════════════════════════
 
   void _showDropdownPicker(
       String title,
@@ -1303,121 +1438,115 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          return DraggableScrollableSheet(
-            initialChildSize: searchable ? 0.75 : 0.55,
-            maxChildSize: 0.92,
-            minChildSize: 0.35,
-            builder: (_, scrollCtrl) => Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
+        builder: (ctx, setModalState) => DraggableScrollableSheet(
+          initialChildSize: searchable ? 0.75 : 0.55,
+          maxChildSize: 0.92,
+          minChildSize: 0.35,
+          builder: (_, scrollCtrl) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
                       color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: _textDark)),
-                  if (searchable) ...[
-                    const SizedBox(height: 14),
-                    Container(
-                      decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: _textDark)),
+                if (searchable) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    decoration: BoxDecoration(
                         color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        controller: searchCtrl,
-                        onChanged: (q) {
-                          setModalState(() {
-                            filtered = options
-                                .where((o) => o
-                                .toLowerCase()
-                                .contains(q.toLowerCase()))
-                                .toList();
-                          });
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search...',
-                          hintStyle: TextStyle(
-                              color: Colors.grey[400], fontSize: 14),
-                          prefixIcon: Icon(Icons.search,
-                              color: Colors.grey[400], size: 20),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 14),
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollCtrl,
-                      itemCount: filtered.length,
-                      itemBuilder: (_, i) {
-                        final option = filtered[i];
-                        final bool selected = currentValue == option;
-                        return InkWell(
-                          onTap: () {
-                            onSelected(option);
-                            Navigator.pop(context);
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: selected ? _softMint : Colors.grey[50],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: selected
-                                    ? _primaryGreen
-                                    : Colors.transparent,
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                    child: Text(option,
-                                        style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: selected
-                                                ? FontWeight.w600
-                                                : FontWeight.normal,
-                                            color: selected
-                                                ? _primaryGreen
-                                                : _textDark))),
-                                if (selected)
-                                  const Icon(Icons.check_circle_rounded,
-                                      color: _primaryGreen, size: 20),
-                              ],
-                            ),
-                          ),
-                        );
+                        borderRadius: BorderRadius.circular(12)),
+                    child: TextField(
+                      controller: searchCtrl,
+                      onChanged: (q) {
+                        setModalState(() {
+                          filtered = options
+                              .where((o) =>
+                              o.toLowerCase().contains(q.toLowerCase()))
+                              .toList();
+                        });
                       },
+                      decoration: InputDecoration(
+                        hintText: 'Search...',
+                        hintStyle:
+                        TextStyle(color: Colors.grey[400], fontSize: 14),
+                        prefixIcon: Icon(Icons.search,
+                            color: Colors.grey[400], size: 20),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 14),
+                      ),
                     ),
                   ),
                 ],
-              ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: ListView.builder(
+                    controller: scrollCtrl,
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) {
+                      final option = filtered[i];
+                      final bool selected = currentValue == option;
+                      return InkWell(
+                        onTap: () {
+                          onSelected(option);
+                          Navigator.pop(context);
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: selected ? _softMint : Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: selected
+                                  ? _primaryGreen
+                                  : Colors.transparent,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                  child: Text(option,
+                                      style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: selected
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                          color: selected
+                                              ? _primaryGreen
+                                              : _textDark))),
+                              if (selected)
+                                const Icon(Icons.check_circle_rounded,
+                                    color: _primaryGreen, size: 20),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -1431,108 +1560,106 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          return DraggableScrollableSheet(
-            initialChildSize: 0.75,
-            maxChildSize: 0.92,
-            minChildSize: 0.4,
-            builder: (_, scrollCtrl) => Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              child: Column(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2)),
-                  ),
-                  const Text('Select Bank',
-                      style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: _textDark)),
-                  const SizedBox(height: 14),
-                  Container(
-                    decoration: BoxDecoration(
+        builder: (ctx, setModalState) => DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          maxChildSize: 0.92,
+          minChildSize: 0.4,
+          builder: (_, scrollCtrl) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+                const Text('Select Bank',
+                    style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: _textDark)),
+                const SizedBox(height: 14),
+                Container(
+                  decoration: BoxDecoration(
                       color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TextField(
-                      controller: searchCtrl,
-                      onChanged: (q) {
-                        setModalState(() {
-                          filteredBanks = _bankController.banks
-                              .where((b) => b.bankName
-                              .toLowerCase()
-                              .contains(q.toLowerCase()))
-                              .toList();
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search bank...',
-                        hintStyle: TextStyle(
-                            color: Colors.grey[400], fontSize: 14),
-                        prefixIcon: Icon(Icons.search,
-                            color: Colors.grey[400], size: 20),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 14),
-                      ),
+                      borderRadius: BorderRadius.circular(12)),
+                  child: TextField(
+                    controller: searchCtrl,
+                    onChanged: (q) {
+                      setModalState(() {
+                        filteredBanks = _bankController.banks
+                            .where((b) => b.bankName
+                            .toLowerCase()
+                            .contains(q.toLowerCase()))
+                            .toList();
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search bank...',
+                      hintStyle:
+                      TextStyle(color: Colors.grey[400], fontSize: 14),
+                      prefixIcon: Icon(Icons.search,
+                          color: Colors.grey[400], size: 20),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 14),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: filteredBanks.isEmpty
-                        ? Center(
-                        child: Text('No banks found',
-                            style: TextStyle(color: _textMuted)))
-                        : ListView.builder(
-                      controller: scrollCtrl,
-                      itemCount: filteredBanks.length,
-                      itemBuilder: (_, i) {
-                        final bank = filteredBanks[i];
-                        final bool selected =
-                            _bankController.selectedBank == bank.bankName;
-                        return InkWell(
-                          onTap: () {
-                            setState(() {
-                              _bankController.selectBank(bank.bankName);
-                              _bankNameController.text = bank.bankName;
-                              _errors.remove('bankName');
-                              try {
-                                _swiftCodeController.text =
-                                    bank.bicCode ?? '';
-                              } catch (e) {
-                                _swiftCodeController.text = '';
-                              }
-                            });
-                            Navigator.pop(context);
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: selected ? _softMint : Colors.grey[50],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: selected
-                                    ? _primaryGreen
-                                    : Colors.transparent,
-                                width: 1.5,
-                              ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: filteredBanks.isEmpty
+                      ? Center(
+                      child: Text('No banks found',
+                          style: TextStyle(color: _textMuted)))
+                      : ListView.builder(
+                    controller: scrollCtrl,
+                    itemCount: filteredBanks.length,
+                    itemBuilder: (_, i) {
+                      final bank = filteredBanks[i];
+                      final bool selected =
+                          _bankController.selectedBank == bank.bankName;
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _bankController.selectBank(bank.bankName);
+                            _bankNameController.text = bank.bankName;
+                            _errors.remove('bankName');
+                            try {
+                              _swiftCodeController.text =
+                                  bank.bicCode ?? '';
+                            } catch (e) {
+                              _swiftCodeController.text = '';
+                            }
+                          });
+                          Navigator.pop(context);
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color:
+                            selected ? _softMint : Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: selected
+                                  ? _primaryGreen
+                                  : Colors.transparent,
+                              width: 1.5,
                             ),
-                            child: Row(
-                              children: [
-                                Expanded(
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
                                   child: Text(bank.bankName,
                                       style: TextStyle(
                                           fontSize: 15,
@@ -1541,28 +1668,28 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                                               : FontWeight.normal,
                                           color: selected
                                               ? _primaryGreen
-                                              : _textDark)),
-                                ),
-                                if (selected)
-                                  const Icon(Icons.check_circle_rounded,
-                                      color: _primaryGreen, size: 20),
-                              ],
-                            ),
+                                              : _textDark))),
+                              if (selected)
+                                const Icon(Icons.check_circle_rounded,
+                                    color: _primaryGreen, size: 20),
+                            ],
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  // ─── Step Router ──────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  STEP WIDGETS
+  // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _buildCurrentStep() {
     switch (_currentStep) {
@@ -1576,144 +1703,198 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     }
   }
 
-  // ─── Step 0: Personal Information ────────────────────────────────────────────
-
+  // ── Step 0: Personal Information ──────────────────────────────────────────
   Widget _buildPersonalInformationStep() {
-    return _buildStepCard(
-      children: [
-        _buildSectionLabel('Title & Name'),
-        Row(
-          children: [
-            Expanded(
-              child: _buildDropdownTile(
-                label: 'Title',
-                value: _titleController.text,
-                onTap: () => _showDropdownPicker('Select Title', _titles,
-                    _titleController.text,
-                        (v) => setState(() => _titleController.text = v)),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildDropdownTile(
-                label: 'Gender',
-                value: _selectedGender,
-                onTap: () => _showDropdownPicker('Select Gender', _genders,
-                    _selectedGender,
-                        (v) => setState(() => _selectedGender = v)),
-              ),
-            ),
-          ],
+    return _buildStepCard(children: [
+      _buildSectionLabel('Title & Name'),
+      Row(children: [
+        Expanded(
+          child: _buildDropdownTile(
+            label: 'Title',
+            value: _titleController.text,
+            onTap: () => _showDropdownPicker('Select Title', _titles,
+                _titleController.text,
+                    (v) => setState(() => _titleController.text = v)),
+          ),
         ),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _firstNameController, label: 'First Name', icon: Icons.person_outline_rounded, required: true, errorText: _errors['firstName'], onChanged: (_) => setState(() => _errors.remove('firstName'))),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _middleNameController, label: 'Middle Name', icon: Icons.person_outline_rounded),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _lastNameController, label: 'Last Name (Surname)', icon: Icons.person_outline_rounded, required: true, errorText: _errors['lastName'], onChanged: (_) => setState(() => _errors.remove('lastName'))),
-        const SizedBox(height: 20),
-        _buildSectionLabel('Personal Details'),
-        _buildDateField(controller: _dateOfBirthController, label: 'Date of Birth', firstDate: DateTime(1900), lastDate: DateTime.now(), required: true, errorText: _errors['dob']),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _placeOfBirthController, label: 'Place of Birth', icon: Icons.location_city_rounded),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _occupationController, label: 'Occupation / Objective', icon: Icons.work_outline_rounded, required: true, errorText: _errors['occupation'], onChanged: (_) => setState(() => _errors.remove('occupation'))),
-      ],
-    );
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildDropdownTile(
+            label: 'Gender',
+            value: _selectedGender,
+            onTap: () => _showDropdownPicker('Select Gender', _genders,
+                _selectedGender, (v) => setState(() => _selectedGender = v)),
+          ),
+        ),
+      ]),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _firstNameController, label: 'First Name',
+          icon: Icons.person_outline_rounded, required: true,
+          errorText: _errors['firstName'],
+          onChanged: (_) => setState(() => _errors.remove('firstName'))),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _middleNameController, label: 'Middle Name',
+          icon: Icons.person_outline_rounded),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _lastNameController, label: 'Last Name (Surname)',
+          icon: Icons.person_outline_rounded, required: true,
+          errorText: _errors['lastName'],
+          onChanged: (_) => setState(() => _errors.remove('lastName'))),
+      const SizedBox(height: 20),
+      _buildSectionLabel('Personal Details'),
+      _buildDateField(
+          controller: _dateOfBirthController, label: 'Date of Birth',
+          firstDate: DateTime(1900), lastDate: DateTime.now(),
+          required: true, errorText: _errors['dob']),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _placeOfBirthController, label: 'Place of Birth',
+          icon: Icons.location_city_rounded),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _occupationController,
+          label: 'Occupation / Objective',
+          icon: Icons.work_outline_rounded, required: true,
+          errorText: _errors['occupation'],
+          onChanged: (_) => setState(() => _errors.remove('occupation'))),
+    ]);
   }
 
-  // ─── Step 1: Identification ───────────────────────────────────────────────────
-
+  // ── Step 1: Identification ─────────────────────────────────────────────────
   Widget _buildIdentificationStep() {
     final bool isTanzanian = _selectedNationality == 'Tanzanian';
-    return _buildStepCard(
-      children: [
-        _buildSectionLabel('Identity Details'),
+    return _buildStepCard(children: [
+      _buildSectionLabel('Identity Details'),
+      _buildDropdownTile(
+        label: 'Nationality *',
+        value: _selectedNationality.isEmpty
+            ? 'Select nationality'
+            : _selectedNationality,
+        onTap: () => _showDropdownPicker(
+            'Select Nationality', _nationalities, _selectedNationality,
+                (v) => setState(() {
+              _selectedNationality = v;
+              _selectedIssuingAuthority = '';
+              _errors.remove('nationality');
+            }),
+            searchable: true),
+        errorText: _errors['nationality'],
+        highlighted: _selectedNationality.isNotEmpty,
+      ),
+      const SizedBox(height: 14),
+      _buildDropdownTile(
+        label: 'Identification Type',
+        value: _selectedIdType,
+        onTap: () => _showDropdownPicker('Select ID Type',
+            _identificationTypes, _selectedIdType,
+                (v) => setState(() => _selectedIdType = v)),
+      ),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _identificationNumberController,
+          label: 'Identification Number',
+          icon: Icons.numbers_rounded, required: true,
+          errorText: _errors['idNumber'],
+          onChanged: (_) => setState(() => _errors.remove('idNumber'))),
+      const SizedBox(height: 14),
+      _buildDateField(
+          controller: _validityDateController,
+          label: 'Expiry / Validity Date',
+          firstDate: DateTime.now(), lastDate: DateTime(2100)),
+      const SizedBox(height: 14),
+      if (isTanzanian) ...[
         _buildDropdownTile(
-          label: 'Nationality *',
-          value: _selectedNationality.isEmpty ? 'Select nationality' : _selectedNationality,
-          onTap: () => _showDropdownPicker('Select Nationality', _nationalities, _selectedNationality,
-                  (v) => setState(() { _selectedNationality = v; _selectedIssuingAuthority = ''; _errors.remove('nationality'); }), searchable: true),
-          errorText: _errors['nationality'],
-          highlighted: _selectedNationality.isNotEmpty,
+          label: 'Issuing Authority *',
+          value: _selectedIssuingAuthority.isEmpty
+              ? 'Select authority'
+              : _selectedIssuingAuthority,
+          onTap: () => _showDropdownPicker('Select Issuing Authority',
+              _tzIssuingAuthorities, _selectedIssuingAuthority,
+                  (v) => setState(() {
+                _selectedIssuingAuthority = v;
+                _errors.remove('issuingAuthority');
+              })),
+          errorText: _errors['issuingAuthority'],
+          highlighted: _selectedIssuingAuthority.isNotEmpty,
         ),
-        const SizedBox(height: 14),
-        _buildDropdownTile(
-          label: 'Identification Type',
-          value: _selectedIdType,
-          onTap: () => _showDropdownPicker('Select ID Type', _identificationTypes, _selectedIdType,
-                  (v) => setState(() => _selectedIdType = v)),
-        ),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _identificationNumberController, label: 'Identification Number', icon: Icons.numbers_rounded, required: true, errorText: _errors['idNumber'], onChanged: (_) => setState(() => _errors.remove('idNumber'))),
-        const SizedBox(height: 14),
-        _buildDateField(controller: _validityDateController, label: 'Expiry / Validity Date', firstDate: DateTime.now(), lastDate: DateTime(2100)),
-        const SizedBox(height: 14),
-        if (isTanzanian) ...[
-          _buildDropdownTile(
-            label: 'Issuing Authority *',
-            value: _selectedIssuingAuthority.isEmpty ? 'Select authority' : _selectedIssuingAuthority,
-            onTap: () => _showDropdownPicker('Select Issuing Authority', _tzIssuingAuthorities, _selectedIssuingAuthority,
-                    (v) => setState(() { _selectedIssuingAuthority = v; _errors.remove('issuingAuthority'); })),
-            errorText: _errors['issuingAuthority'],
-            highlighted: _selectedIssuingAuthority.isNotEmpty,
-          ),
-        ] else ...[
-          _buildInputField(controller: _issuingAuthorityController, label: 'Issuing Authority & Country', icon: Icons.verified_outlined),
-        ],
-        const SizedBox(height: 20),
-        _buildSectionLabel('Upload ID Document'),
-        Text('Upload a photo or PDF of your identification (optional)', style: TextStyle(fontSize: 13, color: _textMuted)),
-        const SizedBox(height: 12),
-        _idFile == null ? _buildUploadButton() : _buildUploadedFileCard(),
+      ] else ...[
+        _buildInputField(
+            controller: _issuingAuthorityController,
+            label: 'Issuing Authority & Country',
+            icon: Icons.verified_outlined),
       ],
-    );
+      const SizedBox(height: 20),
+      _buildSectionLabel('Upload ID Document'),
+      Text('Upload a photo or PDF of your identification (optional)',
+          style: TextStyle(fontSize: 13, color: _textMuted)),
+      const SizedBox(height: 12),
+      _idFile == null ? _buildUploadButton() : _buildUploadedFileCard(),
+    ]);
   }
 
-  Widget _buildUploadButton() {
-    return GestureDetector(
-      onTap: _pickIdFile,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        decoration: BoxDecoration(
-          color: _softMint,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _primaryGreen.withOpacity(0.4), width: 1.5, style: BorderStyle.solid),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: _primaryGreen.withOpacity(0.15), shape: BoxShape.circle),
-              child: const Icon(Icons.upload_file_rounded, size: 28, color: _primaryGreen),
-            ),
-            const SizedBox(height: 10),
-            const Text('Tap to upload', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: _primaryGreen)),
-            const SizedBox(height: 4),
-            Text('JPG, PNG or PDF supported', style: TextStyle(fontSize: 12, color: _textMuted)),
-          ],
-        ),
+  Widget _buildUploadButton() => GestureDetector(
+    onTap: _pickIdFile,
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      decoration: BoxDecoration(
+        color: _softMint,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: _primaryGreen.withOpacity(0.4), width: 1.5),
       ),
-    );
-  }
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+                color: _primaryGreen.withOpacity(0.15),
+                shape: BoxShape.circle),
+            child: const Icon(Icons.upload_file_rounded,
+                size: 28, color: _primaryGreen),
+          ),
+          const SizedBox(height: 10),
+          const Text('Tap to upload',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: _primaryGreen)),
+          const SizedBox(height: 4),
+          Text('JPG, PNG or PDF supported',
+              style: TextStyle(fontSize: 12, color: _textMuted)),
+        ],
+      ),
+    ),
+  );
 
   Widget _buildUploadedFileCard() {
-    final bool isImage = _idFileExtension == 'jpg' || _idFileExtension == 'jpeg' || _idFileExtension == 'png';
+    final bool isImage = _idFileExtension == 'jpg' ||
+        _idFileExtension == 'jpeg' ||
+        _idFileExtension == 'png';
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _primaryGreen.withOpacity(0.5), width: 1.5),
-        boxShadow: [BoxShadow(color: _primaryGreen.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: _primaryGreen.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Column(
         children: [
           if (isImage)
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-              child: Image.file(_idFile!, width: double.infinity, height: 180, fit: BoxFit.cover),
+              borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(14)),
+              child: Image.file(_idFile!,
+                  width: double.infinity, height: 180, fit: BoxFit.cover),
             ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1722,23 +1903,37 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isImage ? Colors.blue.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                    color: isImage
+                        ? Colors.blue.withOpacity(0.1)
+                        : Colors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(isImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded,
-                      color: isImage ? Colors.blue : Colors.red[700], size: 22),
+                  child: Icon(
+                      isImage
+                          ? Icons.image_rounded
+                          : Icons.picture_as_pdf_rounded,
+                      color: isImage ? Colors.blue : Colors.red[700],
+                      size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_idFileName ?? 'Uploaded file', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-                      Text('Document uploaded', style: TextStyle(fontSize: 12, color: _textMuted)),
+                      Text(_idFileName ?? 'Uploaded file',
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis),
+                      Text('Document uploaded',
+                          style: TextStyle(fontSize: 12, color: _textMuted)),
                     ],
                   ),
                 ),
-                IconButton(onPressed: _removeIdFile, icon: const Icon(Icons.delete_outline_rounded, color: Colors.red), tooltip: 'Remove file'),
+                IconButton(
+                    onPressed: _removeIdFile,
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: Colors.red),
+                    tooltip: 'Remove file'),
               ],
             ),
           ),
@@ -1754,270 +1949,405 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     );
   }
 
-  // ─── Step 2: Address Information ──────────────────────────────────────────────
-
+  // ── Step 2: Address ────────────────────────────────────────────────────────
   Widget _buildAddressInformationStep() {
     final bool isTanzania = _selectedCountry == 'Tanzania';
-    return _buildStepCard(
-      children: [
-        _buildSectionLabel('Location'),
+    return _buildStepCard(children: [
+      _buildSectionLabel('Location'),
+      _buildDropdownTile(
+        label: 'Country *',
+        value:
+        _selectedCountry.isEmpty ? 'Select country' : _selectedCountry,
+        onTap: () => _showDropdownPicker(
+            'Select Country', _countries, _selectedCountry,
+                (v) => setState(() {
+              _selectedCountry = v;
+              _selectedRegion = '';
+              _selectedDistrict = '';
+              _errors.remove('country');
+            }),
+            searchable: true),
+        errorText: _errors['country'],
+        highlighted: _selectedCountry.isNotEmpty,
+      ),
+      const SizedBox(height: 14),
+      if (isTanzania) ...[
         _buildDropdownTile(
-          label: 'Country *',
-          value: _selectedCountry.isEmpty ? 'Select country' : _selectedCountry,
-          onTap: () => _showDropdownPicker('Select Country', _countries, _selectedCountry,
-                  (v) => setState(() { _selectedCountry = v; _selectedRegion = ''; _selectedDistrict = ''; _errors.remove('country'); }), searchable: true),
-          errorText: _errors['country'],
-          highlighted: _selectedCountry.isNotEmpty,
+          label: 'Region *',
+          value: _selectedRegion.isEmpty ? 'Select region' : _selectedRegion,
+          onTap: () => _showDropdownPicker(
+              'Select Region', _tanzaniaRegions, _selectedRegion,
+                  (v) => setState(() {
+                _selectedRegion = v;
+                _selectedDistrict = '';
+                _errors.remove('region');
+              }),
+              searchable: true),
+          errorText: _errors['region'],
+          highlighted: _selectedRegion.isNotEmpty,
         ),
         const SizedBox(height: 14),
-        if (isTanzania) ...[
+        if (_selectedRegion.isNotEmpty) ...[
           _buildDropdownTile(
-            label: 'Region *',
-            value: _selectedRegion.isEmpty ? 'Select region' : _selectedRegion,
-            onTap: () => _showDropdownPicker('Select Region', _tanzaniaRegions, _selectedRegion,
-                    (v) => setState(() { _selectedRegion = v; _selectedDistrict = ''; _errors.remove('region'); }), searchable: true),
-            errorText: _errors['region'],
-            highlighted: _selectedRegion.isNotEmpty,
+            label: 'District *',
+            value: _selectedDistrict.isEmpty
+                ? 'Select district'
+                : _selectedDistrict,
+            onTap: () => _showDropdownPicker(
+                'Select District',
+                _tanzaniaDistricts[_selectedRegion] ?? [],
+                _selectedDistrict,
+                    (v) => setState(() {
+                  _selectedDistrict = v;
+                  _errors.remove('district');
+                }),
+                searchable: true),
+            errorText: _errors['district'],
+            highlighted: _selectedDistrict.isNotEmpty,
           ),
           const SizedBox(height: 14),
-          if (_selectedRegion.isNotEmpty) ...[
-            _buildDropdownTile(
-              label: 'District *',
-              value: _selectedDistrict.isEmpty ? 'Select district' : _selectedDistrict,
-              onTap: () => _showDropdownPicker('Select District', _tanzaniaDistricts[_selectedRegion] ?? [], _selectedDistrict,
-                      (v) => setState(() { _selectedDistrict = v; _errors.remove('district'); }), searchable: true),
-              errorText: _errors['district'],
-              highlighted: _selectedDistrict.isNotEmpty,
-            ),
-            const SizedBox(height: 14),
-          ],
-          _buildInputField(controller: _wardController, label: 'Ward *', icon: Icons.location_on_outlined, required: true, errorText: _errors['ward'], onChanged: (_) => setState(() => _errors.remove('ward'))),
-          const SizedBox(height: 14),
-          _buildInputField(controller: _houseNumberController, label: 'House Number *', icon: Icons.home_outlined, required: true, errorText: _errors['houseNumber'], onChanged: (_) => setState(() => _errors.remove('houseNumber'))),
-          const SizedBox(height: 14),
-          _buildInputField(controller: _streetController, label: 'Street Name', icon: Icons.alt_route_outlined),
-        ] else ...[
-          _buildInputField(controller: _cityController, label: 'City', icon: Icons.location_city_rounded),
-          const SizedBox(height: 14),
-          _buildInputField(controller: _physicalAddressController, label: 'Physical Address *', icon: Icons.home_outlined, maxLines: 2, required: true, errorText: _errors['address'], onChanged: (_) => setState(() => _errors.remove('address'))),
         ],
-        const SizedBox(height: 20),
-        _buildSectionLabel('Contact Details'),
-        _buildInputField(controller: _emailController, label: 'Email Address', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress, required: true, errorText: _errors['email'], onChanged: (_) => setState(() => _errors.remove('email'))),
+        _buildInputField(
+            controller: _wardController, label: 'Ward *',
+            icon: Icons.location_on_outlined, required: true,
+            errorText: _errors['ward'],
+            onChanged: (_) => setState(() => _errors.remove('ward'))),
         const SizedBox(height: 14),
-        _buildInputField(controller: _phoneController, label: 'Phone Number', icon: Icons.phone_outlined, keyboardType: TextInputType.phone, required: true, errorText: _errors['phone'], onChanged: (_) => setState(() => _errors.remove('phone'))),
+        _buildInputField(
+            controller: _houseNumberController, label: 'House Number *',
+            icon: Icons.home_outlined, required: true,
+            errorText: _errors['houseNumber'],
+            onChanged: (_) =>
+                setState(() => _errors.remove('houseNumber'))),
+        const SizedBox(height: 14),
+        _buildInputField(
+            controller: _streetController, label: 'Street Name',
+            icon: Icons.alt_route_outlined),
+      ] else ...[
+        _buildInputField(
+            controller: _cityController, label: 'City',
+            icon: Icons.location_city_rounded),
+        const SizedBox(height: 14),
+        _buildInputField(
+            controller: _physicalAddressController,
+            label: 'Physical Address *',
+            icon: Icons.home_outlined, maxLines: 2, required: true,
+            errorText: _errors['address'],
+            onChanged: (_) => setState(() => _errors.remove('address'))),
       ],
-    );
+      const SizedBox(height: 20),
+      _buildSectionLabel('Contact Details'),
+      _buildInputField(
+          controller: _emailController, label: 'Email Address',
+          icon: Icons.email_outlined,
+          keyboardType: TextInputType.emailAddress, required: true,
+          errorText: _errors['email'],
+          onChanged: (_) => setState(() => _errors.remove('email'))),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _phoneController, label: 'Phone Number',
+          icon: Icons.phone_outlined, keyboardType: TextInputType.phone,
+          required: true, errorText: _errors['phone'],
+          onChanged: (_) => setState(() => _errors.remove('phone'))),
+    ]);
   }
 
-  // ─── Step 3: Bank Information ─────────────────────────────────────────────────
-
+  // ── Step 3: Bank ───────────────────────────────────────────────────────────
   Widget _buildBankInformationStep() {
-    return _buildStepCard(
-      children: [
-        _buildSectionLabel('Account Details'),
-        _buildDropdownTile(
-          label: 'Bank Type',
-          value: _selectedBankType,
-          onTap: () => _showDropdownPicker('Select Bank Type', _bankTypes, _selectedBankType,
-                  (v) => setState(() => _selectedBankType = v)),
-        ),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _accountNumberController, label: 'Account Number', icon: Icons.credit_card_rounded, keyboardType: TextInputType.number, required: true, errorText: _errors['accountNumber'], onChanged: (_) => setState(() => _errors.remove('accountNumber'))),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _accountHolderNameController, label: 'Account Holder Name', icon: Icons.person_outline_rounded),
-        const SizedBox(height: 20),
-        _buildSectionLabel('Bank Details'),
-        GestureDetector(
-          onTap: _showBankSearchPicker,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(
-              color: _cardBg,
-              borderRadius: BorderRadius.circular(14),
-              border: _errors['bankName'] != null ? Border.all(color: _errorRed, width: 1.5) : null,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.account_balance_outlined, color: _primaryGreen, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Bank Name *', style: TextStyle(fontSize: 12, color: _textMuted)),
-                      const SizedBox(height: 4),
-                      Text(
-                        _bankController.selectedBank ?? (_bankController.isLoading ? 'Loading banks...' : 'Tap to search & select'),
-                        style: TextStyle(fontSize: 15, color: _bankController.selectedBank != null ? _textDark : _textMuted, fontWeight: _bankController.selectedBank != null ? FontWeight.w500 : FontWeight.normal),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.search_rounded, color: _textMuted),
-              ],
-            ),
-          ),
-        ),
-        if (_errors['bankName'] != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 4),
-            child: Text(_errors['bankName']!, style: const TextStyle(color: _errorRed, fontSize: 12)),
-          ),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _branchController, label: 'Branch', icon: Icons.business_outlined),
-        const SizedBox(height: 14),
-        _buildInputField(controller: _swiftCodeController, label: 'SWIFT Code', icon: Icons.code_rounded),
-      ],
-    );
-  }
-
-  // ─── Step 4: Investment Mandate ───────────────────────────────────────────────
-
-  Widget _buildInvestmentMandateStep() {
-    return _buildStepCard(
-      children: [
-        _buildSectionLabel('Initial Investment'),
-        _buildInputFieldFormatted(controller: _initialAmountController, label: 'Initial Amount (optional)', icon: Icons.attach_money_rounded, formatter: _ThousandsInputFormatter()),
-        const SizedBox(height: 14),
-        _buildDropdownTile(
-          label: 'Currency',
-          value: _selectedAmountCurrency,
-          onTap: () => _showDropdownPicker('Select Currency', _currencies, _selectedAmountCurrency,
-                  (v) => setState(() => _selectedAmountCurrency = v)),
-        ),
-        const SizedBox(height: 20),
-        _buildSectionLabel('Account Type'),
-        Column(
-          children: _accountTypes.map((type) {
-            final bool selected = _selectedAccountType == type;
-            return GestureDetector(
-              onTap: () => setState(() => _selectedAccountType = type),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: selected ? _softMint : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: selected ? _primaryGreen : Colors.grey.withOpacity(0.2), width: selected ? 1.5 : 1),
-                  boxShadow: selected ? [BoxShadow(color: _primaryGreen.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))] : [],
-                ),
-                child: Row(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 22, height: 22,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: selected ? _primaryGreen : Colors.transparent, border: Border.all(color: selected ? _primaryGreen : Colors.grey[400]!, width: 2)),
-                      child: selected ? const Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
-                    ),
-                    const SizedBox(width: 14),
-                    Text(type, style: TextStyle(fontSize: 15, fontWeight: selected ? FontWeight.w600 : FontWeight.normal, color: selected ? _primaryGreen : _textDark)),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 20),
-        _buildSectionLabel('Payment Method'),
-        Column(
-          children: _paymentMethods.map((method) {
-            final bool selected = _selectedPaymentMethod == method;
-            return GestureDetector(
-              onTap: () => setState(() => _selectedPaymentMethod = method),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: selected ? _softMint : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: selected ? _primaryGreen : Colors.grey.withOpacity(0.2), width: selected ? 1.5 : 1),
-                  boxShadow: selected ? [BoxShadow(color: _primaryGreen.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))] : [],
-                ),
-                child: Row(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 22, height: 22,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: selected ? _primaryGreen : Colors.transparent, border: Border.all(color: selected ? _primaryGreen : Colors.grey[400]!, width: 2)),
-                      child: selected ? const Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
-                    ),
-                    const SizedBox(width: 14),
-                    Text(method, style: TextStyle(fontSize: 15, fontWeight: selected ? FontWeight.w600 : FontWeight.normal, color: selected ? _primaryGreen : _textDark)),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  // ─── Step 5: Final Details ────────────────────────────────────────────────────
-
-  Widget _buildFinalDetailsStep() {
-    return _buildStepCard(
-      children: [
-        _buildSectionLabel('Investment Purpose'),
-        _buildInputField(controller: _investmentPurposeController, label: 'Purpose of Investment (e.g. Wealth Creation)', icon: Icons.flag_outlined, maxLines: 2),
-        const SizedBox(height: 20),
-        _buildSectionLabel('Source of Funds'),
-        _buildDropdownTile(
-          label: 'Source of Funds *',
-          value: _selectedSourceOfFunds.isEmpty ? 'Select source' : _selectedSourceOfFunds,
-          onTap: () => _showDropdownPicker('Source of Funds', _sourcesOfFunds, _selectedSourceOfFunds,
-                  (v) => setState(() { _selectedSourceOfFunds = v; _fundsSourceController.text = v; _errors.remove('sourceOfFunds'); })),
-          errorText: _errors['sourceOfFunds'],
-          highlighted: _selectedSourceOfFunds.isNotEmpty,
-        ),
-        const SizedBox(height: 20),
-        _buildSectionLabel('Political Exposure Disclosure'),
-        Container(
-          padding: const EdgeInsets.all(16),
+    return _buildStepCard(children: [
+      _buildSectionLabel('Account Details'),
+      _buildDropdownTile(
+        label: 'Bank Type',
+        value: _selectedBankType,
+        onTap: () => _showDropdownPicker('Select Bank Type', _bankTypes,
+            _selectedBankType, (v) => setState(() => _selectedBankType = v)),
+      ),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _accountNumberController, label: 'Account Number',
+          icon: Icons.credit_card_rounded,
+          keyboardType: TextInputType.number, required: true,
+          errorText: _errors['accountNumber'],
+          onChanged: (_) =>
+              setState(() => _errors.remove('accountNumber'))),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _accountHolderNameController,
+          label: 'Account Holder Name',
+          icon: Icons.person_outline_rounded),
+      const SizedBox(height: 20),
+      _buildSectionLabel('Bank Details'),
+      GestureDetector(
+        onTap: _showBankSearchPicker,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
+            color: _cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: _errors['bankName'] != null
+                ? Border.all(color: _errorRed, width: 1.5)
+                : null,
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2))
+            ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Icon(Icons.info_outline_rounded, color: Colors.orange[600], size: 18),
-                  const SizedBox(width: 8),
-                  const Expanded(child: Text('Politically Exposed Person (PEP)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
-                ],
+              Icon(Icons.account_balance_outlined,
+                  color: _primaryGreen, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Bank Name *',
+                        style:
+                        TextStyle(fontSize: 12, color: _textMuted)),
+                    const SizedBox(height: 4),
+                    Text(
+                      _bankController.selectedBank ??
+                          (_bankController.isLoading
+                              ? 'Loading banks...'
+                              : 'Tap to search & select'),
+                      style: TextStyle(
+                          fontSize: 15,
+                          color: _bankController.selectedBank != null
+                              ? _textDark
+                              : _textMuted,
+                          fontWeight: _bankController.selectedBank != null
+                              ? FontWeight.w500
+                              : FontWeight.normal),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                'Are you or any immediate family member related to a senior government official, military officer (general+), president of a state-owned company, head of a government agency, supreme court judge, or political party representative?',
-                style: TextStyle(fontSize: 12, color: _textMuted, height: 1.5),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  _buildToggleOption(label: 'Yes', selected: _isPoliticallyExposed, onTap: () => setState(() => _isPoliticallyExposed = true)),
-                  const SizedBox(width: 12),
-                  _buildToggleOption(label: 'No', selected: !_isPoliticallyExposed, onTap: () => setState(() => _isPoliticallyExposed = false)),
-                ],
-              ),
-              if (_isPoliticallyExposed) ...[
-                const SizedBox(height: 14),
-                _buildInputField(controller: _positionController, label: 'Position Held', icon: Icons.badge_outlined, required: true, errorText: _errors['position'], onChanged: (_) => setState(() => _errors.remove('position'))),
-              ],
+              Icon(Icons.search_rounded, color: _textMuted),
             ],
           ),
         ),
-      ],
-    );
+      ),
+      if (_errors['bankName'] != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 4, left: 4),
+          child: Text(_errors['bankName']!,
+              style:
+              const TextStyle(color: _errorRed, fontSize: 12)),
+        ),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _branchController, label: 'Branch',
+          icon: Icons.business_outlined),
+      const SizedBox(height: 14),
+      _buildInputField(
+          controller: _swiftCodeController, label: 'SWIFT Code',
+          icon: Icons.code_rounded),
+    ]);
   }
 
-  Widget _buildToggleOption({required String label, required bool selected, required VoidCallback onTap}) {
+  // ── Step 4: Investment Mandate ─────────────────────────────────────────────
+  Widget _buildInvestmentMandateStep() {
+    return _buildStepCard(children: [
+      _buildSectionLabel('Initial Investment'),
+      _buildInputFieldFormatted(
+          controller: _initialAmountController,
+          label: 'Initial Amount (optional)',
+          icon: Icons.attach_money_rounded,
+          formatter: _ThousandsInputFormatter()),
+      const SizedBox(height: 14),
+      _buildDropdownTile(
+        label: 'Currency',
+        value: _selectedAmountCurrency,
+        onTap: () => _showDropdownPicker('Select Currency', _currencies,
+            _selectedAmountCurrency,
+                (v) => setState(() => _selectedAmountCurrency = v)),
+      ),
+      const SizedBox(height: 20),
+      _buildSectionLabel('Account Type'),
+      ..._accountTypes.map((type) {
+        final bool selected = _selectedAccountType == type;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedAccountType = type),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: selected ? _softMint : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: selected ? _primaryGreen : Colors.grey.withOpacity(0.2),
+                  width: selected ? 1.5 : 1),
+              boxShadow: selected
+                  ? [BoxShadow(color: _primaryGreen.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]
+                  : [],
+            ),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 22, height: 22,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? _primaryGreen : Colors.transparent,
+                      border: Border.all(
+                          color: selected ? _primaryGreen : Colors.grey[400]!,
+                          width: 2)),
+                  child: selected
+                      ? const Icon(Icons.check_rounded,
+                      size: 14, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(width: 14),
+                Text(type,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                        color: selected ? _primaryGreen : _textDark)),
+              ],
+            ),
+          ),
+        );
+      }),
+      const SizedBox(height: 20),
+      _buildSectionLabel('Payment Method'),
+      ..._paymentMethods.map((method) {
+        final bool selected = _selectedPaymentMethod == method;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedPaymentMethod = method),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: selected ? _softMint : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: selected ? _primaryGreen : Colors.grey.withOpacity(0.2),
+                  width: selected ? 1.5 : 1),
+              boxShadow: selected
+                  ? [BoxShadow(color: _primaryGreen.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]
+                  : [],
+            ),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 22, height: 22,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? _primaryGreen : Colors.transparent,
+                      border: Border.all(
+                          color: selected ? _primaryGreen : Colors.grey[400]!,
+                          width: 2)),
+                  child: selected
+                      ? const Icon(Icons.check_rounded,
+                      size: 14, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(width: 14),
+                Text(method,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                        color: selected ? _primaryGreen : _textDark)),
+              ],
+            ),
+          ),
+        );
+      }),
+    ]);
+  }
+
+  // ── Step 5: Final Details ──────────────────────────────────────────────────
+  Widget _buildFinalDetailsStep() {
+    return _buildStepCard(children: [
+      _buildSectionLabel('Investment Purpose'),
+      _buildInputField(
+          controller: _investmentPurposeController,
+          label: 'Purpose of Investment (e.g. Wealth Creation)',
+          icon: Icons.flag_outlined, maxLines: 2),
+      const SizedBox(height: 20),
+      _buildSectionLabel('Source of Funds'),
+      _buildDropdownTile(
+        label: 'Source of Funds *',
+        value: _selectedSourceOfFunds.isEmpty
+            ? 'Select source'
+            : _selectedSourceOfFunds,
+        onTap: () => _showDropdownPicker(
+            'Source of Funds', _sourcesOfFunds, _selectedSourceOfFunds,
+                (v) => setState(() {
+              _selectedSourceOfFunds = v;
+              _fundsSourceController.text = v;
+              _errors.remove('sourceOfFunds');
+            })),
+        errorText: _errors['sourceOfFunds'],
+        highlighted: _selectedSourceOfFunds.isNotEmpty,
+      ),
+      const SizedBox(height: 20),
+      _buildSectionLabel('Political Exposure Disclosure'),
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+          border:
+          Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.info_outline_rounded,
+                  color: Colors.orange[600], size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                  child: Text('Politically Exposed Person (PEP)',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14))),
+            ]),
+            const SizedBox(height: 10),
+            Text(
+              'Are you or any immediate family member related to a senior government official, military officer (general+), president of a state-owned company, head of a government agency, supreme court judge, or political party representative?',
+              style: TextStyle(
+                  fontSize: 12, color: _textMuted, height: 1.5),
+            ),
+            const SizedBox(height: 14),
+            Row(children: [
+              _buildToggleOption(
+                  label: 'Yes',
+                  selected: _isPoliticallyExposed,
+                  onTap: () =>
+                      setState(() => _isPoliticallyExposed = true)),
+              const SizedBox(width: 12),
+              _buildToggleOption(
+                  label: 'No',
+                  selected: !_isPoliticallyExposed,
+                  onTap: () =>
+                      setState(() => _isPoliticallyExposed = false)),
+            ]),
+            if (_isPoliticallyExposed) ...[
+              const SizedBox(height: 14),
+              _buildInputField(
+                  controller: _positionController,
+                  label: 'Position Held',
+                  icon: Icons.badge_outlined, required: true,
+                  errorText: _errors['position'],
+                  onChanged: (_) =>
+                      setState(() => _errors.remove('position'))),
+            ],
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildToggleOption(
+      {required String label,
+        required bool selected,
+        required VoidCallback onTap}) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -2027,38 +2357,52 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           decoration: BoxDecoration(
             color: selected ? _primaryGreen : Colors.white,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: selected ? _primaryGreen : Colors.grey.withOpacity(0.3)),
+            border: Border.all(
+                color: selected ? _primaryGreen : Colors.grey.withOpacity(0.3)),
           ),
-          child: Text(label, textAlign: TextAlign.center, style: TextStyle(color: selected ? Colors.white : _textMuted, fontWeight: FontWeight.w600, fontSize: 15)),
+          child: Text(label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: selected ? Colors.white : _textMuted,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15)),
         ),
       ),
     );
   }
 
-  // ─── Shared Widgets ───────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  SHARED UI HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildStepCard({required List<Widget> children}) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
-      ),
-    );
-  }
+  Widget _buildStepCard({required List<Widget> children}) => FadeTransition(
+    opacity: _fadeAnimation,
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: children),
+    ),
+  );
 
-  Widget _buildSectionLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(width: 3, height: 16, decoration: BoxDecoration(color: _primaryGreen, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _textDark, letterSpacing: 0.3)),
-        ],
-      ),
-    );
-  }
+  Widget _buildSectionLabel(String label) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(children: [
+      Container(
+          width: 3,
+          height: 16,
+          decoration: BoxDecoration(
+              color: _primaryGreen,
+              borderRadius: BorderRadius.circular(2))),
+      const SizedBox(width: 8),
+      Text(label,
+          style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: _textDark,
+              letterSpacing: 0.3)),
+    ]),
+  );
 
   Widget _buildInputField({
     required TextEditingController controller,
@@ -2080,8 +2424,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           decoration: BoxDecoration(
             color: _cardBg,
             borderRadius: BorderRadius.circular(14),
-            border: hasError ? Border.all(color: _errorRed, width: 1.5) : null,
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+            border: hasError
+                ? Border.all(color: _errorRed, width: 1.5)
+                : null,
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2))
+            ],
           ),
           child: TextField(
             controller: controller,
@@ -2092,10 +2443,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             style: const TextStyle(fontSize: 15, color: _textDark),
             decoration: InputDecoration(
               labelText: required ? '$label *' : label,
-              labelStyle: TextStyle(color: hasError ? _errorRed : _textMuted, fontSize: 14),
-              prefixIcon: icon != null ? Icon(icon, color: hasError ? _errorRed : _primaryGreen, size: 20) : null,
+              labelStyle: TextStyle(
+                  color: hasError ? _errorRed : _textMuted, fontSize: 14),
+              prefixIcon: icon != null
+                  ? Icon(icon,
+                  color: hasError ? _errorRed : _primaryGreen, size: 20)
+                  : null,
               border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: icon != null ? 4 : 18, vertical: 16),
+              contentPadding: EdgeInsets.symmetric(
+                  horizontal: icon != null ? 4 : 18, vertical: 16),
               floatingLabelBehavior: FloatingLabelBehavior.auto,
             ),
           ),
@@ -2103,13 +2459,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         if (hasError)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.error_outline, size: 13, color: _errorRed),
-                const SizedBox(width: 4),
-                Text(errorText, style: const TextStyle(fontSize: 12, color: _errorRed)),
-              ],
-            ),
+            child: Row(children: [
+              const Icon(Icons.error_outline, size: 13, color: _errorRed),
+              const SizedBox(width: 4),
+              Text(errorText,
+                  style: const TextStyle(fontSize: 12, color: _errorRed)),
+            ]),
           ),
       ],
     );
@@ -2120,28 +2475,40 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     required String label,
     IconData? icon,
     required TextInputFormatter formatter,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _cardBg,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')), formatter],
-        style: const TextStyle(fontSize: 15, color: _textDark),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: _textMuted, fontSize: 14),
-          prefixIcon: icon != null ? Icon(icon, color: _primaryGreen, size: 20) : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+  }) =>
+      Container(
+        decoration: BoxDecoration(
+          color: _cardBg,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2))
+          ],
         ),
-      ),
-    );
-  }
+        child: TextField(
+          controller: controller,
+          keyboardType:
+          const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
+            formatter
+          ],
+          style: const TextStyle(fontSize: 15, color: _textDark),
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle:
+            TextStyle(color: _textMuted, fontSize: 14),
+            prefixIcon: icon != null
+                ? Icon(icon, color: _primaryGreen, size: 20)
+                : null,
+            border: InputBorder.none,
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+          ),
+        ),
+      );
 
   Widget _buildDateField({
     required TextEditingController controller,
@@ -2157,7 +2524,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       children: [
         GestureDetector(
           onTap: () {
-            _selectDate(controller, firstDate: firstDate, lastDate: lastDate);
+            _selectDate(controller,
+                firstDate: firstDate, lastDate: lastDate);
             setState(() => _errors.remove('dob'));
           },
           child: AnimatedContainer(
@@ -2165,8 +2533,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             decoration: BoxDecoration(
               color: _cardBg,
               borderRadius: BorderRadius.circular(14),
-              border: hasError ? Border.all(color: _errorRed, width: 1.5) : null,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+              border: hasError
+                  ? Border.all(color: _errorRed, width: 1.5)
+                  : null,
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ],
             ),
             child: TextField(
               controller: controller,
@@ -2174,11 +2549,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               style: const TextStyle(fontSize: 15, color: _textDark),
               decoration: InputDecoration(
                 labelText: required ? '$label *' : label,
-                labelStyle: TextStyle(color: hasError ? _errorRed : _textMuted, fontSize: 14),
-                prefixIcon: Icon(Icons.calendar_today_outlined, color: hasError ? _errorRed : _primaryGreen, size: 20),
-                suffixIcon: const Icon(Icons.arrow_forward_ios_rounded, color: _textMuted, size: 14),
+                labelStyle: TextStyle(
+                    color: hasError ? _errorRed : _textMuted,
+                    fontSize: 14),
+                prefixIcon: Icon(Icons.calendar_today_outlined,
+                    color: hasError ? _errorRed : _primaryGreen, size: 20),
+                suffixIcon: const Icon(Icons.arrow_forward_ios_rounded,
+                    color: _textMuted, size: 14),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+                contentPadding:
+                const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
                 disabledBorder: InputBorder.none,
               ),
             ),
@@ -2187,13 +2567,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         if (hasError)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.error_outline, size: 13, color: _errorRed),
-                const SizedBox(width: 4),
-                Text(errorText, style: const TextStyle(fontSize: 12, color: _errorRed)),
-              ],
-            ),
+            child: Row(children: [
+              const Icon(Icons.error_outline, size: 13, color: _errorRed),
+              const SizedBox(width: 4),
+              Text(errorText,
+                  style: const TextStyle(fontSize: 12, color: _errorRed)),
+            ]),
           ),
       ],
     );
@@ -2214,12 +2593,23 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               color: highlighted ? _softMint : _cardBg,
               borderRadius: BorderRadius.circular(14),
-              border: hasError ? Border.all(color: _errorRed, width: 1.5) : highlighted ? Border.all(color: _primaryGreen.withOpacity(0.4), width: 1) : null,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+              border: hasError
+                  ? Border.all(color: _errorRed, width: 1.5)
+                  : highlighted
+                  ? Border.all(
+                  color: _primaryGreen.withOpacity(0.4), width: 1)
+                  : null,
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ],
             ),
             child: Row(
               children: [
@@ -2227,13 +2617,23 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label, style: TextStyle(fontSize: 12, color: hasError ? _errorRed : _textMuted)),
+                      Text(label,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: hasError ? _errorRed : _textMuted)),
                       const SizedBox(height: 4),
-                      Text(value, style: TextStyle(fontSize: 15, color: highlighted ? _primaryGreen : _textDark, fontWeight: highlighted ? FontWeight.w600 : FontWeight.w500)),
+                      Text(value,
+                          style: TextStyle(
+                              fontSize: 15,
+                              color: highlighted ? _primaryGreen : _textDark,
+                              fontWeight: highlighted
+                                  ? FontWeight.w600
+                                  : FontWeight.w500)),
                     ],
                   ),
                 ),
-                Icon(Icons.keyboard_arrow_down_rounded, color: hasError ? _errorRed : _textMuted),
+                Icon(Icons.keyboard_arrow_down_rounded,
+                    color: hasError ? _errorRed : _textMuted),
               ],
             ),
           ),
@@ -2241,20 +2641,18 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         if (hasError)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.error_outline, size: 13, color: _errorRed),
-                const SizedBox(width: 4),
-                Text(errorText, style: const TextStyle(fontSize: 12, color: _errorRed)),
-              ],
-            ),
+            child: Row(children: [
+              const Icon(Icons.error_outline, size: 13, color: _errorRed),
+              const SizedBox(width: 4),
+              Text(errorText,
+                  style: const TextStyle(fontSize: 12, color: _errorRed)),
+            ]),
           ),
       ],
     );
   }
 
-  // ─── Step Progress Indicator ──────────────────────────────────────────────────
-
+  // ─── Step Progress Indicator ───────────────────────────────────────────────
   Widget _buildStepIndicator() {
     return SizedBox(
       height: 56,
@@ -2269,26 +2667,56 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             onTap: () {
               if (index < _currentStep) {
                 _animationController.reset();
-                setState(() { _currentStep = index; _errors.clear(); });
+                setState(() {
+                  _currentStep = index;
+                  _errors.clear();
+                });
                 _animationController.forward();
               }
             },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isCompleted ? _primaryGreen : isCurrent ? Colors.white : Colors.white.withOpacity(0.5),
+                color: isCompleted
+                    ? _primaryGreen
+                    : isCurrent
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(20),
-                border: isCurrent ? Border.all(color: _primaryGreen, width: 1.5) : null,
-                boxShadow: isCurrent ? [BoxShadow(color: _primaryGreen.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2))] : [],
+                border: isCurrent
+                    ? Border.all(color: _primaryGreen, width: 1.5)
+                    : null,
+                boxShadow: isCurrent
+                    ? [
+                  BoxShadow(
+                      color: _primaryGreen.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2))
+                ]
+                    : [],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(isCompleted ? Icons.check_rounded : _steps[index]['icon'] as IconData, size: 16, color: isCompleted ? Colors.white : isCurrent ? _primaryGreen : _textMuted),
+                  Icon(
+                      isCompleted
+                          ? Icons.check_rounded
+                          : _steps[index]['icon'] as IconData,
+                      size: 16,
+                      color: isCompleted
+                          ? Colors.white
+                          : isCurrent
+                          ? _primaryGreen
+                          : _textMuted),
                   if (isCurrent) ...[
                     const SizedBox(width: 6),
-                    Text(_steps[index]['title'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _primaryGreen)),
+                    Text(_steps[index]['title'] as String,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _primaryGreen)),
                   ],
                 ],
               ),
@@ -2299,16 +2727,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     );
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  BUILD
+  // ═══════════════════════════════════════════════════════════════════════════
 
   @override
   Widget build(BuildContext context) {
-    // Show selection screen first if no client type chosen yet
-    if (_clientType == null) {
-      return _buildClientTypeSelection();
-    }
+    if (_clientType == null) return _buildClientTypeSelection();
 
-    // Otherwise show the normal multi-step form
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -2317,13 +2743,17 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF7FFFD4), Color(0xFF98FB98), Color(0xFFAFEEEE)],
+            colors: [
+              Color(0xFF7FFFD4),
+              Color(0xFF98FB98),
+              Color(0xFFAFEEEE)
+            ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // ── Top Header ────────────────────────────────────────────────
+              // ── Header ────────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 child: Row(
@@ -2331,7 +2761,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     GestureDetector(
                       onTap: () {
                         if (_currentStep == 0) {
-                          // Go back to client type selection
                           _animationController.reset();
                           setState(() => _clientType = null);
                           _animationController.forward();
@@ -2345,7 +2774,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           color: Colors.white.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded, color: _textDark, size: 18),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: _textDark, size: 18),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -2353,21 +2783,34 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Individual Account', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _textDark)),
-                          Text(_steps[_currentStep]['title'] as String, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                          const Text('Individual Account',
+                              style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: _textDark)),
+                          Text(_steps[_currentStep]['title'] as String,
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.grey[600])),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.3), borderRadius: BorderRadius.circular(20)),
-                      child: Text('${_currentStep + 1} / ${_steps.length}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _textDark)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Text('${_currentStep + 1} / ${_steps.length}',
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: _textDark)),
                     ),
                   ],
                 ),
               ),
 
-              // ── Progress Bar ──────────────────────────────────────────────
+              // ── Progress bar ──────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: ClipRRect(
@@ -2375,16 +2818,17 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   child: LinearProgressIndicator(
                     value: (_currentStep + 1) / _steps.length,
                     backgroundColor: Colors.white.withOpacity(0.3),
-                    valueColor: const AlwaysStoppedAnimation<Color>(_deepGreen),
+                    valueColor:
+                    const AlwaysStoppedAnimation<Color>(_deepGreen),
                     minHeight: 5,
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-
               _buildStepIndicator(),
               const SizedBox(height: 4),
 
+              // ── Form content ──────────────────────────────────────────
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -2392,12 +2836,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 ),
               ),
 
-              // ── Navigation Buttons ────────────────────────────────────────
+              // ── Navigation buttons ────────────────────────────────────
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: Row(
                   children: [
@@ -2407,12 +2852,20 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         child: OutlinedButton(
                           onPressed: _previousStep,
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: _primaryGreen, width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Colors.white.withOpacity(0.5),
+                            side: const BorderSide(
+                                color: _primaryGreen, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                            padding:
+                            const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor:
+                            Colors.white.withOpacity(0.5),
                           ),
-                          child: const Text('Back', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: _primaryGreen)),
+                          child: const Text('Back',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: _primaryGreen)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -2424,19 +2877,35 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _primaryGreen,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 16),
                           elevation: 0,
                         ),
                         child: _isLoading
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                            ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.5),
+                        )
                             : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisAlignment:
+                          MainAxisAlignment.center,
                           children: [
-                            Text(_currentStep == _steps.length - 1 ? 'Submit Application' : 'Continue', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                            Text(
+                                _currentStep == _steps.length - 1
+                                    ? 'Submit Application'
+                                    : 'Continue',
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700)),
                             if (_currentStep < _steps.length - 1) ...[
                               const SizedBox(width: 6),
-                              const Icon(Icons.arrow_forward_rounded, size: 18),
+                              const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 18),
                             ],
                           ],
                         ),
@@ -2450,39 +2919,5 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _fcNumberController.dispose();
-    _titleController.dispose();
-    _firstNameController.dispose();
-    _middleNameController.dispose();
-    _lastNameController.dispose();
-    _dateOfBirthController.dispose();
-    _placeOfBirthController.dispose();
-    _occupationController.dispose();
-    _identificationNumberController.dispose();
-    _validityDateController.dispose();
-    _issuingAuthorityController.dispose();
-    _houseNumberController.dispose();
-    _streetController.dispose();
-    _wardController.dispose();
-    _cityController.dispose();
-    _physicalAddressController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _fundsSourceController.dispose();
-    _positionController.dispose();
-    _investmentPurposeController.dispose();
-    _accountNumberController.dispose();
-    _accountHolderNameController.dispose();
-    _bankNameController.dispose();
-    _branchController.dispose();
-    _swiftCodeController.dispose();
-    _bankSearchController.dispose();
-    _initialAmountController.dispose();
-    super.dispose();
   }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1008506028199",
+    "project_id": "invest-mkononi",
+    "storage_bucket": "invest-mkononi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1008506028199:android:58ffd8479c8e1d37349b82",
+        "android_client_info": {
+          "package_name": "com.investmukononi.tsl"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARbDGuQs6Bw8qyQBNt1i6zsNQQQfOpfV4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

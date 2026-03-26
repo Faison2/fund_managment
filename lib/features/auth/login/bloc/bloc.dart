@@ -33,12 +33,14 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       if (result['success'] == true) {
         final cdsNumber = result['cdsNumber'] as String;
         final accountStatus = result['accountStatus'] as String;
+        final email = result['email'] as String?;
 
         await repository.saveUserData(
           cdsNumber: cdsNumber,
           accountStatus: accountStatus,
           username: event.username.trim(),
           rememberMe: event.rememberMe,
+          email: email,
         );
 
         if (cdsNumber.isEmpty) {
