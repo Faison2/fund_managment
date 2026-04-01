@@ -1,7 +1,7 @@
 name: tsl
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.2
+version: 1.0.3
 #version: 1.0.1+9
 
 environment:
@@ -27,9 +27,10 @@ dependencies:
   printing: ^5.11.0
   provider: ^6.1.2
   url_launcher: ^6.3.2
-  firebase_core: ^4.6.0
+  #firebase_core: ^4.6.0
   firebase_messaging: ^16.1.3
   flutter_local_notifications: ^20.1.0
+  firebase_core: ^4.6.0
 
 dev_dependencies:
   flutter_test:
