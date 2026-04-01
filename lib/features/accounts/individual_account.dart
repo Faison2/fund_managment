@@ -49,18 +49,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   final String _apiUsername = "User2";
   final String _apiPassword = "CBZ1234#2";
 
-  // ─── Real API endpoint for existing client lookup ─────────────────────────
-  static const String _userDetailsUrl =
-      'https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails';
-
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-
-  // ─── Client type selection ────────────────────────────────────────────────
-  String? _clientType;
-  final TextEditingController _fcNumberController = TextEditingController();
-  bool _isFcLookupLoading = false;
-  String? _fcLookupError;
 
   // ─── Controllers ──────────────────────────────────────────────────────────
   final TextEditingController _titleController =
@@ -246,7 +236,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   @override
   void dispose() {
     _animationController.dispose();
-    _fcNumberController.dispose();
     _titleController.dispose();
     _firstNameController.dispose();
     _middleNameController.dispose();
@@ -371,761 +360,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         backgroundColor: _textDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  //  EXISTING CLIENT FLOW  ── FC lookup → profile card → login
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /// Opens the bottom-sheet / dialog where the user types their FC number.
-  void _showExistingClientDialog() {
-    _fcNumberController.clear();
-    _fcLookupError = null;
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setDialogState) => Dialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Header ─────────────────────────────────────────────
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
-                          color: _softMint, shape: BoxShape.circle),
-                      child: const Icon(Icons.person_search_rounded,
-                          color: _primaryGreen, size: 24),
-                    ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Existing Client',
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: _textDark)),
-                          SizedBox(height: 2),
-                          Text('Enter your FC / CDS Number to continue',
-                              style:
-                              TextStyle(fontSize: 12, color: _textMuted)),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                            color: Colors.grey[100], shape: BoxShape.circle),
-                        child: const Icon(Icons.close_rounded,
-                            size: 18, color: _textMuted),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // ── Info banner ─────────────────────────────────────────
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: Colors.amber.withOpacity(0.4), width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded,
-                          color: Colors.amber[700], size: 18),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text(
-                          'Your FC / CDS Number can be found on your account statement or previous correspondence.',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF7B6200),
-                              height: 1.4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // ── FC Number input ─────────────────────────────────────
-                const Text('FC / CDS Number',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _textDark)),
-                const SizedBox(height: 8),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: _fcLookupError != null
-                          ? _errorRed
-                          : _fcNumberController.text.isNotEmpty
-                          ? _primaryGreen.withOpacity(0.5)
-                          : Colors.grey.withOpacity(0.25),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: _fcNumberController,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.characters,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        color: _textDark,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.2),
-                    onChanged: (_) =>
-                        setDialogState(() => _fcLookupError = null),
-                    decoration: InputDecoration(
-                      hintText: 'e.g. FC0001144',
-                      hintStyle: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 15,
-                          fontWeight: FontWeight.normal,
-                          letterSpacing: 0),
-                      prefixIcon: const Icon(Icons.tag_rounded,
-                          color: _primaryGreen, size: 20),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 16),
-                    ),
-                  ),
-                ),
-
-                // ── Inline error ────────────────────────────────────────
-                if (_fcLookupError != null) ...[
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.error_outline_rounded,
-                          size: 14, color: _errorRed),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(_fcLookupError!,
-                            style: const TextStyle(
-                                fontSize: 12, color: _errorRed)),
-                      ),
-                    ],
-                  ),
-                ],
-
-                const SizedBox(height: 24),
-
-                // ── Action buttons ──────────────────────────────────────
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                              color: Colors.grey[300]!, width: 1.5),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: const Text('Cancel',
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: _textMuted)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: _isFcLookupLoading
-                            ? null
-                            : () => _handleExistingClientLookup(
-                            ctx, setDialogState),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _primaryGreen,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                        ),
-                        child: _isFcLookupLoading
-                            ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.5),
-                        )
-                            : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.search_rounded, size: 18),
-                            SizedBox(width: 6),
-                            Text('Look Up Client',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Calls the real UserBasicDetails API and handles the response.
-  Future<void> _handleExistingClientLookup(
-      BuildContext dialogCtx, StateSetter setDialogState) async {
-    final fcNumber = _fcNumberController.text.trim();
-    if (fcNumber.isEmpty) {
-      setDialogState(
-              () => _fcLookupError = 'Please enter your FC / CDS Number');
-      return;
-    }
-
-    setDialogState(() {
-      _isFcLookupLoading = true;
-      _fcLookupError = null;
-    });
-
-    try {
-      final response = await http.post(
-        Uri.parse(_userDetailsUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'CDSNumber': fcNumber}),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-
-        if (responseData['status'] == 'success') {
-          final data = responseData['data'] as Map<String, dynamic>;
-
-          // Close the lookup dialog first
-          if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-
-          // Show the rich profile card
-          _showExistingClientSuccessDialog(fcNumber, data);
-        } else {
-          setDialogState(() => _fcLookupError = responseData['statusDesc'] ??
-              'No account found for this number. Please check and try again.');
-        }
-      } else {
-        setDialogState(() => _fcLookupError =
-        'Server error (${response.statusCode}). Please try again.');
-      }
-    } catch (e) {
-      setDialogState(() =>
-      _fcLookupError = 'Network error. Please check your connection.');
-    } finally {
-      setDialogState(() => _isFcLookupLoading = false);
-    }
-  }
-
-  /// Rich profile-card dialog shown after a successful FC lookup.
-  void _showExistingClientSuccessDialog(
-      String fcNumber, Map<String, dynamic> data) {
-    final String names = data['Names'] ?? '—';
-    final String email = data['Email'] ?? '—';
-    final String mobile = data['Mobile'] ?? '—';
-    final String bank = data['Bank'] ?? '—';
-    final String accountNo = data['AccountNo'] ?? '—';
-    final String accountName = data['AccountName'] ?? '—';
-    final String branch = data['Branch'] ?? '—';
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding:
-        const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-        child: Container(
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24), color: Colors.white),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Animated success icon ───────────────────────────────
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
-                      color: _softMint, shape: BoxShape.circle),
-                  child: const Icon(Icons.how_to_reg_rounded,
-                      color: _primaryGreen, size: 48),
-                ),
-                const SizedBox(height: 16),
-                const Text('Account Found!',
-                    style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: _textDark)),
-                const SizedBox(height: 6),
-                Text('Please verify your details below',
-                    style: TextStyle(fontSize: 13, color: _textMuted)),
-                const SizedBox(height: 20),
-
-                // ── FC Number badge ─────────────────────────────────────
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: _softMint,
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                        color: _primaryGreen.withOpacity(0.35), width: 1.5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.tag_rounded,
-                          color: _primaryGreen, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        fcNumber,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: _primaryGreen,
-                            letterSpacing: 1.2),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-
-                // ── Profile detail card ─────────────────────────────────
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFB),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: Colors.grey.withOpacity(0.12), width: 1),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildProfileRow(
-                          Icons.person_outline_rounded, 'Full Name', names),
-                      _buildProfileDivider(),
-                      _buildProfileRow(
-                          Icons.email_outlined, 'Email Address', email),
-                      _buildProfileDivider(),
-                      _buildProfileRow(
-                          Icons.phone_outlined, 'Mobile Number', mobile),
-                      _buildProfileDivider(),
-                      _buildProfileRow(
-                          Icons.account_balance_outlined, 'Bank', bank),
-                      _buildProfileDivider(),
-                      _buildProfileRow(Icons.credit_card_rounded,
-                          'Account Number', accountNo),
-                      _buildProfileDivider(),
-                      _buildProfileRow(
-                          Icons.person_pin_outlined, 'Account Name', accountName),
-                      _buildProfileDivider(),
-                      _buildProfileRow(
-                          Icons.business_outlined, 'Branch', branch),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // ── Info note ───────────────────────────────────────────
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: Colors.amber.withOpacity(0.4), width: 1),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.lock_outline_rounded,
-                          color: Colors.amber[700], size: 18),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text(
-                          'Your profile has been verified. To access your account please proceed to login and sign in with your credentials.',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF7B6200),
-                              height: 1.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // ── Proceed to Login button ─────────────────────────────
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primaryGreen,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const LoginScreen()));
-                    },
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.login_rounded, size: 18),
-                        SizedBox(width: 8),
-                        Text('Proceed to Login',
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // ── "Not you?" back option ──────────────────────────────
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    // Re-open the FC input dialog
-                    Future.microtask(() => _showExistingClientDialog());
-                  },
-                  child: Text(
-                    'Not you? Try a different number',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: _textMuted,
-                        fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ─── Profile card helpers ──────────────────────────────────────────────────
-
-  Widget _buildProfileRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _softMint,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: _primaryGreen, size: 17),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style:
-                    const TextStyle(fontSize: 11, color: _textMuted)),
-                const SizedBox(height: 3),
-                Text(
-                  value,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _textDark),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileDivider() => Divider(
-    height: 1,
-    thickness: 1,
-    color: Colors.grey.withOpacity(0.1),
-    indent: 16,
-    endIndent: 16,
-  );
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  //  CLIENT TYPE SELECTION SCREEN
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  Widget _buildClientTypeSelection() {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF7FFFD4),
-              Color(0xFF98FB98),
-              Color(0xFFAFEEEE),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // ── Back button ──────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const LoginScreen())),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: _textDark, size: 18),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Hero ────────────────────────────────────────
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.5),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                    color: _primaryGreen.withOpacity(0.15),
-                                    blurRadius: 24,
-                                    offset: const Offset(0, 8))
-                              ],
-                            ),
-                            child: const Icon(Icons.account_circle_outlined,
-                                size: 64, color: _deepGreen),
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        const Center(
-                          child: Text('Individual Account',
-                              style: TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: _textDark)),
-                        ),
-                        const SizedBox(height: 8),
-                        Center(
-                          child: Text(
-                            'Are you a new or existing client?',
-                            style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.grey[600],
-                                height: 1.4),
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-
-                        // ── New Client card ──────────────────────────────
-                        _buildClientTypeCard(
-                          type: 'new',
-                          icon: Icons.person_add_outlined,
-                          title: 'New Client',
-                          subtitle:
-                          'I\'m opening an account for the first time',
-                          badgeText: 'Register',
-                          badgeColor: _primaryGreen,
-                          onTap: () {
-                            _animationController.reset();
-                            setState(() => _clientType = 'new');
-                            _animationController.forward();
-                          },
-                        ),
-                        const SizedBox(height: 16),
-
-                        // ── Existing Client card ─────────────────────────
-                        _buildClientTypeCard(
-                          type: 'existing',
-                          icon: Icons.manage_accounts_outlined,
-                          title: 'Existing Client',
-                          subtitle:
-                          'I already have an account and have my FC Number',
-                          badgeText: 'Sign In',
-                          badgeColor: const Color(0xFF5C6BC0),
-                          onTap: () => _showExistingClientDialog(),
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // ── Security footer ──────────────────────────────
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.lock_outline_rounded,
-                                  color: _textMuted, size: 18),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Your information is secured and encrypted. We are regulated by CMSA Tanzania.',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: _textMuted,
-                                      height: 1.4),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClientTypeCard({
-    required String type,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String badgeText,
-    required Color badgeColor,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4))
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: badgeColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: badgeColor, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(title,
-                          style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: _textDark)),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: badgeColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(badgeText,
-                            style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: badgeColor)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(subtitle,
-                      style: TextStyle(
-                          fontSize: 13, color: _textMuted, height: 1.4)),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.arrow_forward_ios_rounded,
-                color: Colors.grey[400], size: 16),
-          ],
-        ),
       ),
     );
   }
@@ -1326,7 +560,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     }
   }
 
-  // ─── New-client success dialog ─────────────────────────────────────────────
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -1408,8 +641,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                             builder: (_) => const LoginScreen()));
                   },
                   child: const Text("Continue to Login",
-                      style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -1647,8 +880,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color:
-                            selected ? _softMint : Colors.grey[50],
+                            color: selected
+                                ? _softMint
+                                : Colors.grey[50],
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: selected
@@ -1956,8 +1190,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _buildSectionLabel('Location'),
       _buildDropdownTile(
         label: 'Country *',
-        value:
-        _selectedCountry.isEmpty ? 'Select country' : _selectedCountry,
+        value: _selectedCountry.isEmpty ? 'Select country' : _selectedCountry,
         onTap: () => _showDropdownPicker(
             'Select Country', _countries, _selectedCountry,
                 (v) => setState(() {
@@ -1974,7 +1207,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       if (isTanzania) ...[
         _buildDropdownTile(
           label: 'Region *',
-          value: _selectedRegion.isEmpty ? 'Select region' : _selectedRegion,
+          value:
+          _selectedRegion.isEmpty ? 'Select region' : _selectedRegion,
           onTap: () => _showDropdownPicker(
               'Select Region', _tanzaniaRegions, _selectedRegion,
                   (v) => setState(() {
@@ -2104,8 +1338,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Bank Name *',
-                        style:
-                        TextStyle(fontSize: 12, color: _textMuted)),
+                        style: TextStyle(fontSize: 12, color: _textMuted)),
                     const SizedBox(height: 4),
                     Text(
                       _bankController.selectedBank ??
@@ -2133,8 +1366,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         Padding(
           padding: const EdgeInsets.only(top: 4, left: 4),
           child: Text(_errors['bankName']!,
-              style:
-              const TextStyle(color: _errorRed, fontSize: 12)),
+              style: const TextStyle(color: _errorRed, fontSize: 12)),
         ),
       const SizedBox(height: 14),
       _buildInputField(
@@ -2178,10 +1410,17 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               color: selected ? _softMint : Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: selected ? _primaryGreen : Colors.grey.withOpacity(0.2),
+                  color: selected
+                      ? _primaryGreen
+                      : Colors.grey.withOpacity(0.2),
                   width: selected ? 1.5 : 1),
               boxShadow: selected
-                  ? [BoxShadow(color: _primaryGreen.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]
+                  ? [
+                BoxShadow(
+                    color: _primaryGreen.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ]
                   : [],
             ),
             child: Row(
@@ -2193,7 +1432,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       shape: BoxShape.circle,
                       color: selected ? _primaryGreen : Colors.transparent,
                       border: Border.all(
-                          color: selected ? _primaryGreen : Colors.grey[400]!,
+                          color:
+                          selected ? _primaryGreen : Colors.grey[400]!,
                           width: 2)),
                   child: selected
                       ? const Icon(Icons.check_rounded,
@@ -2204,7 +1444,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 Text(type,
                     style: TextStyle(
                         fontSize: 15,
-                        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight:
+                        selected ? FontWeight.w600 : FontWeight.normal,
                         color: selected ? _primaryGreen : _textDark)),
               ],
             ),
@@ -2225,10 +1466,17 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               color: selected ? _softMint : Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: selected ? _primaryGreen : Colors.grey.withOpacity(0.2),
+                  color: selected
+                      ? _primaryGreen
+                      : Colors.grey.withOpacity(0.2),
                   width: selected ? 1.5 : 1),
               boxShadow: selected
-                  ? [BoxShadow(color: _primaryGreen.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]
+                  ? [
+                BoxShadow(
+                    color: _primaryGreen.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ]
                   : [],
             ),
             child: Row(
@@ -2240,7 +1488,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       shape: BoxShape.circle,
                       color: selected ? _primaryGreen : Colors.transparent,
                       border: Border.all(
-                          color: selected ? _primaryGreen : Colors.grey[400]!,
+                          color:
+                          selected ? _primaryGreen : Colors.grey[400]!,
                           width: 2)),
                   child: selected
                       ? const Icon(Icons.check_rounded,
@@ -2251,7 +1500,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 Text(method,
                     style: TextStyle(
                         fontSize: 15,
-                        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight:
+                        selected ? FontWeight.w600 : FontWeight.normal,
                         color: selected ? _primaryGreen : _textDark)),
               ],
             ),
@@ -2293,8 +1543,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         decoration: BoxDecoration(
           color: Colors.orange.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
-          border:
-          Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
+          border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2311,16 +1560,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             const SizedBox(height: 10),
             Text(
               'Are you or any immediate family member related to a senior government official, military officer (general+), president of a state-owned company, head of a government agency, supreme court judge, or political party representative?',
-              style: TextStyle(
-                  fontSize: 12, color: _textMuted, height: 1.5),
+              style: TextStyle(fontSize: 12, color: _textMuted, height: 1.5),
             ),
             const SizedBox(height: 14),
             Row(children: [
               _buildToggleOption(
                   label: 'Yes',
                   selected: _isPoliticallyExposed,
-                  onTap: () =>
-                      setState(() => _isPoliticallyExposed = true)),
+                  onTap: () => setState(() => _isPoliticallyExposed = true)),
               const SizedBox(width: 12),
               _buildToggleOption(
                   label: 'No',
@@ -2358,7 +1605,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             color: selected ? _primaryGreen : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-                color: selected ? _primaryGreen : Colors.grey.withOpacity(0.3)),
+                color:
+                selected ? _primaryGreen : Colors.grey.withOpacity(0.3)),
           ),
           child: Text(label,
               textAlign: TextAlign.center,
@@ -2498,8 +1746,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           style: const TextStyle(fontSize: 15, color: _textDark),
           decoration: InputDecoration(
             labelText: label,
-            labelStyle:
-            TextStyle(color: _textMuted, fontSize: 14),
+            labelStyle: TextStyle(color: _textMuted, fontSize: 14),
             prefixIcon: icon != null
                 ? Icon(icon, color: _primaryGreen, size: 20)
                 : null,
@@ -2550,8 +1797,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               decoration: InputDecoration(
                 labelText: required ? '$label *' : label,
                 labelStyle: TextStyle(
-                    color: hasError ? _errorRed : _textMuted,
-                    fontSize: 14),
+                    color: hasError ? _errorRed : _textMuted, fontSize: 14),
                 prefixIcon: Icon(Icons.calendar_today_outlined,
                     color: hasError ? _errorRed : _primaryGreen, size: 20),
                 suffixIcon: const Icon(Icons.arrow_forward_ios_rounded,
@@ -2625,7 +1871,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       Text(value,
                           style: TextStyle(
                               fontSize: 15,
-                              color: highlighted ? _primaryGreen : _textDark,
+                              color:
+                              highlighted ? _primaryGreen : _textDark,
                               fontWeight: highlighted
                                   ? FontWeight.w600
                                   : FontWeight.w500)),
@@ -2733,8 +1980,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_clientType == null) return _buildClientTypeSelection();
-
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -2761,9 +2006,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     GestureDetector(
                       onTap: () {
                         if (_currentStep == 0) {
-                          _animationController.reset();
-                          setState(() => _clientType = null);
-                          _animationController.forward();
+                          Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const LoginScreen()));
                         } else {
                           _previousStep();
                         }
@@ -2800,7 +2046,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(20)),
-                      child: Text('${_currentStep + 1} / ${_steps.length}',
+                      child: Text(
+                          '${_currentStep + 1} / ${_steps.length}',
                           style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
