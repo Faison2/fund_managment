@@ -230,22 +230,22 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   final List<String> _currencies = ['TZS', 'USD', 'ZWL', 'EUR', 'GBP'];
 
   final List<Map<String, dynamic>> _steps = [
-    {'title': 'Personal Info', 'icon': Icons.person_outline_rounded},
+    {'title': 'Personal Info',  'icon': Icons.person_outline_rounded},
     {'title': 'Identification', 'icon': Icons.badge_outlined},
-    {'title': 'Address', 'icon': Icons.location_on_outlined},
-    {'title': 'Bank Details', 'icon': Icons.account_balance_outlined},
-    {'title': 'Investment', 'icon': Icons.trending_up_rounded},
-    {'title': 'Final Details', 'icon': Icons.checklist_rounded},
+    {'title': 'Address',        'icon': Icons.location_on_outlined},
+    {'title': 'Bank Details',   'icon': Icons.account_balance_outlined},
+    {'title': 'Investment',     'icon': Icons.trending_up_rounded},
+    {'title': 'Final Details',  'icon': Icons.checklist_rounded},
   ];
 
   // ─── Theme Colors ──────────────────────────────────────────────────────────
   static const Color _primaryGreen = Color(0xFF2DC98E);
-  static const Color _deepGreen = Color(0xFF1A9B6C);
-  static const Color _softMint = Color(0xFFE8FBF4);
-  static const Color _cardBg = Colors.white;
-  static const Color _textDark = Color(0xFF1A2332);
-  static const Color _textMuted = Color(0xFF8A9BB0);
-  static const Color _errorRed = Color(0xFFE53935);
+  static const Color _deepGreen    = Color(0xFF1A9B6C);
+  static const Color _softMint     = Color(0xFFE8FBF4);
+  static const Color _cardBg       = Colors.white;
+  static const Color _textDark     = Color(0xFF1A2332);
+  static const Color _textMuted    = Color(0xFF8A9BB0);
+  static const Color _errorRed     = Color(0xFFE53935);
 
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
   @override
@@ -256,7 +256,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
     _loadBanks();
@@ -355,6 +356,19 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     }
   }
 
+  // ─── Account Number Validator ──────────────────────────────────────────────
+  String? _validateAccountNumber(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return 'Account number is required';
+    if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(trimmed)) {
+      return 'Only letters and numbers are allowed';
+    }
+    if (trimmed.length < 8) {
+      return 'Account number must be at least 8 characters';
+    }
+    return null;
+  }
+
   Future<void> _selectDate(TextEditingController controller,
       {DateTime? firstDate, DateTime? lastDate}) async {
     final DateTime? picked = await showDatePicker(
@@ -417,7 +431,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: _textDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -466,6 +481,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         if (_occupationController.text.trim().isEmpty)
           newErrors['occupation'] = 'Occupation is required';
         break;
+
       case 1:
         if (_selectedNationality.isEmpty)
           newErrors['nationality'] = 'Please select your nationality';
@@ -476,6 +492,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           newErrors['issuingAuthority'] =
           'Please select an issuing authority';
         break;
+
       case 2:
         if (_selectedCountry.isEmpty)
           newErrors['country'] = 'Please select your country';
@@ -498,18 +515,25 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         if (_phoneController.text.trim().isEmpty)
           newErrors['phone'] = 'Phone number is required';
         break;
+
       case 3:
-        if (_accountNumberController.text.trim().isEmpty)
-          newErrors['accountNumber'] = 'Account number is required';
+      // ── Account number: alphanumeric + min 8 chars ─────────────────
+        final accountError =
+        _validateAccountNumber(_accountNumberController.text);
+        if (accountError != null) newErrors['accountNumber'] = accountError;
+
         if (_bankController.selectedBank == null)
           newErrors['bankName'] = 'Please select your bank';
         break;
+
       case 4:
         break;
+
       case 5:
         if (_selectedSourceOfFunds.isEmpty)
           newErrors['sourceOfFunds'] = 'Please select a source of funds';
-        if (_isPoliticallyExposed && _positionController.text.trim().isEmpty)
+        if (_isPoliticallyExposed &&
+            _positionController.text.trim().isEmpty)
           newErrors['position'] = 'Please specify the position held';
         break;
     }
@@ -579,8 +603,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         "InvestmentAccountType": _selectedAccountType,
         "InvestorType": "Individual",
         "Disclosure": _isPoliticallyExposed ? "Yes" : "No",
-        "PositionHeld":
-        _isPoliticallyExposed ? _positionController.text.trim() : "None",
+        "PositionHeld": _isPoliticallyExposed
+            ? _positionController.text.trim()
+            : "None",
         "BankType": _selectedBankType,
         "BankAccountNumber": _accountNumberController.text,
         "BankAccountName": _accountHolderNameController.text,
@@ -594,7 +619,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         "InvestmentPeriod": "Long Term",
         "RiskTolerance": "Medium",
         "Charge": "0",
-        // ── Selected Fund ──────────────────────────────────────────────────
         "FundCode": _selectedFund?.fundingCode ?? "",
         "FundName": _selectedFund?.fundingName ?? "",
       };
@@ -624,7 +648,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     }
   }
 
-  // ─── Simplified Success Dialog (no CDS number shown) ──────────────────────
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -635,7 +658,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24), color: Colors.white),
+              borderRadius: BorderRadius.circular(24),
+              color: Colors.white),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -659,8 +683,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               const Text(
                 "Your individual account has been created successfully. You can now log in to access your account.",
                 textAlign: TextAlign.center,
-                style:
-                TextStyle(color: _textMuted, fontSize: 14, height: 1.5),
+                style: TextStyle(
+                    color: _textMuted, fontSize: 14, height: 1.5),
               ),
               const SizedBox(height: 28),
               SizedBox(
@@ -719,15 +743,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           builder: (_, scrollCtrl) => Container(
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius:
+              BorderRadius.vertical(top: Radius.circular(24)),
             ),
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 40,
-                  height: 4,
+                  width: 40, height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                       color: Colors.grey[300],
@@ -749,15 +773,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       onChanged: (q) {
                         setModalState(() {
                           filtered = options
-                              .where((o) =>
-                              o.toLowerCase().contains(q.toLowerCase()))
+                              .where((o) => o
+                              .toLowerCase()
+                              .contains(q.toLowerCase()))
                               .toList();
                         });
                       },
                       decoration: InputDecoration(
                         hintText: 'Search...',
-                        hintStyle:
-                        TextStyle(color: Colors.grey[400], fontSize: 14),
+                        hintStyle: TextStyle(
+                            color: Colors.grey[400], fontSize: 14),
                         prefixIcon: Icon(Icons.search,
                             color: Colors.grey[400], size: 20),
                         border: InputBorder.none,
@@ -786,7 +811,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: selected ? _softMint : Colors.grey[50],
+                            color: selected
+                                ? _softMint
+                                : Colors.grey[50],
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: selected
@@ -838,7 +865,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         builder: (_, scrollCtrl) => Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius:
+            BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           child: Column(
@@ -846,8 +874,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             children: [
               Center(
                 child: Container(
-                  width: 40,
-                  height: 4,
+                  width: 40, height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                       color: Colors.grey[300],
@@ -867,7 +894,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 const Center(
                   child: Padding(
                     padding: EdgeInsets.all(32),
-                    child: CircularProgressIndicator(color: _primaryGreen),
+                    child: CircularProgressIndicator(
+                        color: _primaryGreen),
                   ),
                 )
               else if (_funds.isEmpty)
@@ -888,8 +916,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         },
                         icon: const Icon(Icons.refresh_rounded),
                         label: const Text('Retry'),
-                        style:
-                        TextButton.styleFrom(foregroundColor: _primaryGreen),
+                        style: TextButton.styleFrom(
+                            foregroundColor: _primaryGreen),
                       ),
                     ],
                   ),
@@ -928,14 +956,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Fund icon
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: selected
                                       ? _primaryGreen.withOpacity(0.15)
                                       : Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius:
+                                  BorderRadius.circular(10),
                                 ),
                                 child: Icon(
                                   Icons.account_balance_wallet_outlined,
@@ -951,30 +979,31 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                                   crossAxisAlignment:
                                   CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      fund.fundingName,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: selected
-                                            ? _primaryGreen
-                                            : _textDark,
-                                      ),
-                                    ),
+                                    Text(fund.fundingName,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: selected
+                                              ? _primaryGreen
+                                              : _textDark,
+                                        )),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      fund.description,
-                                      style: TextStyle(
-                                          fontSize: 13, color: _textMuted),
-                                    ),
+                                    Text(fund.description,
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            color: _textMuted)),
                                     const SizedBox(height: 6),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 3),
+                                      padding:
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3),
                                       decoration: BoxDecoration(
                                         color: fund.status == 'Accepted'
-                                            ? Colors.green.withOpacity(0.1)
-                                            : Colors.orange.withOpacity(0.1),
+                                            ? Colors.green
+                                            .withOpacity(0.1)
+                                            : Colors.orange
+                                            .withOpacity(0.1),
                                         borderRadius:
                                         BorderRadius.circular(6),
                                       ),
@@ -1025,14 +1054,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           builder: (_, scrollCtrl) => Container(
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius:
+              BorderRadius.vertical(top: Radius.circular(24)),
             ),
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               children: [
                 Container(
-                  width: 40,
-                  height: 4,
+                  width: 40, height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                       color: Colors.grey[300],
@@ -1061,8 +1090,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     },
                     decoration: InputDecoration(
                       hintText: 'Search bank...',
-                      hintStyle:
-                      TextStyle(color: Colors.grey[400], fontSize: 14),
+                      hintStyle: TextStyle(
+                          color: Colors.grey[400], fontSize: 14),
                       prefixIcon: Icon(Icons.search,
                           color: Colors.grey[400], size: 20),
                       border: InputBorder.none,
@@ -1083,12 +1112,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     itemBuilder: (_, i) {
                       final bank = filteredBanks[i];
                       final bool selected =
-                          _bankController.selectedBank == bank.bankName;
+                          _bankController.selectedBank ==
+                              bank.bankName;
                       return InkWell(
                         onTap: () {
                           setState(() {
-                            _bankController.selectBank(bank.bankName);
-                            _bankNameController.text = bank.bankName;
+                            _bankController
+                                .selectBank(bank.bankName);
+                            _bankNameController.text =
+                                bank.bankName;
                             _errors.remove('bankName');
                             try {
                               _swiftCodeController.text =
@@ -1101,14 +1133,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
+                          margin:
+                          const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
                             color: selected
                                 ? _softMint
                                 : Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius:
+                            BorderRadius.circular(12),
                             border: Border.all(
                               color: selected
                                   ? _primaryGreen
@@ -1129,8 +1163,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                                               ? _primaryGreen
                                               : _textDark))),
                               if (selected)
-                                const Icon(Icons.check_circle_rounded,
-                                    color: _primaryGreen, size: 20),
+                                const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: _primaryGreen,
+                                    size: 20),
                             ],
                           ),
                         ),
@@ -1152,27 +1188,19 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   Widget _buildCurrentStep() {
     switch (_currentStep) {
-      case 0:
-        return _buildPersonalInformationStep();
-      case 1:
-        return _buildIdentificationStep();
-      case 2:
-        return _buildAddressInformationStep();
-      case 3:
-        return _buildBankInformationStep();
-      case 4:
-        return _buildInvestmentMandateStep();
-      case 5:
-        return _buildFinalDetailsStep();
-      default:
-        return Container();
+      case 0:  return _buildPersonalInformationStep();
+      case 1:  return _buildIdentificationStep();
+      case 2:  return _buildAddressInformationStep();
+      case 3:  return _buildBankInformationStep();
+      case 4:  return _buildInvestmentMandateStep();
+      case 5:  return _buildFinalDetailsStep();
+      default: return Container();
     }
   }
 
   // ── Step 0: Personal Information ──────────────────────────────────────────
   Widget _buildPersonalInformationStep() {
     return _buildStepCard(children: [
-      // ── Fund Selection ─────────────────────────────────────────────────
       _buildSectionLabel('Select Fund'),
       _isLoadingFunds
           ? Container(
@@ -1182,14 +1210,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(
-                width: 18,
-                height: 18,
+                width: 18, height: 18,
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: _primaryGreen),
               ),
               SizedBox(width: 12),
               Text('Loading available funds...',
-                  style: TextStyle(color: _textMuted, fontSize: 14)),
+                  style:
+                  TextStyle(color: _textMuted, fontSize: 14)),
             ],
           ),
         ),
@@ -1204,12 +1232,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             const Icon(Icons.error_outline, size: 13, color: _errorRed),
             const SizedBox(width: 4),
             Text(_errors['fund']!,
-                style: const TextStyle(fontSize: 12, color: _errorRed)),
+                style:
+                const TextStyle(fontSize: 12, color: _errorRed)),
           ]),
         ),
       const SizedBox(height: 24),
-
-      // ── Title & Name ────────────────────────────────────────────────────
       _buildSectionLabel('Title & Name'),
       Row(children: [
         Expanded(
@@ -1226,8 +1253,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           child: _buildDropdownTile(
             label: 'Gender',
             value: _selectedGender,
-            onTap: () => _showDropdownPicker('Select Gender', _genders,
-                _selectedGender, (v) => setState(() => _selectedGender = v)),
+            onTap: () => _showDropdownPicker(
+                'Select Gender',
+                _genders,
+                _selectedGender,
+                    (v) => setState(() => _selectedGender = v)),
           ),
         ),
       ]),
@@ -1238,7 +1268,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.person_outline_rounded,
           required: true,
           errorText: _errors['firstName'],
-          onChanged: (_) => setState(() => _errors.remove('firstName'))),
+          onChanged: (_) =>
+              setState(() => _errors.remove('firstName'))),
       const SizedBox(height: 14),
       _buildInputField(
           controller: _middleNameController,
@@ -1251,7 +1282,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.person_outline_rounded,
           required: true,
           errorText: _errors['lastName'],
-          onChanged: (_) => setState(() => _errors.remove('lastName'))),
+          onChanged: (_) =>
+              setState(() => _errors.remove('lastName'))),
       const SizedBox(height: 20),
       _buildSectionLabel('Personal Details'),
       _buildDateField(
@@ -1273,7 +1305,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.work_outline_rounded,
           required: true,
           errorText: _errors['occupation'],
-          onChanged: (_) => setState(() => _errors.remove('occupation'))),
+          onChanged: (_) =>
+              setState(() => _errors.remove('occupation'))),
     ]);
   }
 
@@ -1282,7 +1315,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       onTap: _showFundPicker,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        padding:
+        const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         decoration: BoxDecoration(
           color: _softMint,
           borderRadius: BorderRadius.circular(16),
@@ -1318,12 +1352,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     _funds.isEmpty
                         ? 'Tap to load and select a fund'
                         : 'Tap to browse ${_funds.length} available fund${_funds.length != 1 ? 's' : ''}',
-                    style: TextStyle(fontSize: 13, color: _textMuted),
+                    style:
+                    TextStyle(fontSize: 13, color: _textMuted),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: _primaryGreen),
+            const Icon(Icons.chevron_right_rounded,
+                color: _primaryGreen),
           ],
         ),
       ),
@@ -1339,7 +1375,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         decoration: BoxDecoration(
           color: _softMint,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _primaryGreen.withOpacity(0.5), width: 1.5),
+          border: Border.all(
+              color: _primaryGreen.withOpacity(0.5), width: 1.5),
           boxShadow: [
             BoxShadow(
                 color: _primaryGreen.withOpacity(0.08),
@@ -1370,7 +1407,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           color: _primaryGreen)),
                   const SizedBox(height: 4),
                   Text(fund.description,
-                      style: TextStyle(fontSize: 13, color: _textMuted)),
+                      style:
+                      TextStyle(fontSize: 13, color: _textMuted)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -1396,8 +1434,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       ),
                       const SizedBox(width: 8),
                       Text('Code: ${fund.fundingCode}',
-                          style:
-                          TextStyle(fontSize: 11, color: _textMuted)),
+                          style: TextStyle(
+                              fontSize: 11, color: _textMuted)),
                     ],
                   ),
                 ],
@@ -1432,7 +1470,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             ? 'Select nationality'
             : _selectedNationality,
         onTap: () => _showDropdownPicker(
-            'Select Nationality', _nationalities, _selectedNationality,
+            'Select Nationality',
+            _nationalities,
+            _selectedNationality,
                 (v) => setState(() {
               _selectedNationality = v;
               _selectedIssuingAuthority = '';
@@ -1446,8 +1486,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _buildDropdownTile(
         label: 'Identification Type',
         value: _selectedIdType,
-        onTap: () => _showDropdownPicker('Select ID Type',
-            _identificationTypes, _selectedIdType,
+        onTap: () => _showDropdownPicker(
+            'Select ID Type',
+            _identificationTypes,
+            _selectedIdType,
                 (v) => setState(() => _selectedIdType = v)),
       ),
       const SizedBox(height: 14),
@@ -1457,7 +1499,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.numbers_rounded,
           required: true,
           errorText: _errors['idNumber'],
-          onChanged: (_) => setState(() => _errors.remove('idNumber'))),
+          onChanged: (_) =>
+              setState(() => _errors.remove('idNumber'))),
       const SizedBox(height: 14),
       _buildDateField(
           controller: _validityDateController,
@@ -1471,8 +1514,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           value: _selectedIssuingAuthority.isEmpty
               ? 'Select authority'
               : _selectedIssuingAuthority,
-          onTap: () => _showDropdownPicker('Select Issuing Authority',
-              _tzIssuingAuthorities, _selectedIssuingAuthority,
+          onTap: () => _showDropdownPicker(
+              'Select Issuing Authority',
+              _tzIssuingAuthorities,
+              _selectedIssuingAuthority,
                   (v) => setState(() {
                 _selectedIssuingAuthority = v;
                 _errors.remove('issuingAuthority');
@@ -1539,7 +1584,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _primaryGreen.withOpacity(0.5), width: 1.5),
+        border:
+        Border.all(color: _primaryGreen.withOpacity(0.5), width: 1.5),
         boxShadow: [
           BoxShadow(
               color: _primaryGreen.withOpacity(0.08),
@@ -1554,10 +1600,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               borderRadius:
               const BorderRadius.vertical(top: Radius.circular(14)),
               child: Image.file(_idFile!,
-                  width: double.infinity, height: 180, fit: BoxFit.cover),
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover),
             ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Container(
@@ -1572,7 +1621,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       isImage
                           ? Icons.image_rounded
                           : Icons.picture_as_pdf_rounded,
-                      color: isImage ? Colors.blue : Colors.red[700],
+                      color:
+                      isImage ? Colors.blue : Colors.red[700],
                       size: 22),
                 ),
                 const SizedBox(width: 12),
@@ -1582,10 +1632,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     children: [
                       Text(_idFileName ?? 'Uploaded file',
                           style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w500),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
                           overflow: TextOverflow.ellipsis),
                       Text('Document uploaded',
-                          style: TextStyle(fontSize: 12, color: _textMuted)),
+                          style: TextStyle(
+                              fontSize: 12, color: _textMuted)),
                     ],
                   ),
                 ),
@@ -1602,7 +1654,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             onPressed: _pickIdFile,
             icon: const Icon(Icons.swap_horiz_rounded, size: 18),
             label: const Text('Replace file'),
-            style: TextButton.styleFrom(foregroundColor: _primaryGreen),
+            style:
+            TextButton.styleFrom(foregroundColor: _primaryGreen),
           ),
         ],
       ),
@@ -1616,9 +1669,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _buildSectionLabel('Location'),
       _buildDropdownTile(
         label: 'Country *',
-        value: _selectedCountry.isEmpty ? 'Select country' : _selectedCountry,
+        value: _selectedCountry.isEmpty
+            ? 'Select country'
+            : _selectedCountry,
         onTap: () => _showDropdownPicker(
-            'Select Country', _countries, _selectedCountry,
+            'Select Country',
+            _countries,
+            _selectedCountry,
                 (v) => setState(() {
               _selectedCountry = v;
               _selectedRegion = '';
@@ -1633,10 +1690,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       if (isTanzania) ...[
         _buildDropdownTile(
           label: 'Region *',
-          value:
-          _selectedRegion.isEmpty ? 'Select region' : _selectedRegion,
+          value: _selectedRegion.isEmpty
+              ? 'Select region'
+              : _selectedRegion,
           onTap: () => _showDropdownPicker(
-              'Select Region', _tanzaniaRegions, _selectedRegion,
+              'Select Region',
+              _tanzaniaRegions,
+              _selectedRegion,
                   (v) => setState(() {
                 _selectedRegion = v;
                 _selectedDistrict = '';
@@ -1673,7 +1733,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             icon: Icons.location_on_outlined,
             required: true,
             errorText: _errors['ward'],
-            onChanged: (_) => setState(() => _errors.remove('ward'))),
+            onChanged: (_) =>
+                setState(() => _errors.remove('ward'))),
         const SizedBox(height: 14),
         _buildInputField(
             controller: _houseNumberController,
@@ -1701,7 +1762,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             maxLines: 2,
             required: true,
             errorText: _errors['address'],
-            onChanged: (_) => setState(() => _errors.remove('address'))),
+            onChanged: (_) =>
+                setState(() => _errors.remove('address'))),
       ],
       const SizedBox(height: 20),
       _buildSectionLabel('Contact Details'),
@@ -1712,7 +1774,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           keyboardType: TextInputType.emailAddress,
           required: true,
           errorText: _errors['email'],
-          onChanged: (_) => setState(() => _errors.remove('email'))),
+          onChanged: (_) =>
+              setState(() => _errors.remove('email'))),
       const SizedBox(height: 14),
       _buildInputField(
           controller: _phoneController,
@@ -1721,7 +1784,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           keyboardType: TextInputType.phone,
           required: true,
           errorText: _errors['phone'],
-          onChanged: (_) => setState(() => _errors.remove('phone'))),
+          onChanged: (_) =>
+              setState(() => _errors.remove('phone'))),
     ]);
   }
 
@@ -1732,19 +1796,38 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _buildDropdownTile(
         label: 'Bank Type',
         value: _selectedBankType,
-        onTap: () => _showDropdownPicker('Select Bank Type', _bankTypes,
-            _selectedBankType, (v) => setState(() => _selectedBankType = v)),
+        onTap: () => _showDropdownPicker(
+            'Select Bank Type',
+            _bankTypes,
+            _selectedBankType,
+                (v) => setState(() => _selectedBankType = v)),
       ),
       const SizedBox(height: 14),
+
+      // ── Account Number: alphanumeric, min 8 chars ──────────────────────
       _buildInputField(
           controller: _accountNumberController,
           label: 'Account Number',
           icon: Icons.credit_card_rounded,
-          keyboardType: TextInputType.number,
+          keyboardType: TextInputType.text,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(
+                RegExp(r'[a-zA-Z0-9]')), // blocks special chars & spaces
+            LengthLimitingTextInputFormatter(20),
+          ],
           required: true,
           errorText: _errors['accountNumber'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('accountNumber'))),
+          onChanged: (val) {
+            setState(() {
+              final error = _validateAccountNumber(val);
+              if (error != null) {
+                _errors['accountNumber'] = error;
+              } else {
+                _errors.remove('accountNumber');
+              }
+            });
+          }),
+
       const SizedBox(height: 14),
       _buildInputField(
           controller: _accountHolderNameController,
@@ -1755,7 +1838,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       GestureDetector(
         onTap: _showBankSearchPicker,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          padding: const EdgeInsets.symmetric(
+              horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: _cardBg,
             borderRadius: BorderRadius.circular(14),
@@ -1779,7 +1863,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Bank Name *',
-                        style: TextStyle(fontSize: 12, color: _textMuted)),
+                        style: TextStyle(
+                            fontSize: 12, color: _textMuted)),
                     const SizedBox(height: 4),
                     Text(
                       _bankController.selectedBank ??
@@ -1791,7 +1876,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           color: _bankController.selectedBank != null
                               ? _textDark
                               : _textMuted,
-                          fontWeight: _bankController.selectedBank != null
+                          fontWeight:
+                          _bankController.selectedBank != null
                               ? FontWeight.w500
                               : FontWeight.normal),
                     ),
@@ -1807,7 +1893,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         Padding(
           padding: const EdgeInsets.only(top: 4, left: 4),
           child: Text(_errors['bankName']!,
-              style: const TextStyle(color: _errorRed, fontSize: 12)),
+              style: const TextStyle(
+                  color: _errorRed, fontSize: 12)),
         ),
       const SizedBox(height: 14),
       _buildInputField(
@@ -1835,7 +1922,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _buildDropdownTile(
         label: 'Currency',
         value: _selectedAmountCurrency,
-        onTap: () => _showDropdownPicker('Select Currency', _currencies,
+        onTap: () => _showDropdownPicker(
+            'Select Currency',
+            _currencies,
             _selectedAmountCurrency,
                 (v) => setState(() => _selectedAmountCurrency = v)),
       ),
@@ -1848,7 +1937,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: selected ? _softMint : Colors.white,
               borderRadius: BorderRadius.circular(14),
@@ -1870,14 +1960,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: 22,
-                  height: 22,
+                  width: 22, height: 22,
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected ? _primaryGreen : Colors.transparent,
+                      color: selected
+                          ? _primaryGreen
+                          : Colors.transparent,
                       border: Border.all(
-                          color:
-                          selected ? _primaryGreen : Colors.grey[400]!,
+                          color: selected
+                              ? _primaryGreen
+                              : Colors.grey[400]!,
                           width: 2)),
                   child: selected
                       ? const Icon(Icons.check_rounded,
@@ -1888,9 +1980,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 Text(type,
                     style: TextStyle(
                         fontSize: 15,
-                        fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
-                        color: selected ? _primaryGreen : _textDark)),
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color:
+                        selected ? _primaryGreen : _textDark)),
               ],
             ),
           ),
@@ -1901,11 +1995,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       ..._paymentMethods.map((method) {
         final bool selected = _selectedPaymentMethod == method;
         return GestureDetector(
-          onTap: () => setState(() => _selectedPaymentMethod = method),
+          onTap: () =>
+              setState(() => _selectedPaymentMethod = method),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: selected ? _softMint : Colors.white,
               borderRadius: BorderRadius.circular(14),
@@ -1927,14 +2023,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: 22,
-                  height: 22,
+                  width: 22, height: 22,
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected ? _primaryGreen : Colors.transparent,
+                      color: selected
+                          ? _primaryGreen
+                          : Colors.transparent,
                       border: Border.all(
-                          color:
-                          selected ? _primaryGreen : Colors.grey[400]!,
+                          color: selected
+                              ? _primaryGreen
+                              : Colors.grey[400]!,
                           width: 2)),
                   child: selected
                       ? const Icon(Icons.check_rounded,
@@ -1945,9 +2043,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 Text(method,
                     style: TextStyle(
                         fontSize: 15,
-                        fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
-                        color: selected ? _primaryGreen : _textDark)),
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color:
+                        selected ? _primaryGreen : _textDark)),
               ],
             ),
           ),
@@ -1973,7 +2073,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             ? 'Select source'
             : _selectedSourceOfFunds,
         onTap: () => _showDropdownPicker(
-            'Source of Funds', _sourcesOfFunds, _selectedSourceOfFunds,
+            'Source of Funds',
+            _sourcesOfFunds,
+            _selectedSourceOfFunds,
                 (v) => setState(() {
               _selectedSourceOfFunds = v;
               _fundsSourceController.text = v;
@@ -1989,7 +2091,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         decoration: BoxDecoration(
           color: Colors.orange.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
+          border: Border.all(
+              color: Colors.orange.withOpacity(0.2), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2001,19 +2104,22 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               const Expanded(
                   child: Text('Politically Exposed Person (PEP)',
                       style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14))),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14))),
             ]),
             const SizedBox(height: 10),
             Text(
               'Are you or any immediate family member related to a senior government official, military officer (general+), president of a state-owned company, head of a government agency, supreme court judge, or political party representative?',
-              style: TextStyle(fontSize: 12, color: _textMuted, height: 1.5),
+              style: TextStyle(
+                  fontSize: 12, color: _textMuted, height: 1.5),
             ),
             const SizedBox(height: 14),
             Row(children: [
               _buildToggleOption(
                   label: 'Yes',
                   selected: _isPoliticallyExposed,
-                  onTap: () => setState(() => _isPoliticallyExposed = true)),
+                  onTap: () =>
+                      setState(() => _isPoliticallyExposed = true)),
               const SizedBox(width: 12),
               _buildToggleOption(
                   label: 'No',
@@ -2038,10 +2144,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     ]);
   }
 
-  Widget _buildToggleOption(
-      {required String label,
-        required bool selected,
-        required VoidCallback onTap}) {
+  Widget _buildToggleOption({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -2052,8 +2159,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             color: selected ? _primaryGreen : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-                color:
-                selected ? _primaryGreen : Colors.grey.withOpacity(0.3)),
+                color: selected
+                    ? _primaryGreen
+                    : Colors.grey.withOpacity(0.3)),
           ),
           child: Text(label,
               textAlign: TextAlign.center,
@@ -2070,22 +2178,22 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   //  SHARED UI HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildStepCard({required List<Widget> children}) => FadeTransition(
-    opacity: _fadeAnimation,
-    child: Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: children),
-    ),
-  );
+  Widget _buildStepCard({required List<Widget> children}) =>
+      FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children),
+        ),
+      );
 
   Widget _buildSectionLabel(String label) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(children: [
       Container(
-          width: 3,
-          height: 16,
+          width: 3, height: 16,
           decoration: BoxDecoration(
               color: _primaryGreen,
               borderRadius: BorderRadius.circular(2))),
@@ -2099,11 +2207,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     ]),
   );
 
+  // ── Updated _buildInputField with inputFormatters support ─────────────────
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
     IconData? icon,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters, // ← new
     bool enabled = true,
     int maxLines = 1,
     bool required = false,
@@ -2132,6 +2242,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters, // ← wired in
             enabled: enabled,
             maxLines: maxLines,
             onChanged: onChanged,
@@ -2139,10 +2250,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             decoration: InputDecoration(
               labelText: required ? '$label *' : label,
               labelStyle: TextStyle(
-                  color: hasError ? _errorRed : _textMuted, fontSize: 14),
+                  color: hasError ? _errorRed : _textMuted,
+                  fontSize: 14),
               prefixIcon: icon != null
                   ? Icon(icon,
-                  color: hasError ? _errorRed : _primaryGreen, size: 20)
+                  color: hasError ? _errorRed : _primaryGreen,
+                  size: 20)
                   : null,
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(
@@ -2155,10 +2268,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
             child: Row(children: [
-              const Icon(Icons.error_outline, size: 13, color: _errorRed),
+              const Icon(Icons.error_outline,
+                  size: 13, color: _errorRed),
               const SizedBox(width: 4),
               Text(errorText,
-                  style: const TextStyle(fontSize: 12, color: _errorRed)),
+                  style: const TextStyle(
+                      fontSize: 12, color: _errorRed)),
             ]),
           ),
       ],
@@ -2188,18 +2303,19 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
-            formatter
+            formatter,
           ],
           style: const TextStyle(fontSize: 15, color: _textDark),
           decoration: InputDecoration(
             labelText: label,
-            labelStyle: TextStyle(color: _textMuted, fontSize: 14),
+            labelStyle:
+            TextStyle(color: _textMuted, fontSize: 14),
             prefixIcon: icon != null
                 ? Icon(icon, color: _primaryGreen, size: 20)
                 : null,
             border: InputBorder.none,
-            contentPadding:
-            const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 4, vertical: 16),
           ),
         ),
       );
@@ -2244,14 +2360,18 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               decoration: InputDecoration(
                 labelText: required ? '$label *' : label,
                 labelStyle: TextStyle(
-                    color: hasError ? _errorRed : _textMuted, fontSize: 14),
+                    color: hasError ? _errorRed : _textMuted,
+                    fontSize: 14),
                 prefixIcon: Icon(Icons.calendar_today_outlined,
-                    color: hasError ? _errorRed : _primaryGreen, size: 20),
-                suffixIcon: const Icon(Icons.arrow_forward_ios_rounded,
-                    color: _textMuted, size: 14),
+                    color: hasError ? _errorRed : _primaryGreen,
+                    size: 20),
+                suffixIcon: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: _textMuted,
+                    size: 14),
                 border: InputBorder.none,
-                contentPadding:
-                const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 4, vertical: 16),
                 disabledBorder: InputBorder.none,
               ),
             ),
@@ -2261,10 +2381,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
             child: Row(children: [
-              const Icon(Icons.error_outline, size: 13, color: _errorRed),
+              const Icon(Icons.error_outline,
+                  size: 13, color: _errorRed),
               const SizedBox(width: 4),
               Text(errorText,
-                  style: const TextStyle(fontSize: 12, color: _errorRed)),
+                  style: const TextStyle(
+                      fontSize: 12, color: _errorRed)),
             ]),
           ),
       ],
@@ -2286,8 +2408,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               color: highlighted ? _softMint : _cardBg,
               borderRadius: BorderRadius.circular(14),
@@ -2295,7 +2417,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   ? Border.all(color: _errorRed, width: 1.5)
                   : highlighted
                   ? Border.all(
-                  color: _primaryGreen.withOpacity(0.4), width: 1)
+                  color: _primaryGreen.withOpacity(0.4),
+                  width: 1)
                   : null,
               boxShadow: [
                 BoxShadow(
@@ -2313,13 +2436,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       Text(label,
                           style: TextStyle(
                               fontSize: 12,
-                              color: hasError ? _errorRed : _textMuted)),
+                              color: hasError
+                                  ? _errorRed
+                                  : _textMuted)),
                       const SizedBox(height: 4),
                       Text(value,
                           style: TextStyle(
                               fontSize: 15,
-                              color:
-                              highlighted ? _primaryGreen : _textDark,
+                              color: highlighted
+                                  ? _primaryGreen
+                                  : _textDark,
                               fontWeight: highlighted
                                   ? FontWeight.w600
                                   : FontWeight.w500)),
@@ -2336,10 +2462,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
             child: Row(children: [
-              const Icon(Icons.error_outline, size: 13, color: _errorRed),
+              const Icon(Icons.error_outline,
+                  size: 13, color: _errorRed),
               const SizedBox(width: 4),
               Text(errorText,
-                  style: const TextStyle(fontSize: 12, color: _errorRed)),
+                  style: const TextStyle(
+                      fontSize: 12, color: _errorRed)),
             ]),
           ),
       ],
@@ -2370,8 +2498,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isCompleted
                     ? _primaryGreen
@@ -2438,14 +2566,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             colors: [
               Color(0xFF7FFFD4),
               Color(0xFF98FB98),
-              Color(0xFFAFEEEE)
+              Color(0xFFAFEEEE),
             ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // ── Header ────────────────────────────────────────────────
+              // ── Header ──────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 child: Row(
@@ -2456,7 +2584,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const LoginScreen()));
+                                  builder: (_) =>
+                                  const LoginScreen()));
                         } else {
                           _previousStep();
                         }
@@ -2467,8 +2596,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           color: Colors.white.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: _textDark, size: 18),
+                        child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: _textDark,
+                            size: 18),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -2481,9 +2612,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                   color: _textDark)),
-                          Text(_steps[_currentStep]['title'] as String,
+                          Text(
+                              _steps[_currentStep]['title']
+                              as String,
                               style: TextStyle(
-                                  fontSize: 13, color: Colors.grey[600])),
+                                  fontSize: 13,
+                                  color: Colors.grey[600])),
                         ],
                       ),
                     ),
@@ -2504,16 +2638,18 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 ),
               ),
 
-              // ── Progress bar ──────────────────────────────────────────
+              // ── Progress bar ─────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 20),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: (_currentStep + 1) / _steps.length,
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    valueColor:
-                    const AlwaysStoppedAnimation<Color>(_deepGreen),
+                    backgroundColor:
+                    Colors.white.withOpacity(0.3),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        _deepGreen),
                     minHeight: 5,
                   ),
                 ),
@@ -2522,21 +2658,23 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               _buildStepIndicator(),
               const SizedBox(height: 4),
 
-              // ── Form content ──────────────────────────────────────────
+              // ── Form content ─────────────────────────────────────────
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  padding:
+                  const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: _buildCurrentStep(),
                 ),
               ),
 
-              // ── Navigation buttons ────────────────────────────────────
+              // ── Navigation buttons ───────────────────────────────────
               Container(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                padding:
+                const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
-                  borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20)),
                 ),
                 child: Row(
                   children: [
@@ -2549,9 +2687,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                             side: const BorderSide(
                                 color: _primaryGreen, width: 1.5),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 16),
+                                borderRadius:
+                                BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 16),
                             backgroundColor:
                             Colors.white.withOpacity(0.5),
                           ),
@@ -2567,26 +2706,27 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     Expanded(
                       flex: 2,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _nextStep,
+                        onPressed:
+                        _isLoading ? null : _nextStep,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _primaryGreen,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                          padding:
-                          const EdgeInsets.symmetric(vertical: 16),
+                              borderRadius:
+                              BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 16),
                           elevation: 0,
                         ),
                         child: _isLoading
                             ? const SizedBox(
-                          height: 20,
-                          width: 20,
+                          height: 20, width: 20,
                           child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.5),
+                              color: Colors.white,
+                              strokeWidth: 2.5),
                         )
                             : Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                                 _currentStep == _steps.length - 1

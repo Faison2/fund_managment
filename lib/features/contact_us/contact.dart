@@ -619,6 +619,13 @@ class _ContactUsPageState extends State<ContactUsPage>
           ),
           _line(),
           _hoursRow(
+            day: _sw ? 'Jumamosi' : 'Saturday',
+            hours: _sw ? 'Imefungwa' : 'Closed',
+            isToday: weekday == 7,
+            closed: true,
+          ),
+          _line(),
+          _hoursRow(
             day: _sw ? 'Jumapili' : 'Sunday',
             hours: _sw ? 'Imefungwa' : 'Closed',
             isToday: weekday == 7,
