@@ -33,6 +33,28 @@ class _ThousandsInputFormatter extends TextInputFormatter {
   }
 }
 
+// ─── Fund Model ───────────────────────────────────────────────────────────────
+class FundOption {
+  final String fundingCode;
+  final String fundingName;
+  final String description;
+  final String status;
+
+  FundOption({
+    required this.fundingCode,
+    required this.fundingName,
+    required this.description,
+    required this.status,
+  });
+
+  factory FundOption.fromJson(Map<String, dynamic> json) => FundOption(
+    fundingCode: json['fundingCode'] ?? '',
+    fundingName: json['fundingName'] ?? '',
+    description: json['description'] ?? '',
+    status: json['status'] ?? '',
+  );
+}
+
 class IndividualAccountScreen extends StatefulWidget {
   const IndividualAccountScreen({Key? key}) : super(key: key);
 
@@ -46,6 +68,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   final BankController _bankController = BankController();
   final String _apiUrl = "$cSharpApi/CreateAccount";
   final String _getBanksUrl = "$cSharpApi/GetBanks";
+  final String _getFundsUrl =
+      "https://portaluat.tsl.co.tz/FMSAPI/Home/GetFunds";
   final String _apiUsername = "User2";
   final String _apiPassword = "CBZ1234#2";
 
@@ -115,6 +139,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   String _selectedRegion = '';
   String _selectedDistrict = '';
   String _selectedSourceOfFunds = '';
+
+  // ─── Fund State ────────────────────────────────────────────────────────────
+  List<FundOption> _funds = [];
+  FundOption? _selectedFund;
+  bool _isLoadingFunds = false;
 
   final Map<String, String?> _errors = {};
 
@@ -231,6 +260,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     );
     _animationController.forward();
     _loadBanks();
+    _loadFunds();
   }
 
   @override
@@ -293,6 +323,35 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _showSnackBar('Failed to load banks. Please try again.');
     } finally {
       setState(() => _bankController.isLoading = false);
+    }
+  }
+
+  // ─── Load Funds ────────────────────────────────────────────────────────────
+  Future<void> _loadFunds() async {
+    setState(() => _isLoadingFunds = true);
+    try {
+      final response = await http.post(
+        Uri.parse(_getFundsUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          "APIUsername": _apiUsername,
+          "APIPassword": _apiPassword,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success' && data['data'] != null) {
+          setState(() {
+            _funds = (data['data'] as List)
+                .map((f) => FundOption.fromJson(f))
+                .toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to load funds: $e');
+    } finally {
+      setState(() => _isLoadingFunds = false);
     }
   }
 
@@ -396,6 +455,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
     switch (_currentStep) {
       case 0:
+        if (_selectedFund == null)
+          newErrors['fund'] = 'Please select a fund to proceed';
         if (_firstNameController.text.trim().isEmpty)
           newErrors['firstName'] = 'First name is required';
         if (_lastNameController.text.trim().isEmpty)
@@ -533,6 +594,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         "InvestmentPeriod": "Long Term",
         "RiskTolerance": "Medium",
         "Charge": "0",
+        // ── Selected Fund ──────────────────────────────────────────────────
+        "FundCode": _selectedFund?.fundingCode ?? "",
+        "FundName": _selectedFund?.fundingName ?? "",
       };
 
       final response = await http.post(
@@ -544,8 +608,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         if (responseData['status'] == 200) {
-          setState(() => _cdsNumber = responseData['data']['CDSNumber']);
-          if (_cdsNumber != null) await _saveCDSNumber(_cdsNumber!);
+          final cds = responseData['data']?['CDSNumber'];
+          if (cds != null) await _saveCDSNumber(cds);
           _showSuccessDialog();
         } else {
           _showSnackBar('Error: ${responseData['statusDesc']}');
@@ -560,6 +624,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     }
   }
 
+  // ─── Simplified Success Dialog (no CDS number shown) ──────────────────────
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -582,46 +647,22 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     color: _primaryGreen, size: 48),
               ),
               const SizedBox(height: 20),
-              const Text("Application Submitted!",
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: _textDark)),
+              const Text(
+                "Account Successfully Created!",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: _textDark),
+              ),
               const SizedBox(height: 12),
               const Text(
-                "Your individual account application has been submitted successfully.",
+                "Your individual account has been created successfully. You can now log in to access your account.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _textMuted, fontSize: 14, height: 1.5),
+                style:
+                TextStyle(color: _textMuted, fontSize: 14, height: 1.5),
               ),
-              if (_cdsNumber != null) ...[
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: _softMint,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: _primaryGreen.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text("CDS Number",
-                          style: TextStyle(color: _textMuted, fontSize: 13)),
-                      const SizedBox(height: 6),
-                      Text(_cdsNumber!,
-                          style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: _primaryGreen,
-                              letterSpacing: 1.5)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text("Save this number for future reference.",
-                    style: TextStyle(fontSize: 12, color: _textMuted)),
-              ],
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -784,6 +825,190 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     );
   }
 
+  // ─── Fund Picker Bottom Sheet ──────────────────────────────────────────────
+  void _showFundPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        maxChildSize: 0.85,
+        minChildSize: 0.4,
+        builder: (_, scrollCtrl) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const Text('Select Fund',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: _textDark)),
+              const SizedBox(height: 4),
+              Text('Choose the fund you wish to invest in',
+                  style: TextStyle(fontSize: 13, color: _textMuted)),
+              const SizedBox(height: 16),
+              if (_isLoadingFunds)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(color: _primaryGreen),
+                  ),
+                )
+              else if (_funds.isEmpty)
+                Center(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 24),
+                      Icon(Icons.inbox_outlined,
+                          size: 48, color: Colors.grey[300]),
+                      const SizedBox(height: 12),
+                      Text('No funds available',
+                          style: TextStyle(color: _textMuted)),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _loadFunds();
+                        },
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Retry'),
+                        style:
+                        TextButton.styleFrom(foregroundColor: _primaryGreen),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    controller: scrollCtrl,
+                    itemCount: _funds.length,
+                    itemBuilder: (_, i) {
+                      final fund = _funds[i];
+                      final bool selected =
+                          _selectedFund?.fundingCode == fund.fundingCode;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedFund = fund;
+                            _errors.remove('fund');
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: selected ? _softMint : Colors.grey[50],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: selected
+                                  ? _primaryGreen
+                                  : Colors.transparent,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Fund icon
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? _primaryGreen.withOpacity(0.15)
+                                      : Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.account_balance_wallet_outlined,
+                                  color: selected
+                                      ? _primaryGreen
+                                      : _textMuted,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      fund.fundingName,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: selected
+                                            ? _primaryGreen
+                                            : _textDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      fund.description,
+                                      style: TextStyle(
+                                          fontSize: 13, color: _textMuted),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: fund.status == 'Accepted'
+                                            ? Colors.green.withOpacity(0.1)
+                                            : Colors.orange.withOpacity(0.1),
+                                        borderRadius:
+                                        BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        fund.status,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: fund.status == 'Accepted'
+                                              ? Colors.green[700]
+                                              : Colors.orange[700],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (selected)
+                                const Icon(Icons.check_circle_rounded,
+                                    color: _primaryGreen, size: 22),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showBankSearchPicker() {
     final TextEditingController searchCtrl = TextEditingController();
     List filteredBanks = List.from(_bankController.banks);
@@ -927,19 +1152,64 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   Widget _buildCurrentStep() {
     switch (_currentStep) {
-      case 0: return _buildPersonalInformationStep();
-      case 1: return _buildIdentificationStep();
-      case 2: return _buildAddressInformationStep();
-      case 3: return _buildBankInformationStep();
-      case 4: return _buildInvestmentMandateStep();
-      case 5: return _buildFinalDetailsStep();
-      default: return Container();
+      case 0:
+        return _buildPersonalInformationStep();
+      case 1:
+        return _buildIdentificationStep();
+      case 2:
+        return _buildAddressInformationStep();
+      case 3:
+        return _buildBankInformationStep();
+      case 4:
+        return _buildInvestmentMandateStep();
+      case 5:
+        return _buildFinalDetailsStep();
+      default:
+        return Container();
     }
   }
 
   // ── Step 0: Personal Information ──────────────────────────────────────────
   Widget _buildPersonalInformationStep() {
     return _buildStepCard(children: [
+      // ── Fund Selection ─────────────────────────────────────────────────
+      _buildSectionLabel('Select Fund'),
+      _isLoadingFunds
+          ? Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: const Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: _primaryGreen),
+              ),
+              SizedBox(width: 12),
+              Text('Loading available funds...',
+                  style: TextStyle(color: _textMuted, fontSize: 14)),
+            ],
+          ),
+        ),
+      )
+          : _selectedFund == null
+          ? _buildFundEmptyState()
+          : _buildSelectedFundCard(),
+      if (_errors['fund'] != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 6, left: 4),
+          child: Row(children: [
+            const Icon(Icons.error_outline, size: 13, color: _errorRed),
+            const SizedBox(width: 4),
+            Text(_errors['fund']!,
+                style: const TextStyle(fontSize: 12, color: _errorRed)),
+          ]),
+        ),
+      const SizedBox(height: 24),
+
+      // ── Title & Name ────────────────────────────────────────────────────
       _buildSectionLabel('Title & Name'),
       Row(children: [
         Expanded(
@@ -963,38 +1233,192 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       ]),
       const SizedBox(height: 14),
       _buildInputField(
-          controller: _firstNameController, label: 'First Name',
-          icon: Icons.person_outline_rounded, required: true,
+          controller: _firstNameController,
+          label: 'First Name',
+          icon: Icons.person_outline_rounded,
+          required: true,
           errorText: _errors['firstName'],
           onChanged: (_) => setState(() => _errors.remove('firstName'))),
       const SizedBox(height: 14),
       _buildInputField(
-          controller: _middleNameController, label: 'Middle Name',
+          controller: _middleNameController,
+          label: 'Middle Name',
           icon: Icons.person_outline_rounded),
       const SizedBox(height: 14),
       _buildInputField(
-          controller: _lastNameController, label: 'Last Name (Surname)',
-          icon: Icons.person_outline_rounded, required: true,
+          controller: _lastNameController,
+          label: 'Last Name (Surname)',
+          icon: Icons.person_outline_rounded,
+          required: true,
           errorText: _errors['lastName'],
           onChanged: (_) => setState(() => _errors.remove('lastName'))),
       const SizedBox(height: 20),
       _buildSectionLabel('Personal Details'),
       _buildDateField(
-          controller: _dateOfBirthController, label: 'Date of Birth',
-          firstDate: DateTime(1900), lastDate: DateTime.now(),
-          required: true, errorText: _errors['dob']),
+          controller: _dateOfBirthController,
+          label: 'Date of Birth',
+          firstDate: DateTime(1900),
+          lastDate: DateTime.now(),
+          required: true,
+          errorText: _errors['dob']),
       const SizedBox(height: 14),
       _buildInputField(
-          controller: _placeOfBirthController, label: 'Place of Birth',
+          controller: _placeOfBirthController,
+          label: 'Place of Birth',
           icon: Icons.location_city_rounded),
       const SizedBox(height: 14),
       _buildInputField(
           controller: _occupationController,
           label: 'Occupation / Objective',
-          icon: Icons.work_outline_rounded, required: true,
+          icon: Icons.work_outline_rounded,
+          required: true,
           errorText: _errors['occupation'],
           onChanged: (_) => setState(() => _errors.remove('occupation'))),
     ]);
+  }
+
+  Widget _buildFundEmptyState() {
+    return GestureDetector(
+      onTap: _showFundPicker,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          color: _softMint,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _errors['fund'] != null
+                ? _errorRed
+                : _primaryGreen.withOpacity(0.4),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: _primaryGreen.withOpacity(0.15),
+                  shape: BoxShape.circle),
+              child: const Icon(Icons.account_balance_wallet_outlined,
+                  size: 22, color: _primaryGreen),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Choose a Fund *',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: _primaryGreen)),
+                  const SizedBox(height: 2),
+                  Text(
+                    _funds.isEmpty
+                        ? 'Tap to load and select a fund'
+                        : 'Tap to browse ${_funds.length} available fund${_funds.length != 1 ? 's' : ''}',
+                    style: TextStyle(fontSize: 13, color: _textMuted),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: _primaryGreen),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedFundCard() {
+    final fund = _selectedFund!;
+    return GestureDetector(
+      onTap: _showFundPicker,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _softMint,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _primaryGreen.withOpacity(0.5), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+                color: _primaryGreen.withOpacity(0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4))
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: _primaryGreen.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.account_balance_wallet_rounded,
+                  size: 22, color: _primaryGreen),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(fund.fundingName,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: _primaryGreen)),
+                  const SizedBox(height: 4),
+                  Text(fund.description,
+                      style: TextStyle(fontSize: 13, color: _textMuted)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: fund.status == 'Accepted'
+                              ? Colors.green.withOpacity(0.12)
+                              : Colors.orange.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          fund.status,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: fund.status == 'Accepted'
+                                ? Colors.green[700]
+                                : Colors.orange[700],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text('Code: ${fund.fundingCode}',
+                          style:
+                          TextStyle(fontSize: 11, color: _textMuted)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              children: [
+                const Icon(Icons.check_circle_rounded,
+                    color: _primaryGreen, size: 22),
+                const SizedBox(height: 6),
+                Text('Change',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: _primaryGreen,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Step 1: Identification ─────────────────────────────────────────────────
@@ -1030,14 +1454,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _buildInputField(
           controller: _identificationNumberController,
           label: 'Identification Number',
-          icon: Icons.numbers_rounded, required: true,
+          icon: Icons.numbers_rounded,
+          required: true,
           errorText: _errors['idNumber'],
           onChanged: (_) => setState(() => _errors.remove('idNumber'))),
       const SizedBox(height: 14),
       _buildDateField(
           controller: _validityDateController,
           label: 'Expiry / Validity Date',
-          firstDate: DateTime.now(), lastDate: DateTime(2100)),
+          firstDate: DateTime.now(),
+          lastDate: DateTime(2100)),
       const SizedBox(height: 14),
       if (isTanzanian) ...[
         _buildDropdownTile(
@@ -1242,46 +1668,59 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           const SizedBox(height: 14),
         ],
         _buildInputField(
-            controller: _wardController, label: 'Ward *',
-            icon: Icons.location_on_outlined, required: true,
+            controller: _wardController,
+            label: 'Ward *',
+            icon: Icons.location_on_outlined,
+            required: true,
             errorText: _errors['ward'],
             onChanged: (_) => setState(() => _errors.remove('ward'))),
         const SizedBox(height: 14),
         _buildInputField(
-            controller: _houseNumberController, label: 'House Number *',
-            icon: Icons.home_outlined, required: true,
+            controller: _houseNumberController,
+            label: 'House Number *',
+            icon: Icons.home_outlined,
+            required: true,
             errorText: _errors['houseNumber'],
             onChanged: (_) =>
                 setState(() => _errors.remove('houseNumber'))),
         const SizedBox(height: 14),
         _buildInputField(
-            controller: _streetController, label: 'Street Name',
+            controller: _streetController,
+            label: 'Street Name',
             icon: Icons.alt_route_outlined),
       ] else ...[
         _buildInputField(
-            controller: _cityController, label: 'City',
+            controller: _cityController,
+            label: 'City',
             icon: Icons.location_city_rounded),
         const SizedBox(height: 14),
         _buildInputField(
             controller: _physicalAddressController,
             label: 'Physical Address *',
-            icon: Icons.home_outlined, maxLines: 2, required: true,
+            icon: Icons.home_outlined,
+            maxLines: 2,
+            required: true,
             errorText: _errors['address'],
             onChanged: (_) => setState(() => _errors.remove('address'))),
       ],
       const SizedBox(height: 20),
       _buildSectionLabel('Contact Details'),
       _buildInputField(
-          controller: _emailController, label: 'Email Address',
+          controller: _emailController,
+          label: 'Email Address',
           icon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress, required: true,
+          keyboardType: TextInputType.emailAddress,
+          required: true,
           errorText: _errors['email'],
           onChanged: (_) => setState(() => _errors.remove('email'))),
       const SizedBox(height: 14),
       _buildInputField(
-          controller: _phoneController, label: 'Phone Number',
-          icon: Icons.phone_outlined, keyboardType: TextInputType.phone,
-          required: true, errorText: _errors['phone'],
+          controller: _phoneController,
+          label: 'Phone Number',
+          icon: Icons.phone_outlined,
+          keyboardType: TextInputType.phone,
+          required: true,
+          errorText: _errors['phone'],
           onChanged: (_) => setState(() => _errors.remove('phone'))),
     ]);
   }
@@ -1298,9 +1737,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       ),
       const SizedBox(height: 14),
       _buildInputField(
-          controller: _accountNumberController, label: 'Account Number',
+          controller: _accountNumberController,
+          label: 'Account Number',
           icon: Icons.credit_card_rounded,
-          keyboardType: TextInputType.number, required: true,
+          keyboardType: TextInputType.number,
+          required: true,
           errorText: _errors['accountNumber'],
           onChanged: (_) =>
               setState(() => _errors.remove('accountNumber'))),
@@ -1370,11 +1811,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         ),
       const SizedBox(height: 14),
       _buildInputField(
-          controller: _branchController, label: 'Branch',
+          controller: _branchController,
+          label: 'Branch',
           icon: Icons.business_outlined),
       const SizedBox(height: 14),
       _buildInputField(
-          controller: _swiftCodeController, label: 'SWIFT Code',
+          controller: _swiftCodeController,
+          label: 'SWIFT Code',
           icon: Icons.code_rounded),
     ]);
   }
@@ -1427,7 +1870,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: 22, height: 22,
+                  width: 22,
+                  height: 22,
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: selected ? _primaryGreen : Colors.transparent,
@@ -1483,7 +1927,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: 22, height: 22,
+                  width: 22,
+                  height: 22,
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: selected ? _primaryGreen : Colors.transparent,
@@ -1518,7 +1963,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _buildInputField(
           controller: _investmentPurposeController,
           label: 'Purpose of Investment (e.g. Wealth Creation)',
-          icon: Icons.flag_outlined, maxLines: 2),
+          icon: Icons.flag_outlined,
+          maxLines: 2),
       const SizedBox(height: 20),
       _buildSectionLabel('Source of Funds'),
       _buildDropdownTile(
@@ -1580,7 +2026,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               _buildInputField(
                   controller: _positionController,
                   label: 'Position Held',
-                  icon: Icons.badge_outlined, required: true,
+                  icon: Icons.badge_outlined,
+                  required: true,
                   errorText: _errors['position'],
                   onChanged: (_) =>
                       setState(() => _errors.remove('position'))),
