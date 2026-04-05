@@ -262,6 +262,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     _animationController.forward();
     _loadBanks();
     _loadFunds();
+    _prefillFromPrefs(); // ← auto-populate email & phone
   }
 
   @override
@@ -295,6 +296,23 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     _bankSearchController.dispose();
     _initialAmountController.dispose();
     super.dispose();
+  }
+
+  // ─── Pre-fill email & phone from SharedPreferences ─────────────────────────
+  Future<void> _prefillFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedEmail = prefs.getString('saved_email') ?? '';
+      final savedPhone = prefs.getString('saved_phone') ?? '';
+      if (savedEmail.isNotEmpty || savedPhone.isNotEmpty) {
+        setState(() {
+          if (savedEmail.isNotEmpty) _emailController.text = savedEmail;
+          if (savedPhone.isNotEmpty) _phoneController.text = savedPhone;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading saved credentials: $e');
+    }
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -517,11 +535,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         break;
 
       case 3:
-      // ── Account number: alphanumeric + min 8 chars ─────────────────
         final accountError =
         _validateAccountNumber(_accountNumberController.text);
         if (accountError != null) newErrors['accountNumber'] = accountError;
-
         if (_bankController.selectedBank == null)
           newErrors['bankName'] = 'Please select your bank';
         break;
@@ -1766,6 +1782,29 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 setState(() => _errors.remove('address'))),
       ],
       const SizedBox(height: 20),
+      // ── Pre-filled contact details notice ─────────────────────────────
+      if (_emailController.text.isNotEmpty || _phoneController.text.isNotEmpty)
+        Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: _softMint,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _primaryGreen.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, color: _primaryGreen, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Contact details pre-filled from your registration. You may edit if needed.',
+                  style: TextStyle(fontSize: 12, color: _primaryGreen),
+                ),
+              ),
+            ],
+          ),
+        ),
       _buildSectionLabel('Contact Details'),
       _buildInputField(
           controller: _emailController,
@@ -1803,8 +1842,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 (v) => setState(() => _selectedBankType = v)),
       ),
       const SizedBox(height: 14),
-
-      // ── Account Number: alphanumeric, min 8 chars ──────────────────────
       _buildInputField(
           controller: _accountNumberController,
           label: 'Account Number',
@@ -1812,7 +1849,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           keyboardType: TextInputType.text,
           inputFormatters: [
             FilteringTextInputFormatter.allow(
-                RegExp(r'[a-zA-Z0-9]')), // blocks special chars & spaces
+                RegExp(r'[a-zA-Z0-9]')),
             LengthLimitingTextInputFormatter(20),
           ],
           required: true,
@@ -1827,7 +1864,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               }
             });
           }),
-
       const SizedBox(height: 14),
       _buildInputField(
           controller: _accountHolderNameController,
@@ -2207,13 +2243,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     ]),
   );
 
-  // ── Updated _buildInputField with inputFormatters support ─────────────────
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
     IconData? icon,
     TextInputType? keyboardType,
-    List<TextInputFormatter>? inputFormatters, // ← new
+    List<TextInputFormatter>? inputFormatters,
     bool enabled = true,
     int maxLines = 1,
     bool required = false,
@@ -2242,7 +2277,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            inputFormatters: inputFormatters, // ← wired in
+            inputFormatters: inputFormatters,
             enabled: enabled,
             maxLines: maxLines,
             onChanged: onChanged,

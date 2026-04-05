@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/constants/constants.dart';
 import 'dart:convert';
 import '../../accounts/individual_account.dart';
@@ -15,14 +16,12 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
-  // null = not chosen, true = new, false = existing
   bool? _isNewClient;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  // ─── Theme ──────────────────────────────────────────────────────────────────
   static const Color _primaryGreen = Color(0xFF2DC98E);
   static const Color _deepGreen = Color(0xFF1A9B6C);
   static const Color _softMint = Color(0xFFE8FBF4);
@@ -255,7 +254,7 @@ class _PickCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NEW CLIENT FLOW  (original register form)
+// NEW CLIENT FLOW
 // ─────────────────────────────────────────────────────────────────────────────
 class _NewClientFlow extends StatefulWidget {
   final Color primaryGreen, softMint, textDark, textMuted;
@@ -284,6 +283,13 @@ class _NewClientFlowState extends State<_NewClientFlow> {
   Color get _dark => widget.textDark;
   Color get _muted => widget.textMuted;
 
+  // ── Save credentials to SharedPreferences ──────────────────────────────────
+  Future<void> _saveCredentials(String email, String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_email', email);
+    await prefs.setString('saved_phone', phone);
+  }
+
   Future<void> _register() async {
     if (!_validate()) return;
     if (!_agreeToTerms) { _snack('Please agree to the Terms & Conditions'); return; }
@@ -307,6 +313,8 @@ class _NewClientFlowState extends State<_NewClientFlow> {
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
         if (d['status'] == 'success') {
+          // ── Save to SharedPreferences on success ──
+          await _saveCredentials(_emailCtrl.text.trim(), _phoneCtrl.text.trim());
           _showSuccessDialog();
         } else {
           _snack(d['statusDesc'] ?? 'Registration failed');
@@ -464,7 +472,6 @@ class _NewClientFlowState extends State<_NewClientFlow> {
           ),
         ]),
         const SizedBox(height: 20),
-        // Terms
         GestureDetector(
           onTap: () => setState(() => _agreeToTerms = !_agreeToTerms),
           child: Container(
@@ -603,7 +610,7 @@ class _NewClientFlowState extends State<_NewClientFlow> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EXISTING CLIENT FLOW  (3 steps: validate → set password → KYC)
+// EXISTING CLIENT FLOW  (3 steps: validate → KYC → set password)
 // ─────────────────────────────────────────────────────────────────────────────
 class _ExistingClientFlow extends StatefulWidget {
   final Color primaryGreen, softMint, textDark, textMuted;
@@ -620,7 +627,7 @@ class _ExistingClientFlow extends StatefulWidget {
 }
 
 class _ExistingClientFlowState extends State<_ExistingClientFlow> {
-  // Step 0 = enter email + CDS, 1 = set password, 2 = KYC review
+  // Step 0 = verify, 1 = KYC review, 2 = set password
   int _step = 0;
 
   // Step 0
@@ -641,12 +648,25 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   final _kycAccNameCtrl = TextEditingController();
   final _kycBranchCtrl = TextEditingController();
 
+  // Step 2: Set password
+  final _passCtrl = TextEditingController();
+  final _confirmPassCtrl = TextEditingController();
+  bool _passVisible = false, _confirmVisible = false;
+  bool _submitting = false;
+
   Color get _g => widget.primaryGreen;
   Color get _mint => widget.softMint;
   Color get _dark => widget.textDark;
   Color get _muted => widget.textMuted;
 
-  // ── Step 0: Validate via API ────────────────────────────────────────────────
+  // ── Save credentials to SharedPreferences ──────────────────────────────────
+  Future<void> _saveCredentials(String email, String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_email', email);
+    await prefs.setString('saved_phone', phone);
+  }
+
+  // ── Step 0: Validate via API ───────────────────────────────────────────────
   Future<void> _validateClient() async {
     final email = _emailCtrl.text.trim();
     final cds = _cdsCtrl.text.trim();
@@ -665,10 +685,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
-        // We ignore status field per instruction; if 'data' exists we proceed
         final data = body['data'];
         if (data != null) {
-          // Cross-check email if returned
           final serverEmail = (data['Email'] ?? '') as String;
           if (serverEmail.isNotEmpty &&
               serverEmail.toLowerCase() != email.toLowerCase()) {
@@ -676,7 +694,6 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             return;
           }
           _clientData = Map<String, dynamic>.from(data);
-          // Populate KYC fields immediately
           _kycNameCtrl.text = data['Names'] ?? '';
           _kycEmailCtrl.text = data['Email'] ?? '';
           _kycMobileCtrl.text = data['Mobile'] ?? '';
@@ -698,13 +715,56 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     }
   }
 
-  // ── Step 1: Submit complete registration ──────────────────────────────────
-  Future<void> _submitKYC() async {
-    _snack('Account setup complete! Redirecting to login…');
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+  // ── Step 1 → Step 2: KYC confirmed, move to set password ──────────────────
+  void _proceedToSetPassword() {
+    setState(() => _step = 2);
+  }
+
+  // ── Step 2: Validate password and complete registration ────────────────────
+  Future<void> _submitRegistration() async {
+    if (_passCtrl.text.length < 6) {
+      _snack('Password must be at least 6 characters');
+      return;
+    }
+    if (_passCtrl.text != _confirmPassCtrl.text) {
+      _snack('Passwords do not match');
+      return;
+    }
+
+    setState(() => _submitting = true);
+
+    try {
+      // ── Call your registration API here ──────────────────────────────────
+      // Example payload — adjust fields to match your actual API:
+      // final res = await http.post(
+      //   Uri.parse('$cSharpApi/ExistingClientSignUp'),
+      //   headers: {'Content-Type': 'application/json'},
+      //   body: jsonEncode({
+      //     "CDSNumber": _cdsCtrl.text.trim(),
+      //     "Email": _kycEmailCtrl.text.trim(),
+      //     "Password": _passCtrl.text,
+      //     "Source": "Mobile",
+      //   }),
+      // );
+
+      // ── Save email + phone to SharedPreferences ───────────────────────────
+      await _saveCredentials(
+        _kycEmailCtrl.text.trim(),
+        _kycMobileCtrl.text.trim(),
+      );
+
+      setState(() => _submitting = false);
+
+      if (!mounted) return;
+      _snack('Account setup complete! Redirecting to login…');
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    } catch (e) {
+      setState(() => _submitting = false);
+      _snack('An error occurred. Please try again.');
+    }
   }
 
   void _snack(String msg) {
@@ -727,6 +787,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     _kycNameCtrl.dispose(); _kycEmailCtrl.dispose(); _kycMobileCtrl.dispose();
     _kycAddrCtrl.dispose(); _kycBankCtrl.dispose(); _kycAccNoCtrl.dispose();
     _kycAccNameCtrl.dispose(); _kycBranchCtrl.dispose();
+    _passCtrl.dispose(); _confirmPassCtrl.dispose();
     super.dispose();
   }
 
@@ -735,7 +796,6 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Back
         GestureDetector(
           onTap: _step == 0 ? widget.onBack : () => setState(() => _step -= 1),
           child: Container(
@@ -748,16 +808,17 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           ),
         ),
         const SizedBox(height: 16),
-        // Step indicator
-        _StepIndicator(current: _step, total: 2, primaryGreen: _g, softMint: _mint),
+        // ── Now 3 steps ──
+        _StepIndicator(current: _step, total: 3, primaryGreen: _g, softMint: _mint),
         const SizedBox(height: 24),
         if (_step == 0) _buildStep0(),
         if (_step == 1) _buildStep1(),
+        if (_step == 2) _buildStep2(),
       ]),
     );
   }
 
-  // ── Step 0 UI ─────────────────────────────────────────────────────────────
+  // ── Step 0: Verify ────────────────────────────────────────────────────────
   Widget _buildStep0() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Verify Your Account',
@@ -785,7 +846,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     ]);
   }
 
-  // ── Step 1 UI (KYC) ───────────────────────────────────────────────────────
+  // ── Step 1: KYC ───────────────────────────────────────────────────────────
   Widget _buildStep1() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Complete Your Profile',
@@ -795,7 +856,6 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       Text('Review and confirm your information pulled from our records.',
           style: TextStyle(fontSize: 14, color: _muted)),
       const SizedBox(height: 16),
-      // Greeting chip
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(color: _mint, borderRadius: BorderRadius.circular(12)),
@@ -851,13 +911,83 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       ]),
       const SizedBox(height: 24),
       _primaryBtn(
-          label: 'Complete Setup', icon: Icons.check_circle_rounded,
-          loading: false, onPressed: _submitKYC),
+        label: 'Confirm & Set Password',
+        icon: Icons.arrow_forward_rounded,
+        loading: false,
+        onPressed: _proceedToSetPassword,
+      ),
       const SizedBox(height: 16),
     ]);
   }
 
-  // ── Shared widgets ────────────────────────────────────────────────────────
+  // ── Step 2: Set Password ──────────────────────────────────────────────────
+  Widget _buildStep2() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Set Your Password',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
+              color: _dark, letterSpacing: -0.5)),
+      const SizedBox(height: 6),
+      Text('Choose a strong password to secure your account.',
+          style: TextStyle(fontSize: 14, color: _muted)),
+      const SizedBox(height: 24),
+
+      // ── Confirmed email chip ─────────────────────────────────────────────
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(color: _mint, borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _g.withOpacity(0.3))),
+        child: Row(children: [
+          Icon(Icons.email_outlined, color: _g, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Setting password for', style: TextStyle(fontSize: 12, color: _muted)),
+              const SizedBox(height: 2),
+              Text(_kycEmailCtrl.text.trim(),
+                  style: TextStyle(fontSize: 14, color: _dark, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 20),
+
+      _card(children: [
+        _sectionLabel('Security'),
+        _passField(
+          controller: _passCtrl,
+          label: 'New Password',
+          isVisible: _passVisible,
+          onToggle: () => setState(() => _passVisible = !_passVisible),
+        ),
+        const SizedBox(height: 14),
+        _passField(
+          controller: _confirmPassCtrl,
+          label: 'Confirm Password',
+          isVisible: _confirmVisible,
+          onToggle: () => setState(() => _confirmVisible = !_confirmVisible),
+        ),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 6),
+          child: Row(children: [
+            Icon(Icons.info_outline_rounded, size: 13, color: _muted),
+            const SizedBox(width: 5),
+            Text('Minimum 6 characters', style: TextStyle(fontSize: 12, color: _muted)),
+          ]),
+        ),
+      ]),
+      const SizedBox(height: 24),
+      _primaryBtn(
+        label: 'Complete Setup',
+        icon: Icons.check_circle_rounded,
+        loading: _submitting,
+        onPressed: _submitRegistration,
+      ),
+      const SizedBox(height: 16),
+    ]);
+  }
+
+  // ── Shared widgets ─────────────────────────────────────────────────────────
   Widget _card({required List<Widget> children}) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
@@ -905,6 +1035,26 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             floatingLabelBehavior: FloatingLabelBehavior.auto),
       ));
 
+  Widget _passField({required TextEditingController controller, required String label,
+    required bool isVisible, required VoidCallback onToggle}) =>
+      _fieldContainer(TextField(
+        controller: controller,
+        obscureText: !isVisible,
+        style: TextStyle(fontSize: 15, color: _dark),
+        decoration: InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(color: _muted, fontSize: 14),
+            prefixIcon: Icon(Icons.lock_outline_rounded, color: _g, size: 20),
+            suffixIcon: GestureDetector(
+                onTap: onToggle,
+                child: Icon(
+                    isVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    color: _muted, size: 20)),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+            floatingLabelBehavior: FloatingLabelBehavior.auto),
+      ));
+
   Widget _fieldContainer(Widget child) => Container(
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04),
@@ -944,7 +1094,11 @@ class _StepIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labels = ['Verify', 'KYC Info'];
+    // Labels adapt to total steps
+    final labels = total == 3
+        ? ['Verify', 'KYC Info', 'Password']
+        : ['Verify', 'KYC Info'];
+
     return Row(
       children: List.generate(total, (i) {
         final done = i < current;
