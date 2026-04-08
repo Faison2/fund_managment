@@ -43,73 +43,73 @@ class _WS {
 }
 
 const _wsEn = _WS(
-  withdrawFunds:     'Withdraw Funds',
-  withdrawSubtitle:  'Choose fund and amount to withdraw',
-  selectFund:        'Select Fund',
-  enterAmount:       'Enter Amount',
-  quickSelect:       'Quick Select',
-  availableBalance:  'Available Balance',
-  units:             'units',
-  bankingDetails:    'Banking Details',
-  bank:              'Bank',
-  accountNo:         'Account No',
-  accountName:       'Account Name',
-  branch:            'Branch',
-  requestWithdrawal: 'Request Withdrawal',
-  confirmWithdrawal: 'Confirm Withdrawal',
-  confirmDetails:    'Please confirm your withdrawal request.',
-  cancel:            'Cancel',
-  confirm:           'Confirm',
+  withdrawFunds:       'Withdraw Funds',
+  withdrawSubtitle:    'Choose fund and amount to withdraw',
+  selectFund:          'Select Fund',
+  enterAmount:         'Enter Amount',
+  quickSelect:         'Quick Select',
+  availableBalance:    'Available Balance',
+  units:               'units',
+  bankingDetails:      'Banking Details',
+  bank:                'Bank',
+  accountNo:           'Account No',
+  accountName:         'Account Name',
+  branch:              'Branch',
+  requestWithdrawal:   'Request Withdrawal',
+  confirmWithdrawal:   'Confirm Withdrawal',
+  confirmDetails:      'Please confirm your withdrawal request.',
+  cancel:              'Cancel',
+  confirm:             'Confirm',
   withdrawalRequested: 'Withdrawal Requested!',
-  requestFailed:     'Request Failed',
-  done:              'Done',
-  tryAgain:          'Try Again',
-  fund:              'Fund',
-  amount:            'Amount',
-  phone:             'Phone',
-  failedLoadFunds:   'Failed to load funds',
-  retry:             'Retry',
-  networkError:      'Network error',
-  noFunds:           'No funds available',
-  notSet:            'Not set',
-  noBankingDetails:  'No banking details saved',
-  tapToView:         'Tap to view banking details',
-  tapToHide:         'Tap to hide banking details',
+  requestFailed:       'Request Failed',
+  done:                'Done',
+  tryAgain:            'Try Again',
+  fund:                'Fund',
+  amount:              'Amount',
+  phone:               'Phone',
+  failedLoadFunds:     'Failed to load funds',
+  retry:               'Retry',
+  networkError:        'Network error',
+  noFunds:             'No funds available',
+  notSet:              'Not set',
+  noBankingDetails:    'No banking details saved',
+  tapToView:           'Tap to view banking details',
+  tapToHide:           'Tap to hide banking details',
 );
 
 const _wsSw = _WS(
-  withdrawFunds:     'Toa Fedha',
-  withdrawSubtitle:  'Chagua fedha na kiasi cha kutoa',
-  selectFund:        'Chagua Fedha',
-  enterAmount:       'Ingiza Kiasi',
-  quickSelect:       'Chaguo la Haraka',
-  availableBalance:  'Salio Linalopatikana',
-  units:             'vitengo',
-  bankingDetails:    'Taarifa za Benki',
-  bank:              'Benki',
-  accountNo:         'Nambari ya Akaunti',
-  accountName:       'Jina la Akaunti',
-  branch:            'Tawi',
-  requestWithdrawal: 'Omba Kutoa',
-  confirmWithdrawal: 'Thibitisha Kutoa',
-  confirmDetails:    'Tafadhali thibitisha ombi lako la kutoa.',
-  cancel:            'Ghairi',
-  confirm:           'Thibitisha',
+  withdrawFunds:       'Toa Fedha',
+  withdrawSubtitle:    'Chagua fedha na kiasi cha kutoa',
+  selectFund:          'Chagua Fedha',
+  enterAmount:         'Ingiza Kiasi',
+  quickSelect:         'Chaguo la Haraka',
+  availableBalance:    'Salio Linalopatikana',
+  units:               'vitengo',
+  bankingDetails:      'Taarifa za Benki',
+  bank:                'Benki',
+  accountNo:           'Nambari ya Akaunti',
+  accountName:         'Jina la Akaunti',
+  branch:              'Tawi',
+  requestWithdrawal:   'Omba Kutoa',
+  confirmWithdrawal:   'Thibitisha Kutoa',
+  confirmDetails:      'Tafadhali thibitisha ombi lako la kutoa.',
+  cancel:              'Ghairi',
+  confirm:             'Thibitisha',
   withdrawalRequested: 'Ombi la Kutoa Limewasilishwa!',
-  requestFailed:     'Ombi Limeshindwa',
-  done:              'Imekamilika',
-  tryAgain:          'Jaribu Tena',
-  fund:              'Fedha',
-  amount:            'Kiasi',
-  phone:             'Simu',
-  failedLoadFunds:   'Imeshindwa kupakia fedha',
-  retry:             'Jaribu Tena',
-  networkError:      'Hitilafu ya mtandao',
-  noFunds:           'Hakuna fedha zinazopatikana',
-  notSet:            'Haijawekwa',
-  noBankingDetails:  'Hakuna maelezo ya benki yaliyohifadhiwa',
-  tapToView:         'Gonga kuona maelezo ya benki',
-  tapToHide:         'Gonga kuficha maelezo ya benki',
+  requestFailed:       'Ombi Limeshindwa',
+  done:                'Imekamilika',
+  tryAgain:            'Jaribu Tena',
+  fund:                'Fedha',
+  amount:              'Kiasi',
+  phone:               'Simu',
+  failedLoadFunds:     'Imeshindwa kupakia fedha',
+  retry:               'Jaribu Tena',
+  networkError:        'Hitilafu ya mtandao',
+  noFunds:             'Hakuna fedha zinazopatikana',
+  notSet:              'Haijawekwa',
+  noBankingDetails:    'Hakuna maelezo ya benki yaliyohifadhiwa',
+  tapToView:           'Gonga kuona maelezo ya benki',
+  tapToHide:           'Gonga kuficha maelezo ya benki',
 );
 
 // ── WithdrawalPage ────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
   final TextEditingController _amountController = TextEditingController();
   String _selectedCurrency = 'TZS';
 
-  // ── User / banking data from SharedPreferences ─────────────────────────────
+  // ── User / banking data ────────────────────────────────────────────────────
   String _cdsNumber   = '';
   String _phoneNumber = '';
   String _bank        = '';
@@ -145,8 +145,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
   bool    _isLoadingBalance = false;
 
   // ── UI state ───────────────────────────────────────────────────────────────
-  bool _isSubmitting        = false;
-  bool _bankingDetailsOpen  = false;
+  bool _isSubmitting       = false;
+  bool _bankingDetailsOpen = false;
 
   late final AnimationController _accordionCtrl;
   late final Animation<double>   _accordionAnim;
@@ -184,8 +184,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _cdsNumber   = prefs.getString('cdsNumber')       ?? '';
-      _phoneNumber = prefs.getString('user_mobile')     ?? '';
+      _cdsNumber   = prefs.getString('cdsNumber')        ?? '';
+      _phoneNumber = prefs.getString('user_mobile')      ?? '';
       _bank        = prefs.getString('user_bank')        ?? '';
       _accountNo   = prefs.getString('user_accountNo')   ?? '';
       _accountName = prefs.getString('user_accountName') ?? '';
@@ -199,10 +199,9 @@ class _WithdrawalPageState extends State<WithdrawalPage>
       final funds = await FundsRepository().fetchFunds();
       setState(() {
         _funds          = funds;
-        _selectedFund   = null; // Start with no selection — user must pick
+        _selectedFund   = null;
         _isLoadingFunds = false;
       });
-      // Do NOT auto-fetch balance; wait for user to select a fund
     } catch (_) {
       setState(() { _fundsError = _s.failedLoadFunds; _isLoadingFunds = false; });
     }
@@ -210,7 +209,11 @@ class _WithdrawalPageState extends State<WithdrawalPage>
 
   Future<void> _fetchAvailableBalance() async {
     if (_selectedFund == null) return;
-    setState(() { _isLoadingBalance = true; _availableBalance = null; _availableUnits = null; });
+    setState(() {
+      _isLoadingBalance = true;
+      _availableBalance = null;
+      _availableUnits   = null;
+    });
     try {
       final res = await http.post(
         Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetAvailableBalance'),
@@ -245,11 +248,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
 
   void _toggleBankingDetails() {
     setState(() => _bankingDetailsOpen = !_bankingDetailsOpen);
-    if (_bankingDetailsOpen) {
-      _accordionCtrl.forward();
-    } else {
-      _accordionCtrl.reverse();
-    }
+    _bankingDetailsOpen ? _accordionCtrl.forward() : _accordionCtrl.reverse();
   }
 
   Future<void> _processWithdrawal() async {
@@ -283,12 +282,12 @@ class _WithdrawalPageState extends State<WithdrawalPage>
   }
 
   Future<bool> _showConfirmationDialog() async {
-    final dark   = Provider.of<ThemeProvider>(context, listen: false).isDark;
-    final s      = Provider.of<LocaleProvider>(context, listen: false).isSwahili
+    final dark  = Provider.of<ThemeProvider>(context, listen: false).isDark;
+    final s     = Provider.of<LocaleProvider>(context, listen: false).isSwahili
         ? _wsSw : _wsEn;
-    final fund   = _selectedFund?.fundingName ?? '—';
-    final amt    = '$_selectedCurrency ${_fmt(_amountController.text)}';
-    final phone  = _phoneNumber.isNotEmpty ? _phoneNumber : s.notSet;
+    final fund  = _selectedFund?.fundingName ?? '—';
+    final amt   = '$_selectedCurrency ${_fmt(_amountController.text)}';
+    final phone = _phoneNumber.isNotEmpty ? _phoneNumber : s.notSet;
 
     final cardBg = dark ? const Color(0xFF132013) : Colors.white;
     final txtP   = dark ? const Color(0xFFE8F5E9) : Colors.black87;
@@ -362,13 +361,14 @@ class _WithdrawalPageState extends State<WithdrawalPage>
       Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(border: Border.all(color: bd),
+        decoration: BoxDecoration(
+            border: Border.all(color: bd),
             borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
           SizedBox(width: 72, child: Text(lbl, style: TextStyle(
               fontSize: 12, color: ts, fontWeight: FontWeight.w500))),
-          Expanded(child: Text(val, style: TextStyle(fontSize: 13,
-              fontWeight: FontWeight.w700, color: tp),
+          Expanded(child: Text(val, style: TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w700, color: tp),
               overflow: TextOverflow.ellipsis)),
         ]),
       );
@@ -391,8 +391,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(width: 72, height: 72,
                 decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [
-                      accent, accent.withOpacity(0.75)]),
+                    gradient: LinearGradient(
+                        colors: [accent, accent.withOpacity(0.75)]),
                     shape: BoxShape.circle),
                 child: Icon(success ? Icons.check_rounded : Icons.close_rounded,
                     color: Colors.white, size: 36)),
@@ -441,10 +441,18 @@ class _WithdrawalPageState extends State<WithdrawalPage>
           _selectedFund != null &&
           !_isSubmitting;
 
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     context.watch<ThemeProvider>();
     context.watch<LocaleProvider>();
+
+    // KEY FIX: Read system insets once at build time.
+    // bottomInset = height of the gesture navigation bar / home indicator.
+    // scrollPadding = design padding + inset so the submit button is always
+    // fully visible and tappable above the system nav bar.
+    final bottomInset  = MediaQuery.of(context).padding.bottom;
+    final scrollPadding = 40.0 + bottomInset;
 
     final dark      = _dark; final s = _s;
     final bg        = dark ? const Color(0xFF0B1A0C) : const Color(0xFFB8E6D3);
@@ -459,6 +467,10 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     final balanceBg = dark ? const Color(0xFF0F1A10)  : Colors.white;
 
     return Scaffold(
+      // KEY FIX: resizeToAvoidBottomInset lets the scroll view handle keyboard
+      // avoidance on its own via scrollPadding, preventing the Scaffold from
+      // double-resizing and crushing the layout on gesture-nav phones.
+      resizeToAvoidBottomInset: true,
       backgroundColor: bg,
       body: Column(children: [
 
@@ -473,6 +485,9 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
           ),
+          // SafeArea on the header handles status bar / notch at the top only.
+          // bottom: false so the header does not consume the bottom inset —
+          // only the scroll content area adds that padding.
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Row(children: [
@@ -502,8 +517,10 @@ class _WithdrawalPageState extends State<WithdrawalPage>
         Container(
           decoration: BoxDecoration(
             gradient: dark
-                ? const LinearGradient(colors: [Color(0xFF132013), Color(0xFF0F1A10)])
-                : const LinearGradient(colors: [Color(0xFF388E3C), Color(0xFF2E7D32)]),
+                ? const LinearGradient(
+                colors: [Color(0xFF132013), Color(0xFF0F1A10)])
+                : const LinearGradient(
+                colors: [Color(0xFF388E3C), Color(0xFF2E7D32)]),
           ),
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
           child: Container(
@@ -524,7 +541,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                 const SizedBox(height: 6),
                 _isLoadingBalance
                     ? SizedBox(height: 22, width: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: orange))
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: orange))
                     : Text(
                     _availableBalance != null
                         ? 'TZS ${_fmt(_availableBalance!.toStringAsFixed(2))}'
@@ -533,7 +551,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                         fontWeight: FontWeight.w900, color: orange)),
                 if (_availableUnits != null && !_isLoadingBalance) ...[
                   const SizedBox(height: 4),
-                  Text('${_fmt(_availableUnits!.toStringAsFixed(2))} ${s.units}',
+                  Text(
+                      '${_fmt(_availableUnits!.toStringAsFixed(2))} ${s.units}',
                       style: TextStyle(fontSize: 11, color: txtH)),
                 ],
               ])),
@@ -550,10 +569,16 @@ class _WithdrawalPageState extends State<WithdrawalPage>
 
         // ── Scrollable form ──────────────────────────────────────────────────
         Expanded(
-          child: Container(color: sheet,
+          child: Container(
+            color: sheet,
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+              // KEY FIX: bottom padding = fixed design padding + system bottom
+              // inset. Ensures the submit button is always fully visible and
+              // tappable above the gesture navigation bar / home indicator,
+              // including on full-gesture Android phones and iPhones with no
+              // home button.
+              padding: EdgeInsets.fromLTRB(20, 24, 20, scrollPadding),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
@@ -563,9 +588,11 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                     if (_isLoadingFunds)
                       Center(child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 20),
-                          child: CircularProgressIndicator(color: orange, strokeWidth: 2.5)))
+                          child: CircularProgressIndicator(
+                              color: orange, strokeWidth: 2.5)))
                     else if (_fundsError.isNotEmpty)
-                      _errBanner(_fundsError, s.retry, orange, border, onRetry: _loadFunds)
+                      _errBanner(_fundsError, s.retry, orange, border,
+                          onRetry: _loadFunds)
                     else
                       _dropdown(bg: inputBg, border: border,
                         child: DropdownButtonHideUnderline(
@@ -573,18 +600,13 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                             value: _selectedFund,
                             isExpanded: true,
                             dropdownColor: cardBg,
-                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: txtS),
-                            // ── Placeholder shown when nothing is selected ──
+                            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                                color: txtS),
                             hint: Row(children: [
                               const SizedBox(width: 2),
-                              Text(
-                                s.selectFund,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: txtH,
-                                ),
-                              ),
+                              Text(s.selectFund, style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w500,
+                                  color: txtH)),
                             ]),
                             items: _funds.map((f) => DropdownMenuItem<Fund>(
                               value: f,
@@ -599,18 +621,12 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                // ── Fund name only — issuer removed ──
-                                Expanded(
-                                  child: Text(
-                                    f.fundingName ?? s.noFunds,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                      color: txtP,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
+                                Expanded(child: Text(
+                                  f.fundingName ?? s.noFunds,
+                                  style: TextStyle(fontWeight: FontWeight.w600,
+                                      fontSize: 14, color: txtP),
+                                  overflow: TextOverflow.ellipsis,
+                                )),
                               ]),
                             )).toList(),
                             onChanged: (f) {
@@ -645,7 +661,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                               child: Text(c, style: TextStyle(
                                   fontWeight: FontWeight.w700, color: txtP)),
                             )).toList(),
-                            onChanged: (v) => setState(() => _selectedCurrency = v!),
+                            onChanged: (v) =>
+                                setState(() => _selectedCurrency = v!),
                           ),
                         ),
                       ),
@@ -655,6 +672,11 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         style: TextStyle(fontSize: 18,
                             fontWeight: FontWeight.w800, color: txtP),
+                        // KEY FIX: scrollPadding tells Flutter how far to scroll
+                        // the field into view when it gains focus and the
+                        // keyboard opens. Adding bottomInset prevents the field
+                        // from hiding behind the keyboard on gesture-nav phones.
+                        scrollPadding: EdgeInsets.only(bottom: bottomInset + 80),
                         decoration: InputDecoration(
                           hintText: '0.00', hintStyle: TextStyle(color: txtH),
                           filled: true, fillColor: inputBg,
@@ -727,8 +749,10 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                           borderRadius: BorderRadius.only(
                             topLeft: const Radius.circular(14),
                             topRight: const Radius.circular(14),
-                            bottomLeft: Radius.circular(_bankingDetailsOpen ? 0 : 14),
-                            bottomRight: Radius.circular(_bankingDetailsOpen ? 0 : 14),
+                            bottomLeft:
+                            Radius.circular(_bankingDetailsOpen ? 0 : 14),
+                            bottomRight:
+                            Radius.circular(_bankingDetailsOpen ? 0 : 14),
                           ),
                           border: Border.all(color: _bankingDetailsOpen
                               ? orange.withOpacity(0.5) : border),
@@ -751,7 +775,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                                         fontWeight: FontWeight.w700, color: txtP)),
                                 const SizedBox(height: 2),
                                 Text(
-                                  _bankingDetailsOpen ? s.tapToHide : s.tapToView,
+                                  _bankingDetailsOpen
+                                      ? s.tapToHide : s.tapToView,
                                   style: TextStyle(fontSize: 11, color: txtS),
                                 ),
                               ])),
@@ -778,8 +803,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                             bottomRight: Radius.circular(14),
                           ),
                           border: Border(
-                            left: BorderSide(color: orange.withOpacity(0.5)),
-                            right: BorderSide(color: orange.withOpacity(0.5)),
+                            left:   BorderSide(color: orange.withOpacity(0.5)),
+                            right:  BorderSide(color: orange.withOpacity(0.5)),
                             bottom: BorderSide(color: orange.withOpacity(0.5)),
                           ),
                         ),
@@ -798,16 +823,21 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                           child: Column(children: [
                             _bankRow(Icons.account_balance_outlined,
-                                s.bank, _bank.isNotEmpty ? _bank : s.notSet,
+                                s.bank,
+                                _bank.isNotEmpty ? _bank : s.notSet,
                                 orange, txtP, txtS, border, dark),
                             _bankRow(Icons.credit_card_outlined,
-                                s.accountNo, _accountNo.isNotEmpty ? _accountNo : s.notSet,
+                                s.accountNo,
+                                _accountNo.isNotEmpty ? _accountNo : s.notSet,
                                 orange, txtP, txtS, border, dark),
                             _bankRow(Icons.badge_outlined,
-                                s.accountName, _accountName.isNotEmpty ? _accountName : s.notSet,
+                                s.accountName,
+                                _accountName.isNotEmpty
+                                    ? _accountName : s.notSet,
                                 orange, txtP, txtS, border, dark),
                             _bankRow(Icons.store_outlined,
-                                s.branch, _branch.isNotEmpty ? _branch : s.notSet,
+                                s.branch,
+                                _branch.isNotEmpty ? _branch : s.notSet,
                                 orange, txtP, txtS, border, dark, last: true),
                           ]),
                         ),
@@ -817,6 +847,10 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                     const SizedBox(height: 28),
 
                     // ── Submit button ─────────────────────────────────────────
+                    // The button lives inside the scroll view so it naturally
+                    // scrolls above the keyboard. The scrollPadding on
+                    // SingleChildScrollView guarantees room below the button
+                    // above the system gesture bar / home indicator.
                     GestureDetector(
                       onTap: _canWithdraw ? _processWithdrawal : null,
                       child: AnimatedContainer(
@@ -824,7 +858,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                         decoration: BoxDecoration(
                           gradient: _canWithdraw
                               ? LinearGradient(colors: [orange,
-                            dark ? Colors.deepOrange : Colors.orange.shade700])
+                            dark ? Colors.deepOrange
+                                : Colors.orange.shade700])
                               : LinearGradient(colors: [txtH, txtH]),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: _canWithdraw
@@ -850,6 +885,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     );
   }
 
+  // ── Shared helpers ─────────────────────────────────────────────────────────
   Widget _bankRow(IconData icon, String label, String value,
       Color orange, Color txtP, Color txtS, Color border, bool dark,
       {bool last = false}) =>

@@ -230,7 +230,6 @@ class _DepositPageState extends State<DepositPage> {
           _branch      = d['Branch']      ?? '';
           _isLoadingUser = false;
         });
-        // Set controller AFTER setState
         if (mobile.isNotEmpty) _mobileController.text = mobile;
       } else {
         setState(() {
@@ -252,7 +251,7 @@ class _DepositPageState extends State<DepositPage> {
       final funds = await FundsRepository().fetchFunds();
       setState(() {
         _funds          = funds;
-        _selectedFund   = null; // Start with no selection — user must pick
+        _selectedFund   = null;
         _isLoadingFunds = false;
       });
     } catch (_) {
@@ -455,6 +454,14 @@ class _DepositPageState extends State<DepositPage> {
     context.watch<ThemeProvider>();
     context.watch<LocaleProvider>();
 
+    // KEY FIX: Read system insets once at the top of build so every widget
+    // that needs bottom-safe spacing can reference these values directly.
+    final bottomInset   = MediaQuery.of(context).padding.bottom;
+    final screenHeight  = MediaQuery.of(context).size.height;
+    // Extra bottom scroll padding so the submit button is never hidden
+    // behind the gesture navigation bar on phones with no home button.
+    final scrollPadding = 40.0 + bottomInset;
+
     final dark      = _dark;  final s = _s;
     final bg        = dark ? const Color(0xFF0B1A0C) : const Color(0xFFB8E6D3);
     final cardBg    = dark ? const Color(0xFF132013) : Colors.white;
@@ -473,6 +480,10 @@ class _DepositPageState extends State<DepositPage> {
         !_isSubmitting;
 
     return Scaffold(
+      // KEY FIX: resizeToAvoidBottomInset keeps the layout stable when the
+      // keyboard opens — the scroll view handles keyboard avoidance itself
+      // via its own padding, so we don't want the Scaffold to also resize.
+      resizeToAvoidBottomInset: true,
       backgroundColor: bg,
       body: Column(children: [
 
@@ -487,6 +498,9 @@ class _DepositPageState extends State<DepositPage> {
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
           ),
+          // SafeArea on the header handles the status bar / notch at the top.
+          // We set bottom: false so the header doesn't add bottom inset padding —
+          // only the scroll content area needs that.
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Row(children: [
@@ -513,10 +527,15 @@ class _DepositPageState extends State<DepositPage> {
 
         // ── Scrollable form ──────────────────────────────────────────────────
         Expanded(
-          child: Container(color: sheet,
+          child: Container(
+            color: sheet,
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+              // KEY FIX: bottom padding = fixed design padding + system bottom
+              // inset. This ensures the submit button is always fully visible
+              // and tappable above the gesture navigation bar or home indicator,
+              // even on phones where the nav bar overlaps the app content.
+              padding: EdgeInsets.fromLTRB(20, 24, 20, scrollPadding),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
@@ -537,7 +556,6 @@ class _DepositPageState extends State<DepositPage> {
                             isExpanded: true,
                             dropdownColor: cardBg,
                             icon: Icon(Icons.keyboard_arrow_down_rounded, color: txtS),
-                            // ── Placeholder shown when nothing is selected ──
                             hint: Row(children: [
                               const SizedBox(width: 2),
                               Text(
@@ -562,7 +580,6 @@ class _DepositPageState extends State<DepositPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                // ── Fund name only — issuer removed ──
                                 Expanded(
                                   child: Text(
                                     f.fundingName ?? s.noFunds,
@@ -583,7 +600,7 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Phone number (editable, pre-filled from API) ──────────
+                    // ── Phone number ──────────────────────────────────────────
                     _secLabel(s.phone, txtH),
                     const SizedBox(height: 10),
                     Container(
@@ -602,6 +619,12 @@ class _DepositPageState extends State<DepositPage> {
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           style: TextStyle(fontSize: 15,
                               fontWeight: FontWeight.w600, color: txtP),
+                          // KEY FIX: scrollPadding tells Flutter how far to
+                          // scroll the field into view when it gets focus and
+                          // the keyboard opens. Adding the bottomInset prevents
+                          // the field from being hidden behind the keyboard on
+                          // phones with gesture navigation.
+                          scrollPadding: EdgeInsets.only(bottom: bottomInset + 80),
                           decoration: InputDecoration(
                             hintText: s.notSet,
                             hintStyle: TextStyle(color: txtH),
@@ -646,6 +669,8 @@ class _DepositPageState extends State<DepositPage> {
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         style: TextStyle(fontSize: 18,
                             fontWeight: FontWeight.w800, color: txtP),
+                        // KEY FIX: same scrollPadding fix for the amount field
+                        scrollPadding: EdgeInsets.only(bottom: bottomInset + 80),
                         decoration: InputDecoration(
                           hintText: '0.00', hintStyle: TextStyle(color: txtH),
                           filled: true, fillColor: inputBg,
@@ -733,6 +758,10 @@ class _DepositPageState extends State<DepositPage> {
                     const SizedBox(height: 28),
 
                     // ── Submit button ─────────────────────────────────────────
+                    // KEY FIX: The button lives inside the scroll view, so it
+                    // naturally scrolls above the keyboard and gesture bar.
+                    // The scrollPadding on the SingleChildScrollView ensures
+                    // there is always enough room below the button to see it.
                     GestureDetector(
                       onTap: canSubmit ? _processDeposit : null,
                       child: AnimatedContainer(

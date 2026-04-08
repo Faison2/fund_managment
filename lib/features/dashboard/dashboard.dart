@@ -215,6 +215,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     return Scaffold(
       backgroundColor: _scaffoldBg,
+      // KEY FIX: extendBody allows the body to go behind the nav bar.
+      // This prevents the system gesture area from squashing the body content.
+      extendBody: true,
       appBar: AppBar(
         backgroundColor: _appBarBg,
         elevation: 0,
@@ -241,14 +244,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                         child: CircularProgressIndicator(strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(_txtSec))),
                 ]),
-                // Text(
-                //   _cdsNumber.isNotEmpty
-                //       ? '${s.accNo}: $_cdsNumber'
-                //       : s.accNotAvailable,
-                //   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
-                //       color: _txtSec),
-                //   overflow: TextOverflow.ellipsis,
-                // ),
               ],
             )),
           ]),
@@ -292,31 +287,43 @@ class _DashboardScreenState extends State<DashboardScreen>
       (Icons.person_outline,                  Icons.person),
     ];
 
-    final Widget navPill = _dark
-        ? _glassPill(labels, icons)
-        : _solidPill(labels, icons);
+    // KEY FIX 1: Read the system bottom inset (gesture nav bar / home indicator).
+    // This is the height of the system navigation area we must not overlap.
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
+    // KEY FIX 2: Responsive pill height based on screen size.
+    // Smaller phones get a shorter pill so it doesn't crowd the screen.
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth  = MediaQuery.of(context).size.width;
+    final pillHeight   = screenHeight < 680 || screenWidth < 360 ? 56.0 : 64.0;
+
+    final Widget navPill = _dark
+        ? _glassPill(labels, icons, pillHeight)
+        : _solidPill(labels, icons, pillHeight);
+
+    // KEY FIX 3: Remove SafeArea wrapper — handle insets manually via padding.
+    // SafeArea can double-count padding when extendBody is true on the Scaffold.
+    // We add bottomInset directly as bottom padding so the pill floats above
+    // the gesture bar without being crushed or unreachable.
     return Container(
       color: _scaffoldBg,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: navPill,
-        ),
-      ),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 12 + bottomInset),
+      child: navPill,
     );
   }
 
   // ── Frosted glass pill (dark mode) ─────────────────────────────────────────
-  Widget _glassPill(List<String> labels,
-      List<(IconData, IconData)> icons) {
+  Widget _glassPill(
+      List<String> labels,
+      List<(IconData, IconData)> icons,
+      double pillHeight,
+      ) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(32),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: Container(
-          height: 64,
+          height: pillHeight,
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.06),
             borderRadius: BorderRadius.circular(32),
@@ -330,20 +337,26 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ],
           ),
-          child: _navItems(labels, icons,
-              selectedItemColor: const Color(0xFF4ADE80),
-              unselectedItemColor: Colors.white38,
-              selectedBgColor: const Color(0xFF4ADE80).withOpacity(0.12)),
+          child: _navItems(
+            labels, icons,
+            selectedItemColor:   const Color(0xFF4ADE80),
+            unselectedItemColor: Colors.white38,
+            selectedBgColor:     const Color(0xFF4ADE80).withOpacity(0.12),
+            pillHeight:          pillHeight,
+          ),
         ),
       ),
     );
   }
 
   // ── Solid pill (light mode) ────────────────────────────────────────────────
-  Widget _solidPill(List<String> labels,
-      List<(IconData, IconData)> icons) {
+  Widget _solidPill(
+      List<String> labels,
+      List<(IconData, IconData)> icons,
+      double pillHeight,
+      ) {
     return Container(
-      height: 64,
+      height: pillHeight,
       decoration: BoxDecoration(
         color: const Color(0xFF2D4F28),
         borderRadius: BorderRadius.circular(32),
@@ -355,10 +368,13 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
       ),
-      child: _navItems(labels, icons,
-          selectedItemColor: const Color(0xFF81C784),
-          unselectedItemColor: Colors.white54,
-          selectedBgColor: const Color(0xFF4CAF50).withOpacity(0.25)),
+      child: _navItems(
+        labels, icons,
+        selectedItemColor:   const Color(0xFF81C784),
+        unselectedItemColor: Colors.white54,
+        selectedBgColor:     const Color(0xFF4CAF50).withOpacity(0.25),
+        pillHeight:          pillHeight,
+      ),
     );
   }
 
@@ -369,7 +385,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         required Color selectedItemColor,
         required Color unselectedItemColor,
         required Color selectedBgColor,
+        required double pillHeight,
       }) {
+    // KEY FIX 4: Scale icon and font sizes relative to the pill height
+    // so they stay proportional on all screen sizes.
+    final double selectedIconSize   = pillHeight < 60 ? 22.0 : 24.0;
+    final double unselectedIconSize = pillHeight < 60 ? 20.0 : 22.0;
+    final double selectedFontSize   = pillHeight < 60 ? 9.0  : 10.0;
+    final double unselectedFontSize = pillHeight < 60 ? 8.0  : 9.0;
+    final double verticalMargin     = pillHeight < 60 ? 6.0  : 8.0;
+
     return Row(
       children: List.generate(labels.length, (index) {
         final isSelected = _currentIndex == index;
@@ -383,13 +408,16 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
-              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              // KEY FIX 5: Use symmetric vertical margin derived from pillHeight
+              // instead of a hardcoded value, so items don't overflow on small pills.
+              margin: EdgeInsets.symmetric(horizontal: 4, vertical: verticalMargin),
               decoration: BoxDecoration(
                 color: isSelected ? selectedBgColor : Colors.transparent,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
@@ -397,18 +425,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                       isSelected ? icons[index].$2 : icons[index].$1,
                       key: ValueKey(isSelected),
                       color: isSelected ? selectedItemColor : unselectedItemColor,
-                      size: isSelected ? 24 : 22,
+                      size: isSelected ? selectedIconSize : unselectedIconSize,
                     ),
                   ),
                   const SizedBox(height: 2),
                   AnimatedDefaultTextStyle(
                     duration: const Duration(milliseconds: 200),
                     style: TextStyle(
-                      fontSize: isSelected ? 10 : 9,
+                      fontSize:   isSelected ? selectedFontSize : unselectedFontSize,
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                      color: isSelected ? selectedItemColor : unselectedItemColor,
+                      color:      isSelected ? selectedItemColor : unselectedItemColor,
                     ),
-                    child: Text(labels[index]),
+                    child: Text(
+                      labels[index],
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
                 ],
               ),
