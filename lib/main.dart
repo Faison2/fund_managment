@@ -9,6 +9,7 @@ import 'package:tsl/features/splash%20screen/initial_splash.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:tsl/provider/locale_provider.dart';
 import 'package:tsl/provider/theme_provider.dart';
+import 'firebase_options.dart'; // ← ADD THIS
 
 // ── Local notifications plugin instance ───────────────────────────────────────
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -25,7 +26,9 @@ const AndroidNotificationChannel channel = AndroidNotificationChannel(
 // ── Background message handler (must be top-level) ────────────────────────────
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // ← FIXED
+  );
   debugPrint('Background message: ${message.messageId}');
 }
 
@@ -167,7 +170,10 @@ class NotificationService {
 // ── Entry point ───────────────────────────────────────────────────────────────
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // ← FIXED
+  );
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
