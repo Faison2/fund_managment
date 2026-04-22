@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../holdings/holding.dart';
 import '../market_watch/market_watch.dart';
-import '../markets /markets.dart';
-import '../profile/trade_profile.dart';
 import 'trade_dashboad.dart'; // for PastelColors
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,53 +173,6 @@ class _TradeDrawerState extends State<TradeDrawer>
                   color: PastelColors.accent,
                   delay: 0,
                   onTap: () => Navigator.pop(context),
-                ),
-                _item(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Markets',
-                  color: PastelColors.accent2,
-                  delay: 50,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const MarketsPage()));
-                  },
-                ),
-                // _item(
-                //   icon: Icons.star_rounded,
-                //   label: 'Watchlist',
-                //   color: PastelColors.gold,
-                //   delay: 100,
-                //   // onTap: () {
-                //   //   Navigator.pop(context);
-                //   //   Navigator.push(context,
-                //   //       MaterialPageRoute(
-                //   //           builder: (_) => const WatchlistPage()));
-                //   // },
-                // ),
-                _item(
-                  icon: Icons.list_alt_rounded,
-                  label: 'Holdings',
-                  color: PastelColors.accent,
-                  delay: 150,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context,
-                        MaterialPageRoute(
-                            builder: (_) => const HoldingsPage()));
-                  },
-                ),
-                _item(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
-                  color: PastelColors.accent2,
-                  delay: 200,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context,
-                        MaterialPageRoute(
-                            builder: (_) => const ProfilePage()));
-                  },
                 ),
               ],
             ),

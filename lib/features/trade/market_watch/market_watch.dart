@@ -8,18 +8,24 @@ import 'package:flutter/services.dart';
 // THEME TOKENS
 // ─────────────────────────────────────────────────────────────────────────────
 class _C {
-  static const bg      = Color(0xFF080C14);
-  static const surface = Color(0xFF0F1520);
-  static const card    = Color(0xFF131A27);
-  static const border  = Color(0xFF1E2A3A);
-  static const green   = Color(0xFF00D97E);
-  static const red     = Color(0xFFFF4560);
-  static const gray    = Color(0xFF8899AA);
-  static const gold    = Color(0xFFFFBB33);
-  static const teal    = Color(0xFF00C2FF);
-  static const txtPrim = Color(0xFFECF2FF);
-  static const txtSec  = Color(0xFF6B7E96);
-  static const txtHint = Color(0xFF3D4F62);
+  // ── Backgrounds (dark blue-tinted, derived from #329AD6)
+  static const bg      = Color(0xFF071219);
+  static const surface = Color(0xFF0C1B26);
+  static const card    = Color(0xFF112131);
+  static const border  = Color(0xFF1A3045);
+
+  // ── Brand colours
+  static const blue    = Color(0xFF329AD6);  // primary accent
+  static const teal    = Color(0xFF329AD6);  // maps to blue (buttons, icons, chips)
+  static const green   = Color(0xFF00A79D);  // Teal → gainers / positive
+  static const red     = Color(0xFF939598);  // Grey → losers / negative
+  static const gray    = Color(0xFF939598);  // Grey → flat / neutral
+  static const gold    = Color(0xFF329AD6);  // Blue → stat highlights
+
+  // ── Typography
+  static const txtPrim = Color(0xFFFFFFFF);  // White
+  static const txtSec  = Color(0xFF939598);  // Grey
+  static const txtHint = Color(0xFF4A6070);  // Dark-muted (for subtle labels)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -327,7 +333,6 @@ class _MarketBanner extends StatelessWidget {
     final losers   = stocks.where((s) => s.isLoss).length;
     final flat     = stocks.where((s) => s.isFlat).length;
     final totalVol = stocks.fold<int>(0, (s, e) {
-      // Parse the already-formatted volume string back to an int estimate
       final raw = e.volume;
       if (raw.endsWith('M')) {
         return s + ((double.tryParse(raw.replaceAll('M', '')) ?? 0) * 1000000).toInt();
@@ -338,10 +343,10 @@ class _MarketBanner extends StatelessWidget {
     });
 
     final items = [
-      _BannerItem(icon: Icons.trending_up_rounded,   label: 'Gainers',   value: '$gainers',         color: _C.green),
-      _BannerItem(icon: Icons.trending_down_rounded, label: 'Losers',    value: '$losers',           color: _C.red),
-      _BannerItem(icon: Icons.remove_rounded,        label: 'Unchanged', value: '$flat',             color: _C.gray),
-      _BannerItem(icon: Icons.bar_chart_rounded,     label: 'Vol',       value: _fmtVolume(totalVol), color: _C.teal),
+      _BannerItem(icon: Icons.trending_up_rounded,   label: 'Gainers',   value: '$gainers',          color: _C.green),
+      _BannerItem(icon: Icons.trending_down_rounded, label: 'Losers',    value: '$losers',            color: _C.red),
+      _BannerItem(icon: Icons.remove_rounded,        label: 'Unchanged', value: '$flat',              color: _C.gray),
+      _BannerItem(icon: Icons.bar_chart_rounded,     label: 'Vol',       value: _fmtVolume(totalVol), color: _C.blue),
     ];
 
     return Padding(
@@ -543,7 +548,7 @@ class _OrderSheetState extends State<_OrderSheet>
                         label: 'Day Range',
                         value: '${widget.stock.low.toStringAsFixed(0)} – ${widget.stock.high.toStringAsFixed(0)}',
                         sub: 'TZS',
-                        color: _C.teal),
+                        color: _C.blue),
                   ),
                 ],
               ),
@@ -640,17 +645,15 @@ class _OrderSheetState extends State<_OrderSheet>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
-                          color: sel ? _C.teal.withOpacity(0.12) : _C.card,
+                          color: sel ? _C.blue.withOpacity(0.12) : _C.card,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: sel
-                                ? _C.teal.withOpacity(0.4)
-                                : _C.border,
+                            color: sel ? _C.blue.withOpacity(0.4) : _C.border,
                           ),
                         ),
                         child: Text(e.value,
                             style: TextStyle(
-                                color: sel ? _C.teal : _C.txtSec,
+                                color: sel ? _C.blue : _C.txtSec,
                                 fontSize: 12,
                                 fontWeight: sel
                                     ? FontWeight.w700
@@ -747,7 +750,7 @@ class _OrderSheetState extends State<_OrderSheet>
             ),
             const SizedBox(height: 20),
 
-            // Confirm
+            // Confirm button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: GestureDetector(
@@ -966,7 +969,7 @@ class _StockCardState extends State<_StockCard>
                     ),
                     const SizedBox(width: 10),
 
-                    // Symbol + company name + sector — all from API / _kMeta lookup
+                    // Symbol + company name + sector
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -985,20 +988,20 @@ class _StockCardState extends State<_StockCard>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: _C.teal.withOpacity(0.08),
+                              color: _C.blue.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: _C.teal.withOpacity(0.2)),
+                              border: Border.all(color: _C.blue.withOpacity(0.2)),
                             ),
                             child: Text(s.sector,
                                 style: const TextStyle(
-                                    color: _C.teal, fontSize: 9,
+                                    color: _C.blue, fontSize: 9,
                                     fontWeight: FontWeight.w700)),
                           ),
                         ],
                       ),
                     ),
 
-                    // Sparkline — built from open/high/low/close
+                    // Sparkline
                     SizedBox(
                       width: 90, height: 48,
                       child: CustomPaint(
@@ -1012,7 +1015,7 @@ class _StockCardState extends State<_StockCard>
 
               Container(height: 1, color: _C.border),
 
-              // Bottom row — price / change / volume all from API
+              // Bottom row
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
                 child: Row(
@@ -1092,14 +1095,14 @@ class _StockCardState extends State<_StockCard>
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              _C.teal.withOpacity(0.9),
-                              _C.teal.withOpacity(0.6),
+                              _C.blue.withOpacity(0.9),
+                              _C.blue.withOpacity(0.6),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                                color: _C.teal.withOpacity(0.25),
+                                color: _C.blue.withOpacity(0.25),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3)),
                           ],
@@ -1107,11 +1110,11 @@ class _StockCardState extends State<_StockCard>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: const [
-                            Icon(Icons.add_rounded, size: 13, color: _C.bg),
+                            Icon(Icons.add_rounded, size: 13, color: _C.txtPrim),
                             SizedBox(width: 4),
                             Text('Place Order',
                                 style: TextStyle(
-                                    color: _C.bg, fontSize: 11,
+                                    color: _C.txtPrim, fontSize: 11,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 0.2)),
                           ],
@@ -1130,8 +1133,7 @@ class _StockCardState extends State<_StockCard>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TOP STATS ROW  — replaces the old hardcoded _IndicesRow
-// Computes gainers / losers / total volume / listed count from live data.
+// TOP STATS ROW
 // ─────────────────────────────────────────────────────────────────────────────
 class _LiveStatsRow extends StatelessWidget {
   final List<DseStock> stocks;
@@ -1141,7 +1143,6 @@ class _LiveStatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (stocks.isEmpty) return const SizedBox.shrink();
 
-    // Best performer
     final sorted = [...stocks]
       ..sort((a, b) => b.changePercent.compareTo(a.changePercent));
     final topGainer = sorted.first;
@@ -1176,14 +1177,14 @@ class _LiveStatsRow extends StatelessWidget {
         label: 'Total Vol',
         value: _fmtVolume(totalVolRaw),
         sub: 'shares traded',
-        color: _C.teal,
+        color: _C.blue,
         icon: Icons.bar_chart_rounded,
       ),
       _StatCard(
         label: 'Listed',
         value: '${stocks.length}',
         sub: 'securities',
-        color: _C.gold,
+        color: _C.green,
         icon: Icons.list_alt_rounded,
       ),
     ];
@@ -1235,7 +1236,7 @@ class _StatCard extends StatelessWidget {
             style: const TextStyle(
                 color: _C.txtSec, fontSize: 10, fontWeight: FontWeight.w600)),
         Text(value,
-            style: TextStyle(
+            style: const TextStyle(
                 color: _C.txtPrim, fontSize: 16,
                 fontWeight: FontWeight.w900, letterSpacing: -0.5),
             overflow: TextOverflow.ellipsis),
@@ -1275,9 +1276,9 @@ class _SectionHeader extends StatelessWidget {
         Container(
           width: 28, height: 28,
           decoration: BoxDecoration(
-              color: _C.teal.withOpacity(0.1),
+              color: _C.blue.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, color: _C.teal, size: 14),
+          child: Icon(icon, color: _C.blue, size: 14),
         ),
         const SizedBox(width: 8),
         Text(title,
@@ -1302,7 +1303,7 @@ class _FilterRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const tabs   = ['All', 'Gainers', 'Losers', 'Flat'];
-    const colors = [_C.teal, _C.green, _C.red, _C.gray];
+    const colors = [_C.blue, _C.green, _C.red, _C.gray];
 
     return Container(
       height: 32,
@@ -1376,7 +1377,7 @@ class _SkeletonCardState extends State<_SkeletonCard>
       animation: _anim,
       builder: (_, __) {
         final shimmer = Color.lerp(
-            const Color(0xFF131A27), const Color(0xFF1E2A3A), _anim.value)!;
+            const Color(0xFF112131), const Color(0xFF1A3045), _anim.value)!;
         return Container(
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
           height: 106,
@@ -1491,7 +1492,7 @@ class _DseMarketWatchPageState extends State<DseMarketWatchPage>
       body: FadeTransition(
         opacity: _fade,
         child: RefreshIndicator(
-          color: _C.teal,
+          color: _C.blue,
           backgroundColor: _C.card,
           onRefresh: _fetchData,
           child: CustomScrollView(
@@ -1545,7 +1546,7 @@ class _DseMarketWatchPageState extends State<DseMarketWatchPage>
                         border: Border.all(color: _C.border),
                       ),
                       child: const Icon(Icons.refresh_rounded,
-                          size: 14, color: _C.teal),
+                          size: 14, color: _C.blue),
                     ),
                     onPressed: _loading ? null : _fetchData,
                   ),
@@ -1556,8 +1557,7 @@ class _DseMarketWatchPageState extends State<DseMarketWatchPage>
                     decoration: BoxDecoration(
                       color: _C.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
-                      border:
-                      Border.all(color: _C.green.withOpacity(0.3)),
+                      border: Border.all(color: _C.green.withOpacity(0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1581,7 +1581,6 @@ class _DseMarketWatchPageState extends State<DseMarketWatchPage>
                   children: [
                     const SizedBox(height: 12),
 
-                    // Live stats row — replaces the old hardcoded _IndicesRow
                     if (!_loading && _error == null && _stocks.isNotEmpty) ...[
                       _SectionHeader(
                           title: 'Market Snapshot  ·  ${_stocks.first.lastTradeTime.substring(0, 10)}',
@@ -1652,14 +1651,14 @@ class _DseMarketWatchPageState extends State<DseMarketWatchPage>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 24, vertical: 12),
                             decoration: BoxDecoration(
-                              color: _C.teal.withOpacity(0.15),
+                              color: _C.blue.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: _C.teal.withOpacity(0.4)),
+                                  color: _C.blue.withOpacity(0.4)),
                             ),
                             child: const Text('Retry',
                                 style: TextStyle(
-                                    color: _C.teal, fontSize: 13,
+                                    color: _C.blue, fontSize: 13,
                                     fontWeight: FontWeight.w800)),
                           ),
                         ),
