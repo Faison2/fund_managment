@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../buysell/buy.dart';
+import '../buysell/sell.dart';
 import '../market_watch/market_watch.dart';
 import 'drawer.dart';
 
@@ -372,7 +374,10 @@ class _TradeDashboardState extends State<TradeDashboard>
               icon: Icons.trending_up_rounded,
               grad: PastelColors.buyGrad,
               shadow: PastelColors.accent2,
-              onTap: () => HapticFeedback.mediumImpact(),
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                _push(const BuySharesPage());
+              },
             ),
           ),
           const SizedBox(width: 12),
@@ -382,7 +387,10 @@ class _TradeDashboardState extends State<TradeDashboard>
               icon: Icons.trending_down_rounded,
               grad: PastelColors.sellGrad,
               shadow: PastelColors.red,
-              onTap: () => HapticFeedback.mediumImpact(),
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                _push(const SellSharesPage());
+              },
             ),
           ),
         ]),

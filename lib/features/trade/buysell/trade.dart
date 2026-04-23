@@ -32,7 +32,7 @@ enum TradeType { buy, sell }
 class _TradeApi {
   static const _buyUrl  = 'https://portaluat.tsl.co.tz/DSEAPI/Home/BuyShares';
   static const _sellUrl = 'https://portaluat.tsl.co.tz/DSEAPI//Home/SellShares';
-  static const _nida    = '19931225100010000001';
+  static const _nida    = '19984567-12345-67890-12';
 
   static Future<Map<String, dynamic>> execute({
     required TradeType type,
