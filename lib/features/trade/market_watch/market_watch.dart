@@ -3,34 +3,25 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../buysell/trade.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// THEME TOKENS
-// ─────────────────────────────────────────────────────────────────────────────
 class _C {
-  // ── Backgrounds (light mint-green, matching the screenshot)
-  static const bg      = Color(0xFFE8F4EF); // light mint page background
-  static const surface = Color(0xFFF2FAF6); // slightly lighter surface
-  static const card    = Color(0xFFFFFFFF); // white cards
-  static const border  = Color(0xFFD0E8DF); // subtle green border
-
-  // ── Brand colours
-  static const blue    = Color(0xFF1A7A65); // dark teal — primary accent
-  static const teal    = Color(0xFF1A7A65); // same as blue
-  static const green   = Color(0xFF27AE72); // gainers / BUY / positive
-  static const red     = Color(0xFFE05C7A); // losers / SELL / negative (pink-red)
-  static const gray    = Color(0xFF9E9E9E); // flat / unchanged / cancelled
-  static const gold    = Color(0xFFF5A623); // pending / orange highlights
-
-  // ── Typography
-  static const txtPrim = Color(0xFF1A2B28); // dark teal-black
-  static const txtSec  = Color(0xFF7A9990); // muted teal-grey
-  static const txtHint = Color(0xFFAAC9C0); // faint mint (subtle labels)
+  static const bg      = Color(0xFFE8F4EF);
+  static const surface = Color(0xFFF2FAF6);
+  static const card    = Color(0xFFFFFFFF);
+  static const border  = Color(0xFFD0E8DF);
+  static const blue    = Color(0xFF1A7A65);
+  static const green   = Color(0xFF27AE72);
+  static const red     = Color(0xFFE05C7A);
+  static const gray    = Color(0xFF9E9E9E);
+  static const gold    = Color(0xFFF5A623);
+  static const txtPrim = Color(0xFF1A2B28);
+  static const txtSec  = Color(0xFF7A9990);
+  static const txtHint = Color(0xFFAAC9C0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COMPANY META — local lookup only (the API does NOT return display names or
-// sectors). Falls back gracefully to the raw symbol / "Equity" when unknown.
+// COMPANY META
 // ─────────────────────────────────────────────────────────────────────────────
 const Map<String, Map<String, String>> _kMeta = {
   'TBL':        {'name': 'Tanzania Breweries Ltd',       'sector': 'Consumer Goods'},
@@ -55,11 +46,8 @@ const Map<String, Map<String, String>> _kMeta = {
   'VERTEX-ETF': {'name': 'Vertex Exchange Fund',         'sector': 'ETF'},
 };
 
-String _companyName(String symbol) =>
-    _kMeta[symbol]?['name'] ?? symbol;
-
-String _sector(String symbol) =>
-    _kMeta[symbol]?['sector'] ?? 'Equity';
+String _companyName(String symbol) => _kMeta[symbol]?['name'] ?? symbol;
+String _sector(String symbol)      => _kMeta[symbol]?['sector'] ?? 'Equity';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA MODEL
@@ -73,7 +61,6 @@ class DseStock {
   final double changePercent;
   final String volume;
   final List<double> sparkline;
-  // Extra API fields
   final double high;
   final double low;
   final double openingPrice;
@@ -82,7 +69,6 @@ class DseStock {
   final int    bestBidQty;
   final int    bestOfferQty;
   final double marketCap;
-  /// Raw timestamp string returned by the API ("2026-04-21 10:18:18")
   final String lastTradeTime;
 
   const DseStock({
@@ -105,7 +91,6 @@ class DseStock {
     required this.lastTradeTime,
   });
 
-  // ── Factory from API JSON ────────────────────────────────────────────────
   factory DseStock.fromJson(Map<String, dynamic> j) {
     final symbol       = (j['securityName'] as String).trim();
     final price        = (j['marketPrice'] as num).toDouble();
@@ -120,9 +105,7 @@ class DseStock {
     final bestOfferQty = (j['bestOfferQuantity'] as num).toInt();
     final marketCap    = (j['marketCap'] as num).toDouble();
     final time         = (j['time'] as String?) ?? '';
-
-    // percentageChange from the API is always 0 — compute from change/open
-    final pct = open != 0 ? (change / open) * 100 : 0.0;
+    final pct          = open != 0 ? (change / open) * 100 : 0.0;
 
     return DseStock(
       symbol:         symbol,
@@ -151,16 +134,7 @@ class DseStock {
 
   Color get trendColor =>
       isGain ? _C.green : isLoss ? _C.red : _C.gray;
-
-  Color get trendBg =>
-      isGain
-          ? _C.green.withOpacity(0.09)
-          : isLoss
-          ? _C.red.withOpacity(0.09)
-          : _C.gray.withOpacity(0.07);
 }
-
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 String _fmtVolume(int v) {
   if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(2)}M';
@@ -168,24 +142,13 @@ String _fmtVolume(int v) {
   return v.toString();
 }
 
-String _fmtMarketCap(double v) {
-  if (v >= 1e12) return 'TZS ${(v / 1e12).toStringAsFixed(2)}T';
-  if (v >= 1e9)  return 'TZS ${(v / 1e9).toStringAsFixed(2)}B';
-  if (v >= 1e6)  return 'TZS ${(v / 1e6).toStringAsFixed(2)}M';
-  return 'TZS ${v.toStringAsFixed(0)}';
-}
-
-/// Build a 12-point normalised sparkline from open/high/low/close.
-List<double> _buildSparkline(
-    double open, double high, double low, double close) {
+List<double> _buildSparkline(double open, double high, double low, double close) {
   if (high == low) return List.filled(12, 0.5);
   final rng    = Random(open.toInt() ^ close.toInt());
   final prices = <double>[open];
-
   final midHigh = low + (high - low) * (0.55 + rng.nextDouble() * 0.3);
   final midLow  = low + (high - low) * (0.15 + rng.nextDouble() * 0.25);
   final goUp    = close >= open;
-
   prices.add(goUp ? midLow : midHigh);
   for (int i = 2; i < 10; i++) {
     final prev  = prices.last;
@@ -193,7 +156,6 @@ List<double> _buildSparkline(
     prices.add((prev + nudge).clamp(low, high));
   }
   prices.add(close);
-
   final mn    = prices.reduce(min);
   final mx    = prices.reduce(max);
   final range = mx - mn;
@@ -202,53 +164,31 @@ List<double> _buildSparkline(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// API SERVICE  — bypasses self-signed / IP TLS cert on the UAT host
+// API SERVICE
 // ─────────────────────────────────────────────────────────────────────────────
 class _DseApi {
-  static const _url =
-      'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
-
-  // TODO: replace with real NIDA number from user session / auth flow
+  static const _url           = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
   static const _hardcodedNida = '19931225100010000001';
 
   static Future<List<DseStock>> fetchMarketWatch() async {
     final client = HttpClient();
-    client.badCertificateCallback =
-        (X509Certificate cert, String host, int port) => true;
+    client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
     client.connectionTimeout = const Duration(seconds: 15);
-
     try {
       final request = await client.postUrl(Uri.parse(_url));
       request.headers
         ..set('Accept',       'application/json')
         ..set('Content-Type', 'application/json')
         ..set('User-Agent',   'DSEApp/1.0 (Flutter; Dart)');
-
-      final payload = jsonEncode({
-        'nidaNumber': _hardcodedNida,
-        'signature':  '',
-      });
-      request.write(payload);
-
+      request.write(jsonEncode({'nidaNumber': _hardcodedNida, 'signature': ''}));
       final response = await request.close();
       final body     = await response.transform(utf8.decoder).join();
-
-      if (response.statusCode != 200) {
-        throw Exception(
-            'HTTP ${response.statusCode} — ${body.substring(0, body.length.clamp(0, 200))}');
-      }
-
+      if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
       final json = jsonDecode(body) as Map<String, dynamic>;
       final code = json['code'] as int;
-      if (code != 9000) {
-        throw Exception('API code $code: ${json['message']}');
-      }
-
-      final data =
-      (json['data'] as List<dynamic>).cast<Map<String, dynamic>>();
-      return data
-          .map(DseStock.fromJson)
-          .toList()
+      if (code != 9000) throw Exception('API code $code: ${json['message']}');
+      final data = (json['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+      return data.map(DseStock.fromJson).toList()
         ..sort((a, b) => a.symbol.compareTo(b.symbol));
     } finally {
       client.close();
@@ -263,65 +203,46 @@ class SparklinePainter extends CustomPainter {
   final List<double> data;
   final Color color;
   final bool showFill;
-
   SparklinePainter({required this.data, required this.color, this.showFill = true});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (data.length < 2) return;
-
     final points = <Offset>[];
     for (int i = 0; i < data.length; i++) {
-      points.add(Offset(i / (data.length - 1) * size.width,
-          (1 - data[i]) * size.height));
+      points.add(Offset(i / (data.length - 1) * size.width, (1 - data[i]) * size.height));
     }
-
     final path = Path()..moveTo(points.first.dx, points.first.dy);
     for (int i = 0; i < points.length - 1; i++) {
       final cp1 = Offset((points[i].dx + points[i + 1].dx) / 2, points[i].dy);
       final cp2 = Offset((points[i].dx + points[i + 1].dx) / 2, points[i + 1].dy);
-      path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy,
-          points[i + 1].dx, points[i + 1].dy);
+      path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, points[i + 1].dx, points[i + 1].dy);
     }
-
     if (showFill) {
       final fillPath = Path.from(path)
         ..lineTo(size.width, size.height)
         ..lineTo(0, size.height)
         ..close();
-      canvas.drawPath(
-        fillPath,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [color.withOpacity(0.28), color.withOpacity(0.00)],
-          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-          ..style = PaintingStyle.fill,
-      );
+      canvas.drawPath(fillPath, Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [color.withOpacity(0.28), color.withOpacity(0.00)],
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+        ..style = PaintingStyle.fill);
     }
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..strokeWidth = 1.8
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-
+    canvas.drawPath(path, Paint()
+      ..color = color ..strokeWidth = 1.8 ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round ..strokeJoin = StrokeJoin.round);
     canvas.drawCircle(points.last, 3.0, Paint()..color = color.withOpacity(0.3));
     canvas.drawCircle(points.last, 3.0, Paint()..color = color);
   }
 
   @override
-  bool shouldRepaint(SparklinePainter old) =>
-      old.data != data || old.color != color;
+  bool shouldRepaint(SparklinePainter old) => old.data != data || old.color != color;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MARKET SUMMARY BANNER  (computed entirely from live API stocks)
+// MARKET SUMMARY BANNER
 // ─────────────────────────────────────────────────────────────────────────────
 class _MarketBanner extends StatelessWidget {
   final List<DseStock> stocks;
@@ -334,21 +255,16 @@ class _MarketBanner extends StatelessWidget {
     final flat     = stocks.where((s) => s.isFlat).length;
     final totalVol = stocks.fold<int>(0, (s, e) {
       final raw = e.volume;
-      if (raw.endsWith('M')) {
-        return s + ((double.tryParse(raw.replaceAll('M', '')) ?? 0) * 1000000).toInt();
-      } else if (raw.endsWith('K')) {
-        return s + ((double.tryParse(raw.replaceAll('K', '')) ?? 0) * 1000).toInt();
-      }
+      if (raw.endsWith('M')) return s + ((double.tryParse(raw.replaceAll('M', '')) ?? 0) * 1000000).toInt();
+      if (raw.endsWith('K')) return s + ((double.tryParse(raw.replaceAll('K', '')) ?? 0) * 1000).toInt();
       return s + (int.tryParse(raw) ?? 0);
     });
-
     final items = [
       _BannerItem(icon: Icons.trending_up_rounded,   label: 'Gainers',   value: '$gainers',          color: _C.green),
       _BannerItem(icon: Icons.trending_down_rounded, label: 'Losers',    value: '$losers',            color: _C.red),
       _BannerItem(icon: Icons.remove_rounded,        label: 'Unchanged', value: '$flat',              color: _C.gray),
       _BannerItem(icon: Icons.bar_chart_rounded,     label: 'Vol',       value: _fmtVolume(totalVol), color: _C.blue),
     ];
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       child: Row(
@@ -364,22 +280,18 @@ class _MarketBanner extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: item.color.withOpacity(0.18)),
               ),
-              child: Column(
-                children: [
-                  Icon(item.icon, color: item.color, size: 18),
-                  const SizedBox(height: 5),
-                  Text(item.value,
-                      style: TextStyle(
-                          color: item.color, fontSize: 16,
-                          fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                  const SizedBox(height: 2),
-                  Text(item.label,
-                      style: const TextStyle(
-                          color: _C.txtSec, fontSize: 9,
-                          fontWeight: FontWeight.w600),
-                      textAlign: TextAlign.center),
-                ],
-              ),
+              child: Column(children: [
+                Icon(item.icon, color: item.color, size: 18),
+                const SizedBox(height: 5),
+                Text(item.value,
+                    style: TextStyle(color: item.color, fontSize: 16,
+                        fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                const SizedBox(height: 2),
+                Text(item.label,
+                    style: const TextStyle(color: _C.txtSec, fontSize: 9,
+                        fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center),
+              ]),
             ),
           );
         }).toList(),
@@ -389,503 +301,12 @@ class _MarketBanner extends StatelessWidget {
 }
 
 class _BannerItem {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-  const _BannerItem(
-      {required this.icon, required this.label, required this.value, required this.color});
+  final IconData icon; final String label; final String value; final Color color;
+  const _BannerItem({required this.icon, required this.label, required this.value, required this.color});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PLACE ORDER BOTTOM SHEET
-// ─────────────────────────────────────────────────────────────────────────────
-void _showOrderSheet(BuildContext context, DseStock stock) {
-  HapticFeedback.mediumImpact();
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _OrderSheet(stock: stock),
-  );
-}
-
-class _OrderSheet extends StatefulWidget {
-  final DseStock stock;
-  const _OrderSheet({required this.stock});
-
-  @override
-  State<_OrderSheet> createState() => _OrderSheetState();
-}
-
-class _OrderSheetState extends State<_OrderSheet>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  int _side  = 0;
-  int _type  = 0;
-  int _qty   = 100;
-  late double _limitPrice;
-
-  @override
-  void initState() {
-    super.initState();
-    _limitPrice = widget.stock.price;
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 320))
-      ..forward();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Color  get _sideColor => _side == 0 ? _C.green : _C.red;
-  String get _sideLabel => _side == 0 ? 'BUY' : 'SELL';
-
-  @override
-  Widget build(BuildContext context) {
-    final total = _qty * (_type == 0 ? widget.stock.price : _limitPrice);
-
-    return SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-          .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic)),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: _C.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border(top: BorderSide(color: _C.border, width: 1)),
-        ),
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 20),
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                  color: _C.border, borderRadius: BorderRadius.circular(2)),
-            ),
-
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Place Order',
-                          style: TextStyle(
-                              color: _C.txtPrim, fontSize: 20,
-                              fontWeight: FontWeight.w900)),
-                      const SizedBox(height: 2),
-                      Text(
-                          '${widget.stock.symbol} · ${widget.stock.company}',
-                          style: const TextStyle(
-                              color: _C.txtSec, fontSize: 12)),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: widget.stock.trendColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: widget.stock.trendColor.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'TZS ${widget.stock.price.toStringAsFixed(2)}',
-                          style: TextStyle(
-                              color: widget.stock.trendColor,
-                              fontSize: 14, fontWeight: FontWeight.w900),
-                        ),
-                        Text(
-                          '${widget.stock.changePercent >= 0 ? '+' : ''}${widget.stock.changePercent.toStringAsFixed(2)}%',
-                          style: TextStyle(
-                              color: widget.stock.trendColor,
-                              fontSize: 10, fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Bid / Offer / Range row — all from API
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _InfoChip(
-                        label: 'Best Bid',
-                        value: 'TZS ${widget.stock.bestBidPrice.toStringAsFixed(0)}',
-                        sub: '${widget.stock.bestBidQty} shares',
-                        color: _C.green),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _InfoChip(
-                        label: 'Best Offer',
-                        value: 'TZS ${widget.stock.bestOfferPrice.toStringAsFixed(0)}',
-                        sub: '${widget.stock.bestOfferQty} shares',
-                        color: _C.red),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _InfoChip(
-                        label: 'Day Range',
-                        value: '${widget.stock.low.toStringAsFixed(0)} – ${widget.stock.high.toStringAsFixed(0)}',
-                        sub: 'TZS',
-                        color: _C.blue),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Market cap row — from API
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  const Icon(Icons.pie_chart_outline_rounded,
-                      size: 13, color: _C.txtHint),
-                  const SizedBox(width: 5),
-                  Text('Market Cap: ${_fmtMarketCap(widget.stock.marketCap)}',
-                      style: const TextStyle(color: _C.txtSec, fontSize: 11)),
-                  if (widget.stock.lastTradeTime.isNotEmpty) ...[
-                    const Spacer(),
-                    const Icon(Icons.access_time_rounded,
-                        size: 11, color: _C.txtHint),
-                    const SizedBox(width: 4),
-                    Text(
-                      widget.stock.lastTradeTime.length > 10
-                          ? widget.stock.lastTradeTime.substring(11, 16)
-                          : widget.stock.lastTradeTime,
-                      style: const TextStyle(color: _C.txtSec, fontSize: 11),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Buy / Sell toggle
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: _C.card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _C.border),
-                ),
-                child: Row(
-                  children: ['BUY', 'SELL'].asMap().entries.map((e) {
-                    final sel = _side == e.key;
-                    final col = e.key == 0 ? _C.green : _C.red;
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _side = e.key);
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          decoration: BoxDecoration(
-                            color: sel ? col.withOpacity(0.18) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(11),
-                            border: sel
-                                ? Border.all(color: col.withOpacity(0.5))
-                                : null,
-                          ),
-                          child: Center(
-                            child: Text(e.value,
-                                style: TextStyle(
-                                    color: sel ? col : _C.txtSec,
-                                    fontSize: 13, fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5)),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Order type
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  const Text('Order Type',
-                      style: TextStyle(color: _C.txtSec, fontSize: 12)),
-                  const SizedBox(width: 12),
-                  ...['Market', 'Limit'].asMap().entries.map((e) {
-                    final sel = _type == e.key;
-                    return GestureDetector(
-                      onTap: () => setState(() => _type = e.key),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: sel ? _C.blue.withOpacity(0.12) : _C.card,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: sel ? _C.blue.withOpacity(0.4) : _C.border,
-                          ),
-                        ),
-                        child: Text(e.value,
-                            style: TextStyle(
-                                color: sel ? _C.blue : _C.txtSec,
-                                fontSize: 12,
-                                fontWeight: sel
-                                    ? FontWeight.w700
-                                    : FontWeight.w500)),
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Quantity + limit price
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _FieldBox(
-                      label: 'Shares',
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _StepBtn(
-                              icon: Icons.remove,
-                              onTap: () =>
-                                  setState(() => _qty = max(1, _qty - 100))),
-                          Text('$_qty',
-                              style: const TextStyle(
-                                  color: _C.txtPrim, fontSize: 16,
-                                  fontWeight: FontWeight.w900)),
-                          _StepBtn(
-                              icon: Icons.add,
-                              onTap: () => setState(() => _qty += 100)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (_type == 1) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _FieldBox(
-                        label: 'Limit Price (TZS)',
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _StepBtn(
-                                icon: Icons.remove,
-                                onTap: () => setState(() =>
-                                _limitPrice = max(1, _limitPrice - 10))),
-                            Text(_limitPrice.toStringAsFixed(0),
-                                style: const TextStyle(
-                                    color: _C.txtPrim, fontSize: 14,
-                                    fontWeight: FontWeight.w900)),
-                            _StepBtn(
-                                icon: Icons.add,
-                                onTap: () =>
-                                    setState(() => _limitPrice += 10)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Estimated total
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: _sideColor.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _sideColor.withOpacity(0.2)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Estimated Total',
-                        style: TextStyle(color: _C.txtSec, fontSize: 12)),
-                    Text(
-                      'TZS ${_fmtMoney(total)}',
-                      style: TextStyle(
-                          color: _sideColor, fontSize: 16,
-                          fontWeight: FontWeight.w900),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Confirm button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.heavyImpact();
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          '$_sideLabel order placed: $_qty shares of ${widget.stock.symbol}'),
-                      backgroundColor: _sideColor.withOpacity(0.9),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
-                },
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        colors: [_sideColor, _sideColor.withOpacity(0.7)]),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                          color: _sideColor.withOpacity(0.35),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6)),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      '$_sideLabel ${widget.stock.symbol}',
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 15,
-                          fontWeight: FontWeight.w900, letterSpacing: 0.5),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _fmtMoney(double v) {
-    if (v >= 1e9)  return '${(v / 1e9).toStringAsFixed(2)}B';
-    if (v >= 1e6)  return '${(v / 1e6).toStringAsFixed(2)}M';
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
-    return v.toStringAsFixed(0);
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final String sub;
-  final Color color;
-  const _InfoChip(
-      {required this.label, required this.value, required this.sub,
-        required this.color});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.07),
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: color.withOpacity(0.2)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                color: _C.txtSec, fontSize: 9, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-                color: color, fontSize: 11, fontWeight: FontWeight.w800),
-            overflow: TextOverflow.ellipsis),
-        Text(sub,
-            style: const TextStyle(color: _C.txtHint, fontSize: 9)),
-      ],
-    ),
-  );
-}
-
-class _FieldBox extends StatelessWidget {
-  final String label;
-  final Widget child;
-  const _FieldBox({required this.label, required this.child});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-    decoration: BoxDecoration(
-      color: _C.card,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: _C.border),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                color: _C.txtSec, fontSize: 10, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        child,
-      ],
-    ),
-  );
-}
-
-class _StepBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _StepBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: 28, height: 28,
-      decoration: BoxDecoration(
-          color: _C.border, borderRadius: BorderRadius.circular(8)),
-      child: Icon(icon, color: _C.txtPrim, size: 14),
-    ),
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// STOCK CARD
+// STOCK CARD  — display only, no trade actions
 // ─────────────────────────────────────────────────────────────────────────────
 class _StockCard extends StatefulWidget {
   final DseStock stock;
@@ -896,8 +317,7 @@ class _StockCard extends StatefulWidget {
   State<_StockCard> createState() => _StockCardState();
 }
 
-class _StockCardState extends State<_StockCard>
-    with SingleTickerProviderStateMixin {
+class _StockCardState extends State<_StockCard> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
@@ -905,19 +325,14 @@ class _StockCardState extends State<_StockCard>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 450))
-      ..forward();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 450))..forward();
     _fade  = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
   }
 
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -929,204 +344,141 @@ class _StockCardState extends State<_StockCard>
       opacity: _fade,
       child: SlideTransition(
         position: _slide,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          decoration: BoxDecoration(
-            color: _C.card,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _C.border),
-            boxShadow: [
-              BoxShadow(
-                  color: color.withOpacity(0.05),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4)),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Top row
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TradePage(
+                  symbol:         s.symbol,
+                  company:        s.company,
+                  sector:         s.sector,
+                  price:          s.price,
+                  high:           s.high,
+                  low:            s.low,
+                  changePercent:  s.changePercent,
+                  change:         s.change,
+                  bestBidPrice:   s.bestBidPrice,
+                  bestOfferPrice: s.bestOfferPrice,
+                  bestBidQty:     s.bestBidQty,
+                  bestOfferQty:   s.bestOfferQty,
+                  marketCap:      s.marketCap,
+                  lastTradeTime:  s.lastTradeTime,
+                  sparkline:      s.sparkline,
+                  volume:         s.volume,
+                ),
+              ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            decoration: BoxDecoration(
+              color: _C.card,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: _C.border),
+              boxShadow: [BoxShadow(color: color.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 4))],
+            ),
+            child: Column(children: [
+              // ── Top row ──────────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Avatar — initials from symbol
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: color.withOpacity(0.25)),
+                    ),
+                    child: Center(child: Text(
+                      s.symbol.substring(0, min(2, s.symbol.length)),
+                      style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                    )),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(s.symbol, style: const TextStyle(color: _C.txtPrim, fontSize: 15, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 2),
+                    Text(s.company, style: const TextStyle(color: _C.txtSec, fontSize: 11), overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 4),
                     Container(
-                      width: 44, height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: color.withOpacity(0.25)),
+                        color: _C.blue.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: _C.blue.withOpacity(0.2)),
                       ),
-                      child: Center(
-                        child: Text(
-                          s.symbol.substring(0, min(2, s.symbol.length)),
-                          style: TextStyle(
-                              color: color, fontSize: 13,
-                              fontWeight: FontWeight.w900, letterSpacing: -0.5),
-                        ),
-                      ),
+                      child: Text(s.sector, style: const TextStyle(color: _C.blue, fontSize: 9, fontWeight: FontWeight.w700)),
                     ),
-                    const SizedBox(width: 10),
+                  ])),
+                ]),
+              ),
 
-                    // Symbol + company name + sector
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(s.symbol,
-                              style: const TextStyle(
-                                  color: _C.txtPrim, fontSize: 15,
-                                  fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 2),
-                          Text(s.company,
-                              style: const TextStyle(
-                                  color: _C.txtSec, fontSize: 11),
-                              overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _C.blue.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: _C.blue.withOpacity(0.2)),
-                            ),
-                            child: Text(s.sector,
-                                style: const TextStyle(
-                                    color: _C.blue, fontSize: 9,
-                                    fontWeight: FontWeight.w700)),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Sparkline
-                    SizedBox(
-                      width: 90, height: 48,
-                      child: CustomPaint(
-                        painter: SparklinePainter(
-                            data: s.sparkline, color: color),
-                      ),
-                    ),
-                  ],
-                ),
+              // ── Full-width sparkline ──────────────────────────────────────
+              SizedBox(
+                height: 56, width: double.infinity,
+                child: CustomPaint(painter: SparklinePainter(data: s.sparkline, color: color)),
               ),
 
               Container(height: 1, color: _C.border),
 
-              // Bottom row
+              // ── Bottom row ────────────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
-                child: Row(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('TZS ${s.price.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                                color: _C.txtPrim, fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5)),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: color.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                    color: color.withOpacity(0.25)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                      s.isGain
-                                          ? Icons.arrow_upward_rounded
-                                          : s.isLoss
-                                          ? Icons.arrow_downward_rounded
-                                          : Icons.remove_rounded,
-                                      size: 10, color: color),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                      '$sign${s.changePercent.toStringAsFixed(2)}%',
-                                      style: TextStyle(
-                                          color: color, fontSize: 11,
-                                          fontWeight: FontWeight.w800)),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${s.change >= 0 ? '+' : ''}${s.change.toStringAsFixed(0)}',
-                              style: TextStyle(
-                                  color: color, fontSize: 10,
-                                  fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(width: 8),
-                            Row(
-                              children: [
-                                const Icon(Icons.swap_vert_rounded,
-                                    size: 11, color: _C.txtHint),
-                                const SizedBox(width: 3),
-                                Text('Vol ${s.volume}',
-                                    style: const TextStyle(
-                                        color: _C.txtSec, fontSize: 10,
-                                        fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-
-                    // Place Order button
-                    GestureDetector(
-                      onTap: () => _showOrderSheet(context, s),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                child: Row(children: [
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('TZS ${s.price.toStringAsFixed(2)}',
+                        style: const TextStyle(color: _C.txtPrim, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                    const SizedBox(height: 3),
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              _C.blue.withOpacity(0.9),
-                              _C.blue.withOpacity(0.6),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                                color: _C.blue.withOpacity(0.25),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3)),
-                          ],
+                          color: color.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: color.withOpacity(0.25)),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.add_rounded, size: 13, color: _C.txtPrim),
-                            SizedBox(width: 4),
-                            Text('Place Order',
-                                style: TextStyle(
-                                    color: _C.txtPrim, fontSize: 11,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.2)),
-                          ],
-                        ),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(s.isGain ? Icons.arrow_upward_rounded : s.isLoss ? Icons.arrow_downward_rounded : Icons.remove_rounded,
+                              size: 10, color: color),
+                          const SizedBox(width: 3),
+                          Text('$sign${s.changePercent.toStringAsFixed(2)}%',
+                              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+                        ]),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 6),
+                      Text('${s.change >= 0 ? '+' : ''}${s.change.toStringAsFixed(0)}',
+                          style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
+                      const SizedBox(width: 8),
+                      Row(children: [
+                        const Icon(Icons.swap_vert_rounded, size: 11, color: _C.txtHint),
+                        const SizedBox(width: 3),
+                        Text('Vol ${s.volume}',
+                            style: const TextStyle(color: _C.txtSec, fontSize: 10, fontWeight: FontWeight.w600)),
+                      ]),
+                    ]),
+                  ])),
+
+                  // High / Low
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Row(children: [
+                      const Text('H', style: TextStyle(color: _C.txtHint, fontSize: 9, fontWeight: FontWeight.w700)),
+                      const SizedBox(width: 4),
+                      Text(s.high.toStringAsFixed(0), style: const TextStyle(color: _C.green, fontSize: 10, fontWeight: FontWeight.w800)),
+                    ]),
+                    const SizedBox(height: 3),
+                    Row(children: [
+                      const Text('L', style: TextStyle(color: _C.txtHint, fontSize: 9, fontWeight: FontWeight.w700)),
+                      const SizedBox(width: 4),
+                      Text(s.low.toStringAsFixed(0), style: const TextStyle(color: _C.red, fontSize: 10, fontWeight: FontWeight.w800)),
+                    ]),
+                  ]),
+                ]),
               ),
-            ],
-          ),
-        ),
+            ]),
+          ), // Container
+        ), // GestureDetector
       ),
     );
   }
@@ -1142,53 +494,27 @@ class _LiveStatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (stocks.isEmpty) return const SizedBox.shrink();
-
-    final sorted = [...stocks]
-      ..sort((a, b) => b.changePercent.compareTo(a.changePercent));
+    final sorted    = [...stocks]..sort((a, b) => b.changePercent.compareTo(a.changePercent));
     final topGainer = sorted.first;
     final topLoser  = sorted.last;
-
     final totalVolRaw = stocks.fold<int>(0, (s, e) {
       final raw = e.volume;
-      if (raw.endsWith('M')) {
-        return s + ((double.tryParse(raw.replaceAll('M', '')) ?? 0) * 1e6).toInt();
-      } else if (raw.endsWith('K')) {
-        return s + ((double.tryParse(raw.replaceAll('K', '')) ?? 0) * 1000).toInt();
-      }
+      if (raw.endsWith('M')) return s + ((double.tryParse(raw.replaceAll('M', '')) ?? 0) * 1e6).toInt();
+      if (raw.endsWith('K')) return s + ((double.tryParse(raw.replaceAll('K', '')) ?? 0) * 1000).toInt();
       return s + (int.tryParse(raw) ?? 0);
     });
-
     final items = [
-      _StatCard(
-        label: 'Top Gainer',
-        value: topGainer.symbol,
-        sub: '${topGainer.changePercent >= 0 ? '+' : ''}${topGainer.changePercent.toStringAsFixed(2)}%',
-        color: _C.green,
-        icon: Icons.trending_up_rounded,
-      ),
-      _StatCard(
-        label: 'Top Loser',
-        value: topLoser.symbol,
-        sub: '${topLoser.changePercent.toStringAsFixed(2)}%',
-        color: _C.red,
-        icon: Icons.trending_down_rounded,
-      ),
-      _StatCard(
-        label: 'Total Vol',
-        value: _fmtVolume(totalVolRaw),
-        sub: 'shares traded',
-        color: _C.blue,
-        icon: Icons.bar_chart_rounded,
-      ),
-      _StatCard(
-        label: 'Listed',
-        value: '${stocks.length}',
-        sub: 'securities',
-        color: _C.green,
-        icon: Icons.list_alt_rounded,
-      ),
+      _StatCard(label: 'Top Gainer', value: topGainer.symbol,
+          sub: '${topGainer.changePercent >= 0 ? '+' : ''}${topGainer.changePercent.toStringAsFixed(2)}%',
+          color: _C.green, icon: Icons.trending_up_rounded),
+      _StatCard(label: 'Top Loser', value: topLoser.symbol,
+          sub: '${topLoser.changePercent.toStringAsFixed(2)}%',
+          color: _C.red, icon: Icons.trending_down_rounded),
+      _StatCard(label: 'Total Vol', value: _fmtVolume(totalVolRaw),
+          sub: 'shares traded', color: _C.blue, icon: Icons.bar_chart_rounded),
+      _StatCard(label: 'Listed', value: '${stocks.length}',
+          sub: 'securities', color: _C.green, icon: Icons.list_alt_rounded),
     ];
-
     return SizedBox(
       height: 88,
       child: ListView.builder(
@@ -1208,53 +534,22 @@ class _LiveStatsRow extends StatelessWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final String sub;
-  final Color  color;
-  final IconData icon;
-  const _StatCard({
-    required this.label, required this.value, required this.sub,
-    required this.color, required this.icon,
-  });
+  final String label; final String value; final String sub; final Color color; final IconData icon;
+  const _StatCard({required this.label, required this.value, required this.sub, required this.color, required this.icon});
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 148,
-    margin: const EdgeInsets.only(right: 10),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.07),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: color.withOpacity(0.2)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                color: _C.txtSec, fontSize: 10, fontWeight: FontWeight.w600)),
-        Text(value,
-            style: const TextStyle(
-                color: _C.txtPrim, fontSize: 16,
-                fontWeight: FontWeight.w900, letterSpacing: -0.5),
-            overflow: TextOverflow.ellipsis),
-        Row(
-          children: [
-            Icon(icon, size: 10, color: color),
-            const SizedBox(width: 3),
-            Expanded(
-              child: Text(sub,
-                  style: TextStyle(
-                      color: color, fontSize: 11,
-                      fontWeight: FontWeight.w800),
-                  overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
-      ],
-    ),
+    width: 148, margin: const EdgeInsets.only(right: 10), padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(color: color.withOpacity(0.07), borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.2))),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Text(label, style: const TextStyle(color: _C.txtSec, fontSize: 10, fontWeight: FontWeight.w600)),
+      Text(value,  style: const TextStyle(color: _C.txtPrim, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
+      Row(children: [
+        Icon(icon, size: 10, color: color), const SizedBox(width: 3),
+        Expanded(child: Text(sub, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800), overflow: TextOverflow.ellipsis)),
+      ]),
+    ]),
   );
 }
 
@@ -1262,33 +557,21 @@ class _StatCard extends StatelessWidget {
 // SECTION HEADER
 // ─────────────────────────────────────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Widget? trailing;
-  const _SectionHeader(
-      {required this.title, required this.icon, this.trailing});
+  final String title; final IconData icon; final Widget? trailing;
+  const _SectionHeader({required this.title, required this.icon, this.trailing});
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-    child: Row(
-      children: [
-        Container(
-          width: 28, height: 28,
-          decoration: BoxDecoration(
-              color: _C.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, color: _C.blue, size: 14),
-        ),
-        const SizedBox(width: 8),
-        Text(title,
-            style: const TextStyle(
-                color: _C.txtPrim, fontSize: 13,
-                fontWeight: FontWeight.w800)),
-        const Spacer(),
-        if (trailing != null) trailing!,
-      ],
-    ),
+    child: Row(children: [
+      Container(width: 28, height: 28,
+          decoration: BoxDecoration(color: _C.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, color: _C.blue, size: 14)),
+      const SizedBox(width: 8),
+      Text(title, style: const TextStyle(color: _C.txtPrim, fontSize: 13, fontWeight: FontWeight.w800)),
+      const Spacer(),
+      if (trailing != null) trailing!,
+    ]),
   );
 }
 
@@ -1296,28 +579,21 @@ class _SectionHeader extends StatelessWidget {
 // FILTER ROW
 // ─────────────────────────────────────────────────────────────────────────────
 class _FilterRow extends StatelessWidget {
-  final int selected;
-  final ValueChanged<int> onChanged;
+  final int selected; final ValueChanged<int> onChanged;
   const _FilterRow({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
     const tabs   = ['All', 'Gainers', 'Losers', 'Flat'];
     const colors = [_C.blue, _C.green, _C.red, _C.gray];
-
     return Container(
       height: 32,
-      decoration: BoxDecoration(
-          color: _C.surface, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: _C.surface, borderRadius: BorderRadius.circular(10)),
       child: Row(
         children: tabs.asMap().entries.map((e) {
-          final sel = selected == e.key;
-          final col = colors[e.key];
+          final sel = selected == e.key; final col = colors[e.key];
           return GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onChanged(e.key);
-            },
+            onTap: () { HapticFeedback.selectionClick(); onChanged(e.key); },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1326,13 +602,9 @@ class _FilterRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(9),
                 border: sel ? Border.all(color: col.withOpacity(0.4)) : null,
               ),
-              child: Center(
-                child: Text(e.value,
-                    style: TextStyle(
-                        color: sel ? col : _C.txtSec, fontSize: 11,
-                        fontWeight:
-                        sel ? FontWeight.w700 : FontWeight.w500)),
-              ),
+              child: Center(child: Text(e.value,
+                  style: TextStyle(color: sel ? col : _C.txtSec, fontSize: 11,
+                      fontWeight: sel ? FontWeight.w700 : FontWeight.w500))),
             ),
           );
         }).toList(),
@@ -1346,76 +618,47 @@ class _FilterRow extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 class _SkeletonCard extends StatefulWidget {
   const _SkeletonCard();
-
-  @override
-  State<_SkeletonCard> createState() => _SkeletonCardState();
+  @override State<_SkeletonCard> createState() => _SkeletonCardState();
 }
 
-class _SkeletonCardState extends State<_SkeletonCard>
-    with SingleTickerProviderStateMixin {
+class _SkeletonCardState extends State<_SkeletonCard> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _anim;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
   }
 
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _anim,
-      builder: (_, __) {
-        final shimmer = Color.lerp(
-            const Color(0xFF112131), const Color(0xFF1A3045), _anim.value)!;
-        return Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          height: 106,
-          decoration: BoxDecoration(
-            color: _C.card,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _C.border),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                        color: shimmer,
-                        borderRadius: BorderRadius.circular(12))),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(height: 12, width: 80, color: shimmer),
-                      const SizedBox(height: 6),
-                      Container(height: 10, width: 140, color: shimmer),
-                      const SizedBox(height: 6),
-                      Container(height: 8, width: 60, color: shimmer),
-                    ],
-                  ),
-                ),
-                Container(width: 90, height: 48, color: shimmer),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    return AnimatedBuilder(animation: _anim, builder: (_, __) {
+      final shimmer = Color.lerp(const Color(0xFF112131), const Color(0xFF1A3045), _anim.value)!;
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        height: 130,
+        decoration: BoxDecoration(color: _C.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: _C.border)),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            Container(width: 44, height: 44, decoration: BoxDecoration(color: shimmer, borderRadius: BorderRadius.circular(12))),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+              Container(height: 12, width: 80,  color: shimmer),
+              const SizedBox(height: 6),
+              Container(height: 10, width: 140, color: shimmer),
+              const SizedBox(height: 6),
+              Container(height: 8,  width: 60,  color: shimmer),
+            ])),
+          ]),
+        ),
+      );
+    });
   }
 }
 
@@ -1443,28 +686,19 @@ class _DseMarketWatchPageState extends State<DseMarketWatchPage>
   @override
   void initState() {
     super.initState();
-    _anim = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400))
-      ..forward();
+    _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 400))..forward();
     _fade = CurvedAnimation(parent: _anim, curve: Curves.easeOut);
     _fetchData();
   }
 
   @override
-  void dispose() {
-    _anim.dispose();
-    super.dispose();
-  }
+  void dispose() { _anim.dispose(); super.dispose(); }
 
   Future<void> _fetchData() async {
     setState(() { _loading = true; _error = null; });
     try {
       final stocks = await _DseApi.fetchMarketWatch();
-      setState(() {
-        _stocks      = stocks;
-        _loading     = false;
-        _lastUpdated = DateTime.now();
-      });
+      setState(() { _stocks = stocks; _loading = false; _lastUpdated = DateTime.now(); });
     } catch (e) {
       setState(() { _loading = false; _error = e.toString(); });
     }
@@ -1492,200 +726,105 @@ class _DseMarketWatchPageState extends State<DseMarketWatchPage>
       body: FadeTransition(
         opacity: _fade,
         child: RefreshIndicator(
-          color: _C.blue,
-          backgroundColor: _C.card,
-          onRefresh: _fetchData,
+          color: _C.blue, backgroundColor: _C.card, onRefresh: _fetchData,
           child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics()),
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             slivers: [
-              // ── App Bar ──────────────────────────────────────────────
               SliverAppBar(
-                backgroundColor: _C.bg,
-                pinned: true,
-                elevation: 0,
+                backgroundColor: _C.bg, pinned: true, elevation: 0,
                 leading: IconButton(
                   icon: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _C.surface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _C.border),
-                    ),
-                    child: const Icon(Icons.arrow_back_ios_new_rounded,
-                        size: 14, color: _C.txtPrim),
+                    decoration: BoxDecoration(color: _C.surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: _C.border)),
+                    child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: _C.txtPrim),
                   ),
                   onPressed: () => Navigator.pop(context),
                 ),
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('DSE Market Watch',
-                        style: TextStyle(
-                            color: _C.txtPrim, fontSize: 17,
-                            fontWeight: FontWeight.w900, letterSpacing: -0.3)),
-                    Text(
-                      _loading
-                          ? 'Fetching live data…'
-                          : _error != null
-                          ? 'Connection error'
-                          : _lastUpdatedLabel,
-                      style: TextStyle(
-                          color: _error != null ? _C.red : _C.txtSec,
-                          fontSize: 10),
-                    ),
-                  ],
-                ),
+                title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('DSE Market Watch',
+                      style: TextStyle(color: _C.txtPrim, fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: -0.3)),
+                  Text(
+                    _loading ? 'Fetching live data…' : _error != null ? 'Connection error' : _lastUpdatedLabel,
+                    style: TextStyle(color: _error != null ? _C.red : _C.txtSec, fontSize: 10),
+                  ),
+                ]),
                 actions: [
                   IconButton(
                     icon: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: _C.surface,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _C.border),
-                      ),
-                      child: const Icon(Icons.refresh_rounded,
-                          size: 14, color: _C.blue),
+                      decoration: BoxDecoration(color: _C.surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: _C.border)),
+                      child: const Icon(Icons.refresh_rounded, size: 14, color: _C.blue),
                     ),
                     onPressed: _loading ? null : _fetchData,
                   ),
                   Container(
                     margin: const EdgeInsets.only(right: 16),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: _C.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: _C.green.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _PulseDot(color: _C.green),
-                        const SizedBox(width: 5),
-                        const Text('LIVE',
-                            style: TextStyle(
-                                color: _C.green, fontSize: 10,
-                                fontWeight: FontWeight.w900, letterSpacing: 1)),
-                      ],
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: _C.green.withOpacity(0.1), borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: _C.green.withOpacity(0.3))),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      _PulseDot(color: _C.green), const SizedBox(width: 5),
+                      const Text('LIVE', style: TextStyle(color: _C.green, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                    ]),
                   ),
                 ],
               ),
 
-              // ── Body ─────────────────────────────────────────────────
               SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
-
-                    if (!_loading && _error == null && _stocks.isNotEmpty) ...[
-                      _SectionHeader(
-                          title: 'Market Snapshot  ·  ${_stocks.first.lastTradeTime.substring(0, 10)}',
-                          icon: Icons.show_chart_rounded),
-                      _LiveStatsRow(stocks: _stocks),
-                      const SizedBox(height: 20),
-
-                      const _SectionHeader(
-                          title: 'Market Summary',
-                          icon: Icons.bar_chart_rounded),
-                      _MarketBanner(stocks: _stocks),
-                    ],
-
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const SizedBox(height: 12),
+                  if (!_loading && _error == null && _stocks.isNotEmpty) ...[
                     _SectionHeader(
-                      title: 'Listed Securities'
-                          '${_stocks.isNotEmpty ? ' (${_filtered.length})' : ''}',
-                      icon: Icons.list_alt_rounded,
-                      trailing: _stocks.isEmpty
-                          ? null
-                          : _FilterRow(
-                        selected: _filter,
-                        onChanged: (v) => setState(() => _filter = v),
-                      ),
-                    ),
+                        title: 'Market Snapshot  ·  ${_stocks.first.lastTradeTime.substring(0, 10)}',
+                        icon: Icons.show_chart_rounded),
+                    _LiveStatsRow(stocks: _stocks),
+                    const SizedBox(height: 20),
+                    const _SectionHeader(title: 'Market Summary', icon: Icons.bar_chart_rounded),
+                    _MarketBanner(stocks: _stocks),
                   ],
-                ),
+                  _SectionHeader(
+                    title: 'Listed Securities${_stocks.isNotEmpty ? ' (${_filtered.length})' : ''}',
+                    icon: Icons.list_alt_rounded,
+                    trailing: _stocks.isEmpty ? null : _FilterRow(selected: _filter, onChanged: (v) => setState(() => _filter = v)),
+                  ),
+                ]),
               ),
 
-              // ── Content area ─────────────────────────────────────────
               if (_loading)
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                        (_, i) => const _SkeletonCard(),
-                    childCount: 6,
-                  ),
-                )
+                SliverList(delegate: SliverChildBuilderDelegate((_, i) => const _SkeletonCard(), childCount: 6))
               else if (_error != null)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 48),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 64, height: 64,
-                          decoration: BoxDecoration(
-                              color: _C.red.withOpacity(0.1),
-                              shape: BoxShape.circle),
-                          child: const Icon(Icons.wifi_off_rounded,
-                              color: _C.red, size: 28),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text('Unable to connect',
-                            style: TextStyle(
-                                color: _C.txtPrim, fontSize: 16,
-                                fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 8),
-                        Text(
-                          _error!,
-                          style: const TextStyle(
-                              color: _C.txtSec, fontSize: 12),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        GestureDetector(
-                          onTap: _fetchData,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _C.blue.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: _C.blue.withOpacity(0.4)),
-                            ),
-                            child: const Text('Retry',
-                                style: TextStyle(
-                                    color: _C.blue, fontSize: 13,
-                                    fontWeight: FontWeight.w800)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else if (_filtered.isEmpty)
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(
-                        child: Text('No securities match this filter.',
-                            style: TextStyle(color: _C.txtSec, fontSize: 13)),
+                SliverToBoxAdapter(child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                  child: Column(children: [
+                    Container(width: 64, height: 64,
+                        decoration: BoxDecoration(color: _C.red.withOpacity(0.1), shape: BoxShape.circle),
+                        child: const Icon(Icons.wifi_off_rounded, color: _C.red, size: 28)),
+                    const SizedBox(height: 16),
+                    const Text('Unable to connect', style: TextStyle(color: _C.txtPrim, fontSize: 16, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 8),
+                    Text(_error!, style: const TextStyle(color: _C.txtSec, fontSize: 12), textAlign: TextAlign.center),
+                    const SizedBox(height: 24),
+                    GestureDetector(
+                      onTap: _fetchData,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(color: _C.blue.withOpacity(0.15), borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _C.blue.withOpacity(0.4))),
+                        child: const Text('Retry', style: TextStyle(color: _C.blue, fontSize: 13, fontWeight: FontWeight.w800)),
                       ),
                     ),
-                  )
+                  ]),
+                ))
+              else if (_filtered.isEmpty)
+                  const SliverToBoxAdapter(child: Padding(
+                    padding: EdgeInsets.all(48),
+                    child: Center(child: Text('No securities match this filter.', style: TextStyle(color: _C.txtSec, fontSize: 13))),
+                  ))
                 else
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                          (_, i) {
-                        if (i >= _filtered.length) return null;
-                        return _StockCard(stock: _filtered[i], index: i);
-                      },
-                      childCount: _filtered.length,
-                    ),
-                  ),
+                  SliverList(delegate: SliverChildBuilderDelegate(
+                        (_, i) { if (i >= _filtered.length) return null; return _StockCard(stock: _filtered[i], index: i); },
+                    childCount: _filtered.length,
+                  )),
 
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
@@ -1702,39 +841,26 @@ class _DseMarketWatchPageState extends State<DseMarketWatchPage>
 class _PulseDot extends StatefulWidget {
   final Color color;
   const _PulseDot({required this.color});
-
-  @override
-  State<_PulseDot> createState() => _PulseDotState();
+  @override State<_PulseDot> createState() => _PulseDotState();
 }
 
-class _PulseDotState extends State<_PulseDot>
-    with SingleTickerProviderStateMixin {
+class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900))
-      ..repeat(reverse: true);
-    _scale = Tween<double>(begin: 0.8, end: 1.2).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.8, end: 1.2).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) => ScaleTransition(
     scale: _scale,
-    child: Container(
-      width: 6, height: 6,
-      decoration: BoxDecoration(
-          color: widget.color, shape: BoxShape.circle),
-    ),
+    child: Container(width: 6, height: 6, decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle)),
   );
 }
