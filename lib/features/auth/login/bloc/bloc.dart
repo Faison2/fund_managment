@@ -3,7 +3,6 @@ import 'package:tsl/features/auth/login/bloc/state.dart';
 import '../repository/repository.dart';
 import 'event.dart';
 
-
 class LoginBloc extends Bloc<LoginEvent, LoginState> {
   final LoginRepository repository;
   bool _obscurePassword = true;
@@ -34,6 +33,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         final cdsNumber = result['cdsNumber'] as String;
         final accountStatus = result['accountStatus'] as String;
         final email = result['email'] as String?;
+        final nida = result['nida'] as String?; // ✅ Fixed syntax
 
         await repository.saveUserData(
           cdsNumber: cdsNumber,
@@ -41,6 +41,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
           username: event.username.trim(),
           rememberMe: event.rememberMe,
           email: email,
+          nida: nida,
         );
 
         if (cdsNumber.isEmpty) {

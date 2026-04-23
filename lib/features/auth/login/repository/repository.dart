@@ -40,7 +40,8 @@ class LoginRepository {
               'success': true,
               'cdsNumber': data['CDSNumber'] as String? ?? '',
               'accountStatus': data['accountStatus'] as String? ?? '',
-              'email': data['Email'] as String? ?? username, // Email from response or fallback to username
+              'email': data['Email'] as String? ?? username,
+              'nida': data['NIDA'] as String? ?? '', // ✅ Added NIDA
             };
           }
         }
@@ -48,9 +49,10 @@ class LoginRepository {
         else if (responseData['status'] == 200 && responseData['statusDesc'] == 'success') {
           return {
             'success': true,
-            'cdsNumber': '', // Not available in old format
+            'cdsNumber': '',
             'accountStatus': 'Active',
-            'email': username, // Fallback to username as email
+            'email': username,
+            'nida': '', // ✅ Not available in old format
           };
         }
 
@@ -78,6 +80,7 @@ class LoginRepository {
     required String username,
     required bool rememberMe,
     String? email,
+    String? nida, // ✅ Added NIDA parameter
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -87,9 +90,14 @@ class LoginRepository {
       await prefs.setString('username', username);
       await prefs.setBool('isLoggedIn', true);
 
-      // ✅ Save email to shared preferences for password change flow
+      // Save email to shared preferences for password change flow
       if (email != null && email.isNotEmpty) {
         await prefs.setString('userEmail', email);
+      }
+
+      // ✅ Save NIDA to shared preferences
+      if (nida != null && nida.isNotEmpty) {
+        await prefs.setString('userNIDA', nida);
       }
 
       if (rememberMe) {
@@ -130,6 +138,7 @@ class LoginRepository {
         'accountStatus': prefs.getString('accountStatus'),
         'username': prefs.getString('username'),
         'isLoggedIn': prefs.getBool('isLoggedIn')?.toString(),
+        'nida': prefs.getString('userNIDA'), // ✅ Added NIDA to getUserData
       };
     } catch (e) {
       return {};
@@ -142,6 +151,7 @@ class LoginRepository {
       await prefs.remove('cdsNumber');
       await prefs.remove('accountStatus');
       await prefs.remove('username');
+      await prefs.remove('userNIDA'); // ✅ Clear NIDA on logout
       await prefs.setBool('isLoggedIn', false);
     } catch (e) {
       throw Exception('Error clearing user data: $e');

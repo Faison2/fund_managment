@@ -140,6 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   String _errorMessage = '';
   Map<String, dynamic>? _userData;
   String? _accountStatus;
+  String? _nida;
 
   late AnimationController _fadeController;
   late AnimationController _shimmerController;
@@ -209,7 +210,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       final prefs        = await SharedPreferences.getInstance();
       final cdsNumber    = prefs.getString('cdsNumber');
       final acctStatus   = prefs.getString('accountStatus');
-      setState(() => _accountStatus = acctStatus ?? 'Unknown');
+      final nida         = prefs.getString('userNIDA');
+      setState(() {
+        _accountStatus = acctStatus ?? 'Unknown';
+        _nida = nida; // ✅ Fixed
+      });
 
       if (cdsNumber == null || cdsNumber.isEmpty) {
         setState(() {
@@ -230,7 +235,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         if (data['status'] == 'success' && data['data'] != null) {
           final userData = Map<String, dynamic>.from(data['data']);
 
-          // ✅ Persist email so Settings page can use it without re-fetching
           final email = (userData['Email'] as String? ?? '').trim();
           if (email.isNotEmpty) {
             await prefs.setString('userEmail', email);
@@ -862,6 +866,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           _userData?['Email']  ?? s.notProvided, _accent),
       _InfoField(Icons.phone_outlined, s.mobile,
           _userData?['Mobile'] ?? s.notProvided, _teal),
+      _InfoField(Icons.badge_outlined, 'NIDA Number',          // ✅ Add this
+          _nida ?? s.notProvided, _accent),
       _InfoField(Icons.location_on_outlined, s.address,
           _userData?['Add_1']  ?? s.notProvided, _accent),
     ];
