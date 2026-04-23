@@ -8,24 +8,24 @@ import 'package:flutter/services.dart';
 // THEME TOKENS
 // ─────────────────────────────────────────────────────────────────────────────
 class _C {
-  // ── Backgrounds (dark blue-tinted, derived from #329AD6)
-  static const bg      = Color(0xFF071219);
-  static const surface = Color(0xFF0C1B26);
-  static const card    = Color(0xFF112131);
-  static const border  = Color(0xFF1A3045);
+  // ── Backgrounds (light mint-green, matching the screenshot)
+  static const bg      = Color(0xFFE8F4EF); // light mint page background
+  static const surface = Color(0xFFF2FAF6); // slightly lighter surface
+  static const card    = Color(0xFFFFFFFF); // white cards
+  static const border  = Color(0xFFD0E8DF); // subtle green border
 
   // ── Brand colours
-  static const blue    = Color(0xFF329AD6);  // primary accent
-  static const teal    = Color(0xFF329AD6);  // maps to blue (buttons, icons, chips)
-  static const green   = Color(0xFF00A79D);  // Teal → gainers / positive
-  static const red     = Color(0xFF939598);  // Grey → losers / negative
-  static const gray    = Color(0xFF939598);  // Grey → flat / neutral
-  static const gold    = Color(0xFF329AD6);  // Blue → stat highlights
+  static const blue    = Color(0xFF1A7A65); // dark teal — primary accent
+  static const teal    = Color(0xFF1A7A65); // same as blue
+  static const green   = Color(0xFF27AE72); // gainers / BUY / positive
+  static const red     = Color(0xFFE05C7A); // losers / SELL / negative (pink-red)
+  static const gray    = Color(0xFF9E9E9E); // flat / unchanged / cancelled
+  static const gold    = Color(0xFFF5A623); // pending / orange highlights
 
   // ── Typography
-  static const txtPrim = Color(0xFFFFFFFF);  // White
-  static const txtSec  = Color(0xFF939598);  // Grey
-  static const txtHint = Color(0xFF4A6070);  // Dark-muted (for subtle labels)
+  static const txtPrim = Color(0xFF1A2B28); // dark teal-black
+  static const txtSec  = Color(0xFF7A9990); // muted teal-grey
+  static const txtHint = Color(0xFFAAC9C0); // faint mint (subtle labels)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
