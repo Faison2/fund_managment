@@ -10,25 +10,41 @@ import '../../funds/repository/repository.dart';
 import '../../../../provider/locale_provider.dart';
 import '../../../../provider/theme_provider.dart';
 
+// ── Tanzania network providers ────────────────────────────────────────────────
+class _NetworkProvider {
+  final String name;
+  final String code;
+  final Color  color;
+
+  const _NetworkProvider({
+    required this.name,
+    required this.code,
+    required this.color,
+  });
+}
+
+const _tanzaniaNetworks = [
+  _NetworkProvider(name: 'Vodacom M-Pesa', code: 'MPESA',    color: Color(0xFFE10000)),
+  _NetworkProvider(name: 'Mixx by Yas',    code: 'MIXX',     color: Color(0xFF0057A8)),
+  _NetworkProvider(name: 'Airtel Money',   code: 'AIRTEL',   color: Color(0xFFFF6B00)),
+  _NetworkProvider(name: 'Halo Pesa',      code: 'HALOPESA', color: Color(0xFF00A651)),
+];
+
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _WS {
   final String withdrawFunds, withdrawSubtitle,
       selectFund, enterAmount, quickSelect,
-      availableBalance, units, bankingDetails,
-      bank, accountNo, accountName, branch,
+      availableBalance, units,
       requestWithdrawal, confirmWithdrawal, confirmDetails,
       cancel, confirm, withdrawalRequested, requestFailed,
       done, tryAgain, fund, amount, phone,
       failedLoadFunds, retry, networkError,
-      noFunds, notSet, noBankingDetails,
-      tapToView, tapToHide;
+      noFunds, notSet, selectNetwork, walletProvider;
   const _WS({
     required this.withdrawFunds,     required this.withdrawSubtitle,
     required this.selectFund,        required this.enterAmount,
     required this.quickSelect,       required this.availableBalance,
-    required this.units,             required this.bankingDetails,
-    required this.bank,              required this.accountNo,
-    required this.accountName,       required this.branch,
+    required this.units,
     required this.requestWithdrawal, required this.confirmWithdrawal,
     required this.confirmDetails,    required this.cancel,
     required this.confirm,           required this.withdrawalRequested,
@@ -37,8 +53,8 @@ class _WS {
     required this.amount,            required this.phone,
     required this.failedLoadFunds,   required this.retry,
     required this.networkError,      required this.noFunds,
-    required this.notSet,            required this.noBankingDetails,
-    required this.tapToView,         required this.tapToHide,
+    required this.notSet,            required this.selectNetwork,
+    required this.walletProvider,
   });
 }
 
@@ -50,11 +66,6 @@ const _wsEn = _WS(
   quickSelect:         'Quick Select',
   availableBalance:    'Available Balance',
   units:               'units',
-  bankingDetails:      'Banking Details',
-  bank:                'Bank',
-  accountNo:           'Account No',
-  accountName:         'Account Name',
-  branch:              'Branch',
   requestWithdrawal:   'Request Withdrawal',
   confirmWithdrawal:   'Confirm Withdrawal',
   confirmDetails:      'Please confirm your withdrawal request.',
@@ -72,9 +83,8 @@ const _wsEn = _WS(
   networkError:        'Network error',
   noFunds:             'No funds available',
   notSet:              'Not set',
-  noBankingDetails:    'No banking details saved',
-  tapToView:           'Tap to view banking details',
-  tapToHide:           'Tap to hide banking details',
+  selectNetwork:       'Select Network',
+  walletProvider:      'Wallet Provider',
 );
 
 const _wsSw = _WS(
@@ -85,11 +95,6 @@ const _wsSw = _WS(
   quickSelect:         'Chaguo la Haraka',
   availableBalance:    'Salio Linalopatikana',
   units:               'vitengo',
-  bankingDetails:      'Taarifa za Benki',
-  bank:                'Benki',
-  accountNo:           'Nambari ya Akaunti',
-  accountName:         'Jina la Akaunti',
-  branch:              'Tawi',
   requestWithdrawal:   'Omba Kutoa',
   confirmWithdrawal:   'Thibitisha Kutoa',
   confirmDetails:      'Tafadhali thibitisha ombi lako la kutoa.',
@@ -107,9 +112,8 @@ const _wsSw = _WS(
   networkError:        'Hitilafu ya mtandao',
   noFunds:             'Hakuna fedha zinazopatikana',
   notSet:              'Haijawekwa',
-  noBankingDetails:    'Hakuna maelezo ya benki yaliyohifadhiwa',
-  tapToView:           'Gonga kuona maelezo ya benki',
-  tapToHide:           'Gonga kuficha maelezo ya benki',
+  selectNetwork:       'Chagua Mtandao',
+  walletProvider:      'Mtoa Huduma wa Pochi',
 );
 
 // ── WithdrawalPage ────────────────────────────────────────────────────────────
@@ -120,18 +124,16 @@ class WithdrawalPage extends StatefulWidget {
   State<WithdrawalPage> createState() => _WithdrawalPageState();
 }
 
-class _WithdrawalPageState extends State<WithdrawalPage>
-    with SingleTickerProviderStateMixin {
+class _WithdrawalPageState extends State<WithdrawalPage> {
   final TextEditingController _amountController = TextEditingController();
   String _selectedCurrency = 'TZS';
 
-  // ── User / banking data ────────────────────────────────────────────────────
+  // ── Network provider ───────────────────────────────────────────────────────
+  _NetworkProvider? _selectedNetwork;
+
+  // ── User data ──────────────────────────────────────────────────────────────
   String _cdsNumber   = '';
   String _phoneNumber = '';
-  String _bank        = '';
-  String _accountNo   = '';
-  String _accountName = '';
-  String _branch      = '';
 
   // ── Funds ──────────────────────────────────────────────────────────────────
   List<Fund> _funds         = [];
@@ -144,12 +146,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
   double? _availableUnits;
   bool    _isLoadingBalance = false;
 
-  // ── UI state ───────────────────────────────────────────────────────────────
-  bool _isSubmitting       = false;
-  bool _bankingDetailsOpen = false;
-
-  late final AnimationController _accordionCtrl;
-  late final Animation<double>   _accordionAnim;
+  bool _isSubmitting = false;
 
   final List<String> _currencies = ['TZS', 'USD'];
   final List<Map<String, String>> _quickAmounts = [
@@ -166,10 +163,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
   void initState() {
     super.initState();
     _amountController.addListener(() => setState(() {}));
-    _accordionCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 280));
-    _accordionAnim = CurvedAnimation(
-        parent: _accordionCtrl, curve: Curves.easeInOut);
     _loadUserData();
     _loadFunds();
   }
@@ -177,19 +170,14 @@ class _WithdrawalPageState extends State<WithdrawalPage>
   @override
   void dispose() {
     _amountController.dispose();
-    _accordionCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _cdsNumber   = prefs.getString('cdsNumber')        ?? '';
-      _phoneNumber = prefs.getString('user_mobile')      ?? '';
-      _bank        = prefs.getString('user_bank')        ?? '';
-      _accountNo   = prefs.getString('user_accountNo')   ?? '';
-      _accountName = prefs.getString('user_accountName') ?? '';
-      _branch      = prefs.getString('user_branch')      ?? '';
+      _cdsNumber   = prefs.getString('cdsNumber')   ?? '';
+      _phoneNumber = prefs.getString('user_mobile') ?? '';
     });
   }
 
@@ -246,13 +234,12 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     }
   }
 
-  void _toggleBankingDetails() {
-    setState(() => _bankingDetailsOpen = !_bankingDetailsOpen);
-    _bankingDetailsOpen ? _accordionCtrl.forward() : _accordionCtrl.reverse();
-  }
-
   Future<void> _processWithdrawal() async {
     if (_amountController.text.isEmpty || _selectedFund == null) return;
+    if (_selectedNetwork == null) {
+      _snackErr('Please select a network provider');
+      return;
+    }
     final confirmed = await _showConfirmationDialog();
     if (!confirmed) return;
 
@@ -262,17 +249,18 @@ class _WithdrawalPageState extends State<WithdrawalPage>
         Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/Redeem'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername': 'User2',
-          'APIPassword': 'CBZ1234#2',
-          'cdsNumber':   _cdsNumber,
-          'PhoneNumber': _phoneNumber,
-          'Fund':        _selectedFund!.fundingName ?? '',
-          'Amount':      _amountController.text,
+          'APIUsername':    'User2',
+          'APIPassword':    'CBZ1234#2',
+          'cdsNumber':      _cdsNumber,
+          'PhoneNumber':    _phoneNumber,
+          'Fund':           _selectedFund!.fundingName ?? '',
+          'Amount':         _amountController.text,
+          'WalletProvider': _selectedNetwork!.code,   // ← NEW
         }),
       );
-      final data      = jsonDecode(res.body);
+      final data     = jsonDecode(res.body);
       final String msg = data['statusDesc'] ?? 'No response from server';
-      final bool ok   = res.statusCode == 200 && data['status'] == 'success';
+      final bool ok  = res.statusCode == 200 && data['status'] == 'success';
       _showResultDialog(success: ok, message: msg);
     } catch (e) {
       _showResultDialog(success: false, message: '${_s.networkError}: $e');
@@ -281,13 +269,15 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     }
   }
 
+  // ── Confirmation dialog ────────────────────────────────────────────────────
   Future<bool> _showConfirmationDialog() async {
     final dark  = Provider.of<ThemeProvider>(context, listen: false).isDark;
     final s     = Provider.of<LocaleProvider>(context, listen: false).isSwahili
         ? _wsSw : _wsEn;
-    final fund  = _selectedFund?.fundingName ?? '—';
-    final amt   = '$_selectedCurrency ${_fmt(_amountController.text)}';
-    final phone = _phoneNumber.isNotEmpty ? _phoneNumber : s.notSet;
+    final fund   = _selectedFund?.fundingName ?? '—';
+    final amt    = '$_selectedCurrency ${_fmt(_amountController.text)}';
+    final phone  = _phoneNumber.isNotEmpty ? _phoneNumber : s.notSet;
+    final wallet = _selectedNetwork?.name ?? '—';
 
     final cardBg = dark ? const Color(0xFF132013) : Colors.white;
     final txtP   = dark ? const Color(0xFFE8F5E9) : Colors.black87;
@@ -309,16 +299,18 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                       decoration: BoxDecoration(
                           color: orange.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(10)),
-                      child: Icon(Icons.receipt_long_outlined, color: orange, size: 20)),
+                      child: Icon(Icons.receipt_long_outlined,
+                          color: orange, size: 20)),
                   const SizedBox(width: 12),
                   Flexible(child: Text(s.confirmWithdrawal,
                       style: TextStyle(fontSize: 17,
                           fontWeight: FontWeight.w800, color: txtP))),
                 ]),
                 const SizedBox(height: 20),
-                _dRow(s.fund,   fund,  txtP, txtS, border),
-                _dRow(s.amount, amt,   txtP, txtS, border),
-                _dRow(s.phone,  phone, txtP, txtS, border),
+                _dRow(s.fund,           fund,   txtP, txtS, border),
+                _dRow(s.amount,         amt,    txtP, txtS, border),
+                _dRow(s.walletProvider, wallet, txtP, txtS, border),
+                _dRow(s.phone,          phone,  txtP, txtS, border),
                 const SizedBox(height: 12),
                 Text(s.confirmDetails,
                     style: TextStyle(color: txtS, fontSize: 12, height: 1.4)),
@@ -365,7 +357,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
             border: Border.all(color: bd),
             borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
-          SizedBox(width: 72, child: Text(lbl, style: TextStyle(
+          SizedBox(width: 88, child: Text(lbl, style: TextStyle(
               fontSize: 12, color: ts, fontWeight: FontWeight.w500))),
           Expanded(child: Text(val, style: TextStyle(
               fontSize: 13, fontWeight: FontWeight.w700, color: tp),
@@ -373,6 +365,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
         ]),
       );
 
+  // ── Result dialog ──────────────────────────────────────────────────────────
   void _showResultDialog({required bool success, required String message}) {
     final dark   = Provider.of<ThemeProvider>(context, listen: false).isDark;
     final s      = Provider.of<LocaleProvider>(context, listen: false).isSwahili
@@ -428,6 +421,13 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     );
   }
 
+  void _snackErr(String msg) => ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(msg), backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 4)),
+  );
+
   String _fmt(String v) {
     if (v.isEmpty) return '0.00';
     final d = double.tryParse(v) ?? 0;
@@ -438,7 +438,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
   bool get _canWithdraw =>
       _amountController.text.isNotEmpty &&
           (double.tryParse(_amountController.text) ?? 0) > 0 &&
-          _selectedFund != null &&
+          _selectedFund    != null &&
+          _selectedNetwork != null &&
           !_isSubmitting;
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -447,11 +448,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     context.watch<ThemeProvider>();
     context.watch<LocaleProvider>();
 
-    // KEY FIX: Read system insets once at build time.
-    // bottomInset = height of the gesture navigation bar / home indicator.
-    // scrollPadding = design padding + inset so the submit button is always
-    // fully visible and tappable above the system nav bar.
-    final bottomInset  = MediaQuery.of(context).padding.bottom;
+    final bottomInset   = MediaQuery.of(context).padding.bottom;
     final scrollPadding = 40.0 + bottomInset;
 
     final dark      = _dark; final s = _s;
@@ -467,9 +464,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     final balanceBg = dark ? const Color(0xFF0F1A10)  : Colors.white;
 
     return Scaffold(
-      // KEY FIX: resizeToAvoidBottomInset lets the scroll view handle keyboard
-      // avoidance on its own via scrollPadding, preventing the Scaffold from
-      // double-resizing and crushing the layout on gesture-nav phones.
       resizeToAvoidBottomInset: true,
       backgroundColor: bg,
       body: Column(children: [
@@ -485,9 +479,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
           ),
-          // SafeArea on the header handles status bar / notch at the top only.
-          // bottom: false so the header does not consume the bottom inset —
-          // only the scroll content area adds that padding.
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Row(children: [
@@ -503,8 +494,9 @@ class _WithdrawalPageState extends State<WithdrawalPage>
               const SizedBox(width: 16),
               Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(s.withdrawFunds, style: const TextStyle(color: Colors.white,
-                    fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                Text(s.withdrawFunds, style: const TextStyle(
+                    color: Colors.white, fontSize: 22,
+                    fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                 const SizedBox(height: 2),
                 Text(s.withdrawSubtitle, style: TextStyle(
                     color: Colors.white.withOpacity(0.65), fontSize: 12)),
@@ -573,11 +565,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
             color: sheet,
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              // KEY FIX: bottom padding = fixed design padding + system bottom
-              // inset. Ensures the submit button is always fully visible and
-              // tappable above the gesture navigation bar / home indicator,
-              // including on full-gesture Android phones and iPhones with no
-              // home button.
               padding: EdgeInsets.fromLTRB(20, 24, 20, scrollPadding),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -639,6 +626,16 @@ class _WithdrawalPageState extends State<WithdrawalPage>
 
                     const SizedBox(height: 24),
 
+                    // ── Network provider ──────────────────────────────────────
+                    _secLabel(s.selectNetwork, txtH),
+                    const SizedBox(height: 10),
+                    _networkProviderPicker(
+                      inputBg: inputBg, border: border,
+                      txtS: txtS, dark: dark,
+                    ),
+
+                    const SizedBox(height: 24),
+
                     // ── Amount ────────────────────────────────────────────────
                     _secLabel(s.enterAmount, txtH),
                     const SizedBox(height: 10),
@@ -655,7 +652,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                           child: DropdownButton<String>(
                             value: _selectedCurrency,
                             dropdownColor: cardBg, isDense: true,
-                            icon: Icon(Icons.expand_more, size: 18, color: txtS),
+                            icon: Icon(Icons.expand_more,
+                                size: 18, color: txtS),
                             items: _currencies.map((c) => DropdownMenuItem(
                               value: c,
                               child: Text(c, style: TextStyle(
@@ -672,10 +670,6 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         style: TextStyle(fontSize: 18,
                             fontWeight: FontWeight.w800, color: txtP),
-                        // KEY FIX: scrollPadding tells Flutter how far to scroll
-                        // the field into view when it gains focus and the
-                        // keyboard opens. Adding bottomInset prevents the field
-                        // from hiding behind the keyboard on gesture-nav phones.
                         scrollPadding: EdgeInsets.only(bottom: bottomInset + 80),
                         decoration: InputDecoration(
                           hintText: '0.00', hintStyle: TextStyle(color: txtH),
@@ -712,7 +706,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                         return Expanded(child: GestureDetector(
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            setState(() => _amountController.text = a['amount']!);
+                            setState(() =>
+                            _amountController.text = a['amount']!);
                           },
                           child: Container(
                             margin: EdgeInsets.only(
@@ -721,7 +716,8 @@ class _WithdrawalPageState extends State<WithdrawalPage>
                             decoration: BoxDecoration(
                               color: orange.withOpacity(dark ? 0.1 : 0.08),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: orange.withOpacity(0.3)),
+                              border: Border.all(
+                                  color: orange.withOpacity(0.3)),
                             ),
                             child: Column(children: [
                               Text(a['label']!, style: TextStyle(fontSize: 14,
@@ -738,119 +734,7 @@ class _WithdrawalPageState extends State<WithdrawalPage>
 
                     const SizedBox(height: 28),
 
-                    // ── Banking details accordion ──────────────────────────────
-                    GestureDetector(
-                      onTap: _toggleBankingDetails,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: inputBg,
-                          borderRadius: BorderRadius.only(
-                            topLeft: const Radius.circular(14),
-                            topRight: const Radius.circular(14),
-                            bottomLeft:
-                            Radius.circular(_bankingDetailsOpen ? 0 : 14),
-                            bottomRight:
-                            Radius.circular(_bankingDetailsOpen ? 0 : 14),
-                          ),
-                          border: Border.all(color: _bankingDetailsOpen
-                              ? orange.withOpacity(0.5) : border),
-                        ),
-                        child: Row(children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                                color: orange.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(10)),
-                            child: Icon(Icons.account_balance_outlined,
-                                color: orange, size: 18),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(s.bankingDetails,
-                                    style: TextStyle(fontSize: 14,
-                                        fontWeight: FontWeight.w700, color: txtP)),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _bankingDetailsOpen
-                                      ? s.tapToHide : s.tapToView,
-                                  style: TextStyle(fontSize: 11, color: txtS),
-                                ),
-                              ])),
-                          AnimatedRotation(
-                            turns: _bankingDetailsOpen ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 280),
-                            child: Icon(Icons.keyboard_arrow_down_rounded,
-                                color: txtS, size: 22),
-                          ),
-                        ]),
-                      ),
-                    ),
-
-                    // ── Banking details expand panel ───────────────────────────
-                    SizeTransition(
-                      sizeFactor: _accordionAnim,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: dark
-                              ? const Color(0xFF0F1A10)
-                              : const Color(0xFFF0FDF4),
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(14),
-                            bottomRight: Radius.circular(14),
-                          ),
-                          border: Border(
-                            left:   BorderSide(color: orange.withOpacity(0.5)),
-                            right:  BorderSide(color: orange.withOpacity(0.5)),
-                            bottom: BorderSide(color: orange.withOpacity(0.5)),
-                          ),
-                        ),
-                        child: _bank.isEmpty && _accountNo.isEmpty &&
-                            _accountName.isEmpty && _branch.isEmpty
-                            ? Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Row(children: [
-                            Icon(Icons.info_outline, color: txtH, size: 18),
-                            const SizedBox(width: 10),
-                            Text(s.noBankingDetails,
-                                style: TextStyle(color: txtH, fontSize: 13)),
-                          ]),
-                        )
-                            : Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                          child: Column(children: [
-                            _bankRow(Icons.account_balance_outlined,
-                                s.bank,
-                                _bank.isNotEmpty ? _bank : s.notSet,
-                                orange, txtP, txtS, border, dark),
-                            _bankRow(Icons.credit_card_outlined,
-                                s.accountNo,
-                                _accountNo.isNotEmpty ? _accountNo : s.notSet,
-                                orange, txtP, txtS, border, dark),
-                            _bankRow(Icons.badge_outlined,
-                                s.accountName,
-                                _accountName.isNotEmpty
-                                    ? _accountName : s.notSet,
-                                orange, txtP, txtS, border, dark),
-                            _bankRow(Icons.store_outlined,
-                                s.branch,
-                                _branch.isNotEmpty ? _branch : s.notSet,
-                                orange, txtP, txtS, border, dark, last: true),
-                          ]),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 28),
-
                     // ── Submit button ─────────────────────────────────────────
-                    // The button lives inside the scroll view so it naturally
-                    // scrolls above the keyboard. The scrollPadding on
-                    // SingleChildScrollView guarantees room below the button
-                    // above the system gesture bar / home indicator.
                     GestureDetector(
                       onTap: _canWithdraw ? _processWithdrawal : null,
                       child: AnimatedContainer(
@@ -885,39 +769,79 @@ class _WithdrawalPageState extends State<WithdrawalPage>
     );
   }
 
-  // ── Shared helpers ─────────────────────────────────────────────────────────
-  Widget _bankRow(IconData icon, String label, String value,
-      Color orange, Color txtP, Color txtS, Color border, bool dark,
-      {bool last = false}) =>
-      Container(
-        margin: EdgeInsets.only(bottom: last ? 0 : 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: dark ? const Color(0xFF132013) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: border),
-        ),
-        child: Row(children: [
-          Container(
-            padding: const EdgeInsets.all(7),
+  // ── Network provider picker ───────────────────────────────────────────────
+  Widget _networkProviderPicker({
+    required Color inputBg, required Color border,
+    required Color txtS,    required bool  dark,
+  }) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount:   2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing:  10,
+        childAspectRatio: 3.0,
+      ),
+      itemCount: _tanzaniaNetworks.length,
+      itemBuilder: (_, i) {
+        final n        = _tanzaniaNetworks[i];
+        final selected = _selectedNetwork?.code == n.code;
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _selectedNetwork = n);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
             decoration: BoxDecoration(
-                color: orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: orange, size: 15),
+              color: selected
+                  ? n.color.withOpacity(dark ? 0.25 : 0.12)
+                  : inputBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected ? n.color : border,
+                width: selected ? 2 : 1,
+              ),
+              boxShadow: selected
+                  ? [BoxShadow(color: n.color.withOpacity(0.25),
+                  blurRadius: 8, offset: const Offset(0, 3))]
+                  : [],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 10, height: 10,
+                  decoration: BoxDecoration(
+                      color: n.color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    n.name,
+                    style: TextStyle(
+                      fontSize:   12,
+                      fontWeight: selected
+                          ? FontWeight.w800 : FontWeight.w600,
+                      color: selected ? n.color : txtS,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (selected) ...[
+                  const SizedBox(width: 4),
+                  Icon(Icons.check_circle_rounded, color: n.color, size: 14),
+                ],
+              ],
+            ),
           ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: TextStyle(fontSize: 11,
-                color: txtS, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 2),
-            Text(value, style: TextStyle(fontSize: 14,
-                fontWeight: FontWeight.w700, color: txtP),
-                overflow: TextOverflow.ellipsis),
-          ])),
-        ]),
-      );
+        );
+      },
+    );
+  }
 
+  // ── Shared helpers ─────────────────────────────────────────────────────────
   Widget _secLabel(String t, Color c) => Padding(
       padding: const EdgeInsets.only(left: 2),
       child: Text(t.toUpperCase(), style: TextStyle(fontSize: 11,

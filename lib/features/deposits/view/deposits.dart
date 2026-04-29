@@ -10,6 +10,28 @@ import '../../funds/repository/repository.dart';
 import '../../../../provider/locale_provider.dart';
 import '../../../../provider/theme_provider.dart';
 
+// ── Tanzania network providers ────────────────────────────────────────────────
+class _NetworkProvider {
+  final String name;
+  final String code;
+  final Color  color;
+  final IconData icon;
+
+  const _NetworkProvider({
+    required this.name,
+    required this.code,
+    required this.color,
+    required this.icon,
+  });
+}
+
+const _tanzaniaNetworks = [
+  _NetworkProvider(name: 'Vodacom M-Pesa',  code: 'MPESA',    color: Color(0xFFE10000), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Mixx by Yas',     code: 'MIXX',     color: Color(0xFF0057A8), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Airtel Money',    code: 'AIRTEL',   color: Color(0xFFFF6B00), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Halo Pesa',       code: 'HALOPESA', color: Color(0xFF00A651), icon: Icons.sim_card),
+];
+
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _DS {
   final String depositFunds, chooseFund,
@@ -19,7 +41,8 @@ class _DS {
       confirmDeposit, confirmDetails, cancel, confirm,
       depositInitiated, done, phone, amount,
       failedLoadFunds, failedLoadUser, retry, noFunds, networkError,
-      free, notSet, loadingUser, bank, accountNo, accountName, branch;
+      free, notSet, loadingUser,
+      selectNetwork, walletProvider;
   const _DS({
     required this.depositFunds,    required this.chooseFund,
     required this.selectFund,      required this.enterAmount,
@@ -34,9 +57,8 @@ class _DS {
     required this.failedLoadUser,  required this.retry,
     required this.noFunds,         required this.networkError,
     required this.free,            required this.notSet,
-    required this.loadingUser,     required this.bank,
-    required this.accountNo,       required this.accountName,
-    required this.branch,
+    required this.loadingUser,     required this.selectNetwork,
+    required this.walletProvider,
   });
 }
 
@@ -68,10 +90,8 @@ const _dsEn = _DS(
   free:            'Free',
   notSet:          'Not set',
   loadingUser:     'Loading account details...',
-  bank:            'Bank',
-  accountNo:       'Account No',
-  accountName:     'Account Name',
-  branch:          'Branch',
+  selectNetwork:   'Select Network',
+  walletProvider:  'Wallet Provider',
 );
 
 const _dsSw = _DS(
@@ -102,10 +122,8 @@ const _dsSw = _DS(
   free:            'Bure',
   notSet:          'Haijawekwa',
   loadingUser:     'Inapakia maelezo ya akaunti...',
-  bank:            'Benki',
-  accountNo:       'Nambari ya Akaunti',
-  accountName:     'Jina la Akaunti',
-  branch:          'Tawi',
+  selectNetwork:   'Chagua Mtandao',
+  walletProvider:  'Mtoa Huduma wa Pochi',
 );
 
 // ── DepositPage ───────────────────────────────────────────────────────────────
@@ -117,9 +135,12 @@ class DepositPage extends StatefulWidget {
 }
 
 class _DepositPageState extends State<DepositPage> {
-  final TextEditingController _amountController  = TextEditingController();
-  final TextEditingController _mobileController  = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _mobileController = TextEditingController();
   String _selectedCurrency = 'TZS';
+
+  // ── Network provider ───────────────────────────────────────────────────────
+  _NetworkProvider? _selectedNetwork;
 
   // ── User data ──────────────────────────────────────────────────────────────
   String _cdsNumber   = '';
@@ -127,10 +148,6 @@ class _DepositPageState extends State<DepositPage> {
   String _email       = '';
   String _mobile      = '';
   String _address     = '';
-  String _bank        = '';
-  String _accountNo   = '';
-  String _accountName = '';
-  String _branch      = '';
   bool   _isLoadingUser = true;
   String _userError     = '';
 
@@ -177,14 +194,10 @@ class _DepositPageState extends State<DepositPage> {
 
   void _applyCached(SharedPreferences p) {
     setState(() {
-      _names       = p.getString('user_names')       ?? '';
-      _email       = p.getString('user_email')       ?? '';
-      _mobile      = p.getString('user_mobile')      ?? '';
-      _address     = p.getString('user_address')     ?? '';
-      _bank        = p.getString('user_bank')        ?? '';
-      _accountNo   = p.getString('user_accountNo')   ?? '';
-      _accountName = p.getString('user_accountName') ?? '';
-      _branch      = p.getString('user_branch')      ?? '';
+      _names   = p.getString('user_names')   ?? '';
+      _email   = p.getString('user_email')   ?? '';
+      _mobile  = p.getString('user_mobile')  ?? '';
+      _address = p.getString('user_address') ?? '';
     });
     if (_mobile.isNotEmpty) _mobileController.text = _mobile;
   }
@@ -209,25 +222,17 @@ class _DepositPageState extends State<DepositPage> {
         final d = Map<String, dynamic>.from(body['data'] as Map);
 
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_names',       d['Names']       ?? '');
-        await prefs.setString('user_email',        d['Email']       ?? '');
-        await prefs.setString('user_mobile',       d['Mobile']      ?? '');
-        await prefs.setString('user_address',      d['Add_1']       ?? '');
-        await prefs.setString('user_bank',         d['Bank']        ?? '');
-        await prefs.setString('user_accountNo',    d['AccountNo']   ?? '');
-        await prefs.setString('user_accountName',  d['AccountName'] ?? '');
-        await prefs.setString('user_branch',       d['Branch']      ?? '');
+        await prefs.setString('user_names',   d['Names']  ?? '');
+        await prefs.setString('user_email',   d['Email']  ?? '');
+        await prefs.setString('user_mobile',  d['Mobile'] ?? '');
+        await prefs.setString('user_address', d['Add_1']  ?? '');
 
         final mobile = d['Mobile'] ?? '';
         setState(() {
-          _names       = d['Names']       ?? '';
-          _email       = d['Email']       ?? '';
-          _mobile      = mobile;
-          _address     = d['Add_1']       ?? '';
-          _bank        = d['Bank']        ?? '';
-          _accountNo   = d['AccountNo']   ?? '';
-          _accountName = d['AccountName'] ?? '';
-          _branch      = d['Branch']      ?? '';
+          _names   = d['Names']  ?? '';
+          _email   = d['Email']  ?? '';
+          _mobile  = mobile;
+          _address = d['Add_1']  ?? '';
           _isLoadingUser = false;
         });
         if (mobile.isNotEmpty) _mobileController.text = mobile;
@@ -266,6 +271,10 @@ class _DepositPageState extends State<DepositPage> {
       _snackErr('Please enter a phone number');
       return;
     }
+    if (_selectedNetwork == null) {
+      _snackErr('Please select a network provider');
+      return;
+    }
     final ok = await _showConfirmation();
     if (!ok) return;
 
@@ -275,12 +284,13 @@ class _DepositPageState extends State<DepositPage> {
         Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/Deposit'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername': 'User2',
-          'APIPassword': 'CBZ1234#2',
-          'cdsNumber':   _cdsNumber,
-          'PhoneNumber': _mobileController.text.trim(),
-          'Fund':        _selectedFund!.fundingName ?? '',
-          'Amount':      _amountController.text,
+          'APIUsername':    'User2',
+          'APIPassword':    'CBZ1234#2',
+          'cdsNumber':      _cdsNumber,
+          'PhoneNumber':    _mobileController.text.trim(),
+          'Fund':           _selectedFund!.fundingName ?? '',
+          'Amount':         _amountController.text,
+          'WalletProvider': _selectedNetwork!.code,        // ← NEW
         }),
       );
       final data = jsonDecode(res.body);
@@ -306,7 +316,7 @@ class _DepositPageState extends State<DepositPage> {
     final mobile = _mobileController.text.trim();
     final fund   = _selectedFund?.fundingName ?? '—';
     final amt    = '$_selectedCurrency ${_fmt(_amountController.text)}';
-    final bank   = _bank;
+    final wallet = _selectedNetwork?.name ?? '—';
 
     final cardBg = dark ? const Color(0xFF132013) : Colors.white;
     final txtP   = dark ? const Color(0xFFE8F5E9) : Colors.black87;
@@ -333,10 +343,10 @@ class _DepositPageState extends State<DepositPage> {
                       fontSize: 17, fontWeight: FontWeight.w800, color: txtP))),
                 ]),
                 const SizedBox(height: 20),
-                _dRow(s.fund,   fund,  txtP, txtS, border),
-                _dRow(s.amount, amt,   txtP, txtS, border),
-                _dRow(s.phone,  mobile.isNotEmpty ? mobile : s.notSet, txtP, txtS, border),
-                _dRow(s.bank,   bank.isNotEmpty   ? bank   : s.notSet, txtP, txtS, border),
+                _dRow(s.fund,           fund,   txtP, txtS, border),
+                _dRow(s.amount,         amt,    txtP, txtS, border),
+                _dRow(s.phone,          mobile.isNotEmpty ? mobile : s.notSet, txtP, txtS, border),
+                _dRow(s.walletProvider, wallet, txtP, txtS, border),
                 const SizedBox(height: 12),
                 Text(s.confirmDetails,
                     style: TextStyle(color: txtS, fontSize: 12, height: 1.4)),
@@ -378,7 +388,7 @@ class _DepositPageState extends State<DepositPage> {
         decoration: BoxDecoration(border: Border.all(color: bd),
             borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
-          SizedBox(width: 72, child: Text(lbl, style: TextStyle(
+          SizedBox(width: 88, child: Text(lbl, style: TextStyle(
               fontSize: 12, color: ts, fontWeight: FontWeight.w500))),
           Expanded(child: Text(val, style: TextStyle(fontSize: 13,
               fontWeight: FontWeight.w700, color: tp),
@@ -454,12 +464,7 @@ class _DepositPageState extends State<DepositPage> {
     context.watch<ThemeProvider>();
     context.watch<LocaleProvider>();
 
-    // KEY FIX: Read system insets once at the top of build so every widget
-    // that needs bottom-safe spacing can reference these values directly.
     final bottomInset   = MediaQuery.of(context).padding.bottom;
-    final screenHeight  = MediaQuery.of(context).size.height;
-    // Extra bottom scroll padding so the submit button is never hidden
-    // behind the gesture navigation bar on phones with no home button.
     final scrollPadding = 40.0 + bottomInset;
 
     final dark      = _dark;  final s = _s;
@@ -475,14 +480,12 @@ class _DepositPageState extends State<DepositPage> {
     final summaryBg = dark ? const Color(0xFF0F1A10)  : const Color(0xFFF9FAFB);
 
     final bool canSubmit = _amountController.text.isNotEmpty &&
-        _selectedFund != null &&
+        _selectedFund    != null &&
+        _selectedNetwork != null &&
         _mobileController.text.trim().isNotEmpty &&
         !_isSubmitting;
 
     return Scaffold(
-      // KEY FIX: resizeToAvoidBottomInset keeps the layout stable when the
-      // keyboard opens — the scroll view handles keyboard avoidance itself
-      // via its own padding, so we don't want the Scaffold to also resize.
       resizeToAvoidBottomInset: true,
       backgroundColor: bg,
       body: Column(children: [
@@ -498,9 +501,6 @@ class _DepositPageState extends State<DepositPage> {
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
           ),
-          // SafeArea on the header handles the status bar / notch at the top.
-          // We set bottom: false so the header doesn't add bottom inset padding —
-          // only the scroll content area needs that.
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Row(children: [
@@ -531,10 +531,6 @@ class _DepositPageState extends State<DepositPage> {
             color: sheet,
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              // KEY FIX: bottom padding = fixed design padding + system bottom
-              // inset. This ensures the submit button is always fully visible
-              // and tappable above the gesture navigation bar or home indicator,
-              // even on phones where the nav bar overlaps the app content.
               padding: EdgeInsets.fromLTRB(20, 24, 20, scrollPadding),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -558,14 +554,8 @@ class _DepositPageState extends State<DepositPage> {
                             icon: Icon(Icons.keyboard_arrow_down_rounded, color: txtS),
                             hint: Row(children: [
                               const SizedBox(width: 2),
-                              Text(
-                                s.selectFund,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: txtH,
-                                ),
-                              ),
+                              Text(s.selectFund, style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w500, color: txtH)),
                             ]),
                             items: _funds.map((f) => DropdownMenuItem<Fund>(
                               value: f,
@@ -580,23 +570,33 @@ class _DepositPageState extends State<DepositPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    f.fundingName ?? s.noFunds,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                      color: txtP,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
+                                Expanded(child: Text(f.fundingName ?? s.noFunds,
+                                    style: TextStyle(fontWeight: FontWeight.w600,
+                                        fontSize: 14, color: txtP),
+                                    overflow: TextOverflow.ellipsis)),
                               ]),
                             )).toList(),
                             onChanged: (f) => setState(() => _selectedFund = f),
                           ),
                         ),
                       ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Network provider ──────────────────────────────────────
+                    _secLabel(s.selectNetwork, txtH),
+                    const SizedBox(height: 10),
+                    _networkProviderPicker(
+                      inputBg: inputBg,
+                      border:  border,
+                      cardBg:  cardBg,
+                      txtP:    txtP,
+                      txtS:    txtS,
+                      txtH:    txtH,
+                      green:   green,
+                      dark:    dark,
+                      s:       s,
+                    ),
 
                     const SizedBox(height: 24),
 
@@ -619,18 +619,14 @@ class _DepositPageState extends State<DepositPage> {
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           style: TextStyle(fontSize: 15,
                               fontWeight: FontWeight.w600, color: txtP),
-                          // KEY FIX: scrollPadding tells Flutter how far to
-                          // scroll the field into view when it gets focus and
-                          // the keyboard opens. Adding the bottomInset prevents
-                          // the field from being hidden behind the keyboard on
-                          // phones with gesture navigation.
                           scrollPadding: EdgeInsets.only(bottom: bottomInset + 80),
                           decoration: InputDecoration(
                             hintText: s.notSet,
                             hintStyle: TextStyle(color: txtH),
                             border: InputBorder.none,
                             isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            contentPadding:
+                            const EdgeInsets.symmetric(vertical: 12),
                           ),
                         )),
                       ]),
@@ -643,7 +639,8 @@ class _DepositPageState extends State<DepositPage> {
                     const SizedBox(height: 10),
                     Row(children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 14),
                         decoration: BoxDecoration(color: inputBg,
                             borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(14),
@@ -659,7 +656,8 @@ class _DepositPageState extends State<DepositPage> {
                               child: Text(c, style: TextStyle(
                                   fontWeight: FontWeight.w700, color: txtP)),
                             )).toList(),
-                            onChanged: (v) => setState(() => _selectedCurrency = v!),
+                            onChanged: (v) =>
+                                setState(() => _selectedCurrency = v!),
                           ),
                         ),
                       ),
@@ -669,12 +667,12 @@ class _DepositPageState extends State<DepositPage> {
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         style: TextStyle(fontSize: 18,
                             fontWeight: FontWeight.w800, color: txtP),
-                        // KEY FIX: same scrollPadding fix for the amount field
                         scrollPadding: EdgeInsets.only(bottom: bottomInset + 80),
                         decoration: InputDecoration(
                           hintText: '0.00', hintStyle: TextStyle(color: txtH),
                           filled: true, fillColor: inputBg,
-                          border: OutlineInputBorder(borderSide: BorderSide(color: border),
+                          border: OutlineInputBorder(
+                              borderSide: BorderSide(color: border),
                               borderRadius: const BorderRadius.only(
                                   topRight: Radius.circular(14),
                                   bottomRight: Radius.circular(14))),
@@ -705,7 +703,8 @@ class _DepositPageState extends State<DepositPage> {
                         return Expanded(child: GestureDetector(
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            setState(() => _amountController.text = a['amount']!);
+                            setState(() =>
+                            _amountController.text = a['amount']!);
                           },
                           child: Container(
                             margin: EdgeInsets.only(
@@ -738,14 +737,21 @@ class _DepositPageState extends State<DepositPage> {
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: border)),
                       child: Column(children: [
-                        _sRow(s.fund, _selectedFund?.fundingName ?? '—', txtP, txtS),
+                        _sRow(s.fund, _selectedFund?.fundingName ?? '—',
+                            txtP, txtS),
+                        _sDiv(border),
+                        _sRow(s.walletProvider,                            // ← NEW
+                            _selectedNetwork?.name ?? '—', txtP, txtS),
                         _sDiv(border),
                         _sRow(s.phone,
-                            _mobileController.text.isNotEmpty ? _mobileController.text : s.notSet,
+                            _mobileController.text.isNotEmpty
+                                ? _mobileController.text
+                                : s.notSet,
                             txtP, txtS),
                         _sDiv(border),
                         _sRow(s.depositAmount,
-                            '$_selectedCurrency ${_fmt(_amountController.text)}', txtP, txtS),
+                            '$_selectedCurrency ${_fmt(_amountController.text)}',
+                            txtP, txtS),
                         _sDiv(border),
                         _sRow(s.processingFee, s.free, txtP, txtS),
                         _sDiv(border),
@@ -758,10 +764,6 @@ class _DepositPageState extends State<DepositPage> {
                     const SizedBox(height: 28),
 
                     // ── Submit button ─────────────────────────────────────────
-                    // KEY FIX: The button lives inside the scroll view, so it
-                    // naturally scrolls above the keyboard and gesture bar.
-                    // The scrollPadding on the SingleChildScrollView ensures
-                    // there is always enough room below the button to see it.
                     GestureDetector(
                       onTap: canSubmit ? _processDeposit : null,
                       child: AnimatedContainer(
@@ -769,7 +771,8 @@ class _DepositPageState extends State<DepositPage> {
                         decoration: BoxDecoration(
                           gradient: canSubmit
                               ? LinearGradient(colors: [green,
-                            dark ? const Color(0xFF16A34A) : const Color(0xFF15803D)])
+                            dark ? const Color(0xFF16A34A)
+                                : const Color(0xFF15803D)])
                               : LinearGradient(colors: [txtH, txtH]),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: canSubmit
@@ -783,7 +786,8 @@ class _DepositPageState extends State<DepositPage> {
                                 color: Colors.white, strokeWidth: 2.5))
                             : Text(s.depositNow, style: const TextStyle(
                             color: Colors.white, fontSize: 16,
-                            fontWeight: FontWeight.w800, letterSpacing: 0.3))),
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3))),
                       ),
                     ),
                   ]),
@@ -791,6 +795,83 @@ class _DepositPageState extends State<DepositPage> {
           ),
         ),
       ]),
+    );
+  }
+
+  // ── Network provider picker ───────────────────────────────────────────────
+  // Shows a tappable grid of network logos. Tapping one highlights it and
+  // opens a bottom-sheet confirmation — keeps the UI tactile and brand-correct.
+  Widget _networkProviderPicker({
+    required Color inputBg, required Color border, required Color cardBg,
+    required Color txtP,    required Color txtS,   required Color txtH,
+    required Color green,   required bool  dark,   required _DS   s,
+  }) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount:    2,
+        crossAxisSpacing:  10,
+        mainAxisSpacing:   10,
+        childAspectRatio:  3.0,
+      ),
+      itemCount: _tanzaniaNetworks.length,
+      itemBuilder: (_, i) {
+        final n        = _tanzaniaNetworks[i];
+        final selected = _selectedNetwork?.code == n.code;
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _selectedNetwork = n);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              color: selected
+                  ? n.color.withOpacity(dark ? 0.25 : 0.12)
+                  : inputBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected ? n.color : border,
+                width: selected ? 2 : 1,
+              ),
+              boxShadow: selected
+                  ? [BoxShadow(color: n.color.withOpacity(0.25),
+                  blurRadius: 8, offset: const Offset(0, 3))]
+                  : [],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Coloured dot representing the brand
+                Container(
+                  width: 10, height: 10,
+                  decoration: BoxDecoration(
+                      color: n.color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    n.name,
+                    style: TextStyle(
+                      fontSize:   12,
+                      fontWeight: selected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: selected ? n.color : txtS,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (selected) ...[
+                  const SizedBox(width: 4),
+                  Icon(Icons.check_circle_rounded, color: n.color, size: 14),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
