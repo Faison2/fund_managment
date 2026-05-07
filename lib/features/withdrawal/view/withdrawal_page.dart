@@ -24,10 +24,11 @@ class _NetworkProvider {
 }
 
 const _tanzaniaNetworks = [
-  _NetworkProvider(name: 'Vodacom M-Pesa', code: 'MPESA',    color: Color(0xFFE10000)),
-  _NetworkProvider(name: 'Mixx by Yas',    code: 'MIXX',     color: Color(0xFF0057A8)),
-  _NetworkProvider(name: 'Airtel Money',   code: 'AIRTEL',   color: Color(0xFFFF6B00)),
-  _NetworkProvider(name: 'Halo Pesa',      code: 'HALOPESA', color: Color(0xFF00A651)),
+  _NetworkProvider(name: 'Airtel',   code: 'Airtel',   color: Color(0xFFFF6B00)),
+  _NetworkProvider(name: 'Tigo',     code: 'Tigo',     color: Color(0xFF0057A8)),
+  _NetworkProvider(name: 'Halopesa', code: 'Halopesa', color: Color(0xFF00A651)),
+  _NetworkProvider(name: 'Azampesa', code: 'Azampesa', color: Color(0xFF6A0DAD)),
+  _NetworkProvider(name: 'Mpesa',    code: 'Mpesa',    color: Color(0xFFE10000)),
 ];
 
 // ── Localised strings ─────────────────────────────────────────────────────────
@@ -255,7 +256,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
           'PhoneNumber':    _phoneNumber,
           'Fund':           _selectedFund!.fundingName ?? '',
           'Amount':         _amountController.text,
-          'WalletProvider': _selectedNetwork!.code,   // ← NEW
+          'WalletProvider': _selectedNetwork!.code,
         }),
       );
       final data     = jsonDecode(res.body);
@@ -770,75 +771,96 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   }
 
   // ── Network provider picker ───────────────────────────────────────────────
+  // 5 providers: 2-column grid, last item spans full width.
   Widget _networkProviderPicker({
     required Color inputBg, required Color border,
     required Color txtS,    required bool  dark,
   }) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount:   2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing:  10,
-        childAspectRatio: 3.0,
-      ),
-      itemCount: _tanzaniaNetworks.length,
-      itemBuilder: (_, i) {
-        final n        = _tanzaniaNetworks[i];
-        final selected = _selectedNetwork?.code == n.code;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() => _selectedNetwork = n);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(
-              color: selected
-                  ? n.color.withOpacity(dark ? 0.25 : 0.12)
-                  : inputBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: selected ? n.color : border,
-                width: selected ? 2 : 1,
-              ),
-              boxShadow: selected
-                  ? [BoxShadow(color: n.color.withOpacity(0.25),
-                  blurRadius: 8, offset: const Offset(0, 3))]
-                  : [],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 10, height: 10,
-                  decoration: BoxDecoration(
-                      color: n.color, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    n.name,
-                    style: TextStyle(
-                      fontSize:   12,
-                      fontWeight: selected
-                          ? FontWeight.w800 : FontWeight.w600,
-                      color: selected ? n.color : txtS,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (selected) ...[
-                  const SizedBox(width: 4),
-                  Icon(Icons.check_circle_rounded, color: n.color, size: 14),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
+    return Column(
+      children: [
+        // Row 1: Airtel + Tigo
+        Row(children: [
+          _networkTile(_tanzaniaNetworks[0], inputBg, border, txtS, dark),
+          const SizedBox(width: 10),
+          _networkTile(_tanzaniaNetworks[1], inputBg, border, txtS, dark),
+        ]),
+        const SizedBox(height: 10),
+        // Row 2: Halopesa + Azampesa
+        Row(children: [
+          _networkTile(_tanzaniaNetworks[2], inputBg, border, txtS, dark),
+          const SizedBox(width: 10),
+          _networkTile(_tanzaniaNetworks[3], inputBg, border, txtS, dark),
+        ]),
+        const SizedBox(height: 10),
+        // Row 3: Mpesa spans full width
+        _networkTile(_tanzaniaNetworks[4], inputBg, border, txtS, dark,
+            fullWidth: true),
+      ],
     );
+  }
+
+  Widget _networkTile(
+      _NetworkProvider n,
+      Color inputBg,
+      Color border,
+      Color txtS,
+      bool dark, {
+        bool fullWidth = false,
+      }) {
+    final selected = _selectedNetwork?.code == n.code;
+    final tile = GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _selectedNetwork = n);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 50,
+        decoration: BoxDecoration(
+          color: selected
+              ? n.color.withOpacity(dark ? 0.25 : 0.12)
+              : inputBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? n.color : border,
+            width: selected ? 2 : 1,
+          ),
+          boxShadow: selected
+              ? [BoxShadow(
+              color: n.color.withOpacity(0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 3))]
+              : [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 10, height: 10,
+              decoration: BoxDecoration(color: n.color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                n.name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected ? n.color : txtS,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (selected) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.check_circle_rounded, color: n.color, size: 14),
+            ],
+          ],
+        ),
+      ),
+    );
+
+    return fullWidth ? tile : Expanded(child: tile);
   }
 
   // ── Shared helpers ─────────────────────────────────────────────────────────

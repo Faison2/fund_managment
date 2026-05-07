@@ -26,10 +26,11 @@ class _NetworkProvider {
 }
 
 const _tanzaniaNetworks = [
-  _NetworkProvider(name: 'Vodacom M-Pesa',  code: 'MPESA',    color: Color(0xFFE10000), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Mixx by Yas',     code: 'MIXX',     color: Color(0xFF0057A8), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Airtel Money',    code: 'AIRTEL',   color: Color(0xFFFF6B00), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Halo Pesa',       code: 'HALOPESA', color: Color(0xFF00A651), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Airtel',    code: 'Airtel',   color: Color(0xFFFF6B00), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Tigo',      code: 'Tigo',     color: Color(0xFF0057A8), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Halopesa',  code: 'Halopesa', color: Color(0xFF00A651), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Azampesa', code: 'Azampesa', color: Color(0xFF6A0DAD), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Mpesa',     code: 'Mpesa',    color: Color(0xFFE10000), icon: Icons.sim_card),
 ];
 
 // ── Localised strings ─────────────────────────────────────────────────────────
@@ -290,7 +291,7 @@ class _DepositPageState extends State<DepositPage> {
           'PhoneNumber':    _mobileController.text.trim(),
           'Fund':           _selectedFund!.fundingName ?? '',
           'Amount':         _amountController.text,
-          'WalletProvider': _selectedNetwork!.code,        // ← NEW
+          'WalletProvider': _selectedNetwork!.code,
         }),
       );
       final data = jsonDecode(res.body);
@@ -740,7 +741,7 @@ class _DepositPageState extends State<DepositPage> {
                         _sRow(s.fund, _selectedFund?.fundingName ?? '—',
                             txtP, txtS),
                         _sDiv(border),
-                        _sRow(s.walletProvider,                            // ← NEW
+                        _sRow(s.walletProvider,
                             _selectedNetwork?.name ?? '—', txtP, txtS),
                         _sDiv(border),
                         _sRow(s.phone,
@@ -799,80 +800,98 @@ class _DepositPageState extends State<DepositPage> {
   }
 
   // ── Network provider picker ───────────────────────────────────────────────
-  // Shows a tappable grid of network logos. Tapping one highlights it and
-  // opens a bottom-sheet confirmation — keeps the UI tactile and brand-correct.
+  // 5 providers: rendered as a 2-column grid where the last item (5th)
+  // spans the full width so the layout stays balanced and touch-friendly.
   Widget _networkProviderPicker({
     required Color inputBg, required Color border, required Color cardBg,
     required Color txtP,    required Color txtS,   required Color txtH,
     required Color green,   required bool  dark,   required _DS   s,
   }) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount:    2,
-        crossAxisSpacing:  10,
-        mainAxisSpacing:   10,
-        childAspectRatio:  3.0,
-      ),
-      itemCount: _tanzaniaNetworks.length,
-      itemBuilder: (_, i) {
-        final n        = _tanzaniaNetworks[i];
-        final selected = _selectedNetwork?.code == n.code;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() => _selectedNetwork = n);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(
-              color: selected
-                  ? n.color.withOpacity(dark ? 0.25 : 0.12)
-                  : inputBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: selected ? n.color : border,
-                width: selected ? 2 : 1,
-              ),
-              boxShadow: selected
-                  ? [BoxShadow(color: n.color.withOpacity(0.25),
-                  blurRadius: 8, offset: const Offset(0, 3))]
-                  : [],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Coloured dot representing the brand
-                Container(
-                  width: 10, height: 10,
-                  decoration: BoxDecoration(
-                      color: n.color, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    n.name,
-                    style: TextStyle(
-                      fontSize:   12,
-                      fontWeight: selected
-                          ? FontWeight.w800
-                          : FontWeight.w600,
-                      color: selected ? n.color : txtS,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (selected) ...[
-                  const SizedBox(width: 4),
-                  Icon(Icons.check_circle_rounded, color: n.color, size: 14),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
+    return Column(
+      children: [
+        // First row: items 0 & 1
+        Row(children: [
+          _networkTile(_tanzaniaNetworks[0], inputBg, border, txtS, dark),
+          const SizedBox(width: 10),
+          _networkTile(_tanzaniaNetworks[1], inputBg, border, txtS, dark),
+        ]),
+        const SizedBox(height: 10),
+        // Second row: items 2 & 3
+        Row(children: [
+          _networkTile(_tanzaniaNetworks[2], inputBg, border, txtS, dark),
+          const SizedBox(width: 10),
+          _networkTile(_tanzaniaNetworks[3], inputBg, border, txtS, dark),
+        ]),
+        const SizedBox(height: 10),
+        // Third row: item 4 spans full width
+        _networkTile(_tanzaniaNetworks[4], inputBg, border, txtS, dark,
+            fullWidth: true),
+      ],
     );
+  }
+
+  Widget _networkTile(
+      _NetworkProvider n,
+      Color inputBg,
+      Color border,
+      Color txtS,
+      bool dark, {
+        bool fullWidth = false,
+      }) {
+    final selected = _selectedNetwork?.code == n.code;
+    final tile = GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _selectedNetwork = n);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 50,
+        decoration: BoxDecoration(
+          color: selected
+              ? n.color.withOpacity(dark ? 0.25 : 0.12)
+              : inputBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? n.color : border,
+            width: selected ? 2 : 1,
+          ),
+          boxShadow: selected
+              ? [BoxShadow(
+              color: n.color.withOpacity(0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 3))]
+              : [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 10, height: 10,
+              decoration: BoxDecoration(color: n.color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                n.name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected ? n.color : txtS,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (selected) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.check_circle_rounded, color: n.color, size: 14),
+            ],
+          ],
+        ),
+      ),
+    );
+
+    return fullWidth ? tile : Expanded(child: tile);
   }
 
   // ── Shared helpers ─────────────────────────────────────────────────────────
