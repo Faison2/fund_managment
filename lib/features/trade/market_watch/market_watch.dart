@@ -70,6 +70,7 @@ class DseStock {
   final int    bestOfferQty;
   final double marketCap;
   final String lastTradeTime;
+  final String securityRef; // ← ADDED
 
   const DseStock({
     required this.symbol,
@@ -89,6 +90,7 @@ class DseStock {
     required this.bestOfferQty,
     required this.marketCap,
     required this.lastTradeTime,
+    required this.securityRef, // ← ADDED
   });
 
   factory DseStock.fromJson(Map<String, dynamic> j) {
@@ -105,6 +107,7 @@ class DseStock {
     final bestOfferQty = (j['bestOfferQuantity'] as num).toInt();
     final marketCap    = (j['marketCap'] as num).toDouble();
     final time         = (j['time'] as String?) ?? '';
+    final securityRef  = (j['securityRef'] as String?) ?? ''; // ← ADDED
     final pct          = open != 0 ? (change / open) * 100 : 0.0;
 
     return DseStock(
@@ -125,6 +128,7 @@ class DseStock {
       bestOfferQty:   bestOfferQty,
       marketCap:      marketCap,
       lastTradeTime:  time,
+      securityRef:    securityRef, // ← ADDED
     );
   }
 
@@ -168,7 +172,7 @@ List<double> _buildSparkline(double open, double high, double low, double close)
 // ─────────────────────────────────────────────────────────────────────────────
 class _DseApi {
   static const _url           = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
-  static const _hardcodedNida = '19790529215580000111';
+  static const _hardcodedNida = '19931109111010000522';
 
   static Future<List<DseStock>> fetchMarketWatch() async {
     final client = HttpClient();
@@ -367,6 +371,7 @@ class _StockCardState extends State<_StockCard> with SingleTickerProviderStateMi
                   lastTradeTime:  s.lastTradeTime,
                   sparkline:      s.sparkline,
                   volume:         s.volume,
+                  securityRef:    s.securityRef, // ← ADDED
                 ),
               ),
             );

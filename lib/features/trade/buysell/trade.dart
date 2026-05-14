@@ -32,11 +32,11 @@ enum TradeType { buy, sell }
 class _TradeApi {
   static const _buyUrl  = 'https://portaluat.tsl.co.tz/DSEAPI/Home/BuyShares';
   static const _sellUrl = 'https://portaluat.tsl.co.tz/DSEAPI//Home/SellShares';
-  static const _nida    = '19984567-12345-67890-12';
+  static const _nida    = '19931109111010000522';
 
   static Future<Map<String, dynamic>> execute({
     required TradeType type,
-    required String    securityReference,
+    required String    securityReference, // ← receives the real securityRef UUID
     required double    price,
     required int       shares,
   }) async {
@@ -163,6 +163,7 @@ class TradePage extends StatefulWidget {
   final String       lastTradeTime;
   final List<double> sparkline;
   final String       volume;
+  final String       securityRef; // ← ADDED: real UUID from market watch API
 
   const TradePage({
     Key? key,
@@ -182,6 +183,7 @@ class TradePage extends StatefulWidget {
     required this.lastTradeTime,
     required this.sparkline,
     required this.volume,
+    required this.securityRef, // ← ADDED
   }) : super(key: key);
 
   @override
@@ -249,7 +251,7 @@ class _TradePageState extends State<TradePage>
     try {
       final result = await _TradeApi.execute(
         type:              _tradeType,
-        securityReference: widget.symbol,
+        securityReference: widget.securityRef, // ← FIXED: now sends the real UUID
         price:             _price,
         shares:            _shares,
       );

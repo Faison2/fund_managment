@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// THEME TOKENS  (shared palette)
+// THEME TOKENS
 // ─────────────────────────────────────────────────────────────────────────────
 class _C {
   static const bg      = Color(0xFFE8F4EF);
@@ -22,17 +22,77 @@ class _C {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SECURITY MODEL
+// ─────────────────────────────────────────────────────────────────────────────
+class _Security {
+  final String name;
+  final String ref;
+  final double marketPrice;
+
+  const _Security({
+    required this.name,
+    required this.ref,
+    required this.marketPrice,
+  });
+
+  factory _Security.fromJson(Map<String, dynamic> j) => _Security(
+    name:        (j['securityName'] as String).trim(),
+    ref:         (j['securityRef']  as String).trim(),
+    marketPrice: (j['marketPrice']  as num).toDouble(),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MARKET WATCH API
+// ─────────────────────────────────────────────────────────────────────────────
+class _MarketWatchApi {
+  static const _url  = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
+  static const _nida = '19931109111010000522';
+
+  static Future<List<_Security>> fetch() async {
+    final client = HttpClient();
+    client.badCertificateCallback =
+        (X509Certificate cert, String host, int port) => true;
+    client.connectionTimeout = const Duration(seconds: 15);
+
+    try {
+      final request = await client.postUrl(Uri.parse(_url));
+      request.headers
+        ..set('Accept',       'application/json')
+        ..set('Content-Type', 'application/json')
+        ..set('User-Agent',   'DSEApp/1.0 (Flutter; Dart)');
+      request.write(jsonEncode({'nidaNumber': _nida, 'signature': ''}));
+
+      final response = await request.close();
+      final body     = await response.transform(utf8.decoder).join();
+
+      if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
+
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      if ((json['code'] as int) != 9000) {
+        throw Exception('API error: ${json['message']}');
+      }
+
+      final data = (json['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+      return data.map(_Security.fromJson).toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+    } finally {
+      client.close();
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SELL API
 // ─────────────────────────────────────────────────────────────────────────────
 class _SellApi {
-  static const _url =
-      'https://portaluat.tsl.co.tz/DSEAPI//Home/SellShares';
-  static const _hardcodedNida = '19931225100010000001';
+  static const _url  = 'https://portaluat.tsl.co.tz/DSEAPI//Home/SellShares';
+  static const _nida = '19931109111010000522';
 
   static Future<Map<String, dynamic>> sellShares({
     required String securityReference,
     required double price,
-    required int shares,
+    required int    shares,
   }) async {
     final client = HttpClient();
     client.badCertificateCallback =
@@ -46,24 +106,18 @@ class _SellApi {
         ..set('Content-Type', 'application/json')
         ..set('User-Agent',   'DSEApp/1.0 (Flutter; Dart)');
 
-      final payload = jsonEncode({
-        'nidaNumber':        _hardcodedNida,
+      request.write(jsonEncode({
+        'nidaNumber':        _nida,
         'price':             price,
-        'securityReference': securityReference,
+        'securityReference': securityReference, // ← sends securityRef UUID
         'shares':            shares,
         'signature':         '',
-      });
-      request.write(payload);
+      }));
 
       final response = await request.close();
       final body     = await response.transform(utf8.decoder).join();
-
-      if (response.statusCode != 200) {
-        throw Exception('HTTP ${response.statusCode}');
-      }
-
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      return json;
+      if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
+      return jsonDecode(body) as Map<String, dynamic>;
     } finally {
       client.close();
     }
@@ -84,12 +138,7 @@ String _fmtMoney(double v) {
 // SELL SHARES PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 class SellSharesPage extends StatefulWidget {
-  /// Pre-fill values when navigating from Market Watch
-  final String? symbol;
-  final double? marketPrice;
-
-  const SellSharesPage({Key? key, this.symbol, this.marketPrice})
-      : super(key: key);
+  const SellSharesPage({Key? key}) : super(key: key);
 
   @override
   State<SellSharesPage> createState() => _SellSharesPageState();
@@ -97,13 +146,23 @@ class SellSharesPage extends StatefulWidget {
 
 class _SellSharesPageState extends State<SellSharesPage>
     with SingleTickerProviderStateMixin {
-  // ── Controllers ───────────────────────────────────────────────────────────
-  late TextEditingController _symbolCtrl;
+
+  // ── Market watch state ────────────────────────────────────────────────────
+  List<_Security> _securities    = [];
+  bool            _loadingMarket = true;
+  String?         _marketError;
+
+  // ── Selected security ─────────────────────────────────────────────────────
+  _Security? _selected;
+
+  // ── Price controller (auto-filled from market price) ──────────────────────
   late TextEditingController _priceCtrl;
 
-  // ── State ─────────────────────────────────────────────────────────────────
-  int    _shares   = 100;
-  bool   _loading  = false;
+  // ── Shares ────────────────────────────────────────────────────────────────
+  int _shares = 100;
+
+  // ── Submit state ──────────────────────────────────────────────────────────
+  bool    _loading = false;
   String? _error;
   String? _success;
 
@@ -115,9 +174,7 @@ class _SellSharesPageState extends State<SellSharesPage>
   @override
   void initState() {
     super.initState();
-    _symbolCtrl = TextEditingController(text: widget.symbol ?? '');
-    _priceCtrl  = TextEditingController(
-        text: widget.marketPrice?.toStringAsFixed(2) ?? '');
+    _priceCtrl = TextEditingController();
 
     _animCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 500))
@@ -125,31 +182,51 @@ class _SellSharesPageState extends State<SellSharesPage>
     _fade  = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
         .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
+
+    _loadSecurities();
   }
 
   @override
   void dispose() {
-    _symbolCtrl.dispose();
     _priceCtrl.dispose();
     _animCtrl.dispose();
     super.dispose();
   }
 
-  // ── Computed total ─────────────────────────────────────────────────────────
+  // ── Fetch securities from market watch ────────────────────────────────────
+  Future<void> _loadSecurities() async {
+    setState(() { _loadingMarket = true; _marketError = null; });
+    try {
+      final list = await _MarketWatchApi.fetch();
+      setState(() { _securities = list; _loadingMarket = false; });
+    } catch (e) {
+      setState(() { _loadingMarket = false; _marketError = e.toString(); });
+    }
+  }
+
+  // ── When user picks a security ────────────────────────────────────────────
+  void _onSecuritySelected(_Security s) {
+    setState(() {
+      _selected       = s;
+      _priceCtrl.text = s.marketPrice.toStringAsFixed(2);
+      _error   = null;
+      _success = null;
+    });
+  }
+
+  // ── Computed total ────────────────────────────────────────────────────────
   double get _total {
     final p = double.tryParse(_priceCtrl.text) ?? 0;
     return p * _shares;
   }
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────────────────────
   Future<void> _submit() async {
-    final symbol = _symbolCtrl.text.trim();
-    final price  = double.tryParse(_priceCtrl.text.trim());
-
-    if (symbol.isEmpty) {
-      setState(() => _error = 'Please enter a security reference.');
+    if (_selected == null) {
+      setState(() => _error = 'Please select a security.');
       return;
     }
+    final price = double.tryParse(_priceCtrl.text.trim());
     if (price == null || price <= 0) {
       setState(() => _error = 'Please enter a valid price.');
       return;
@@ -164,7 +241,7 @@ class _SellSharesPageState extends State<SellSharesPage>
 
     try {
       final result = await _SellApi.sellShares(
-        securityReference: symbol,
+        securityReference: _selected!.ref, // ← UUID, not name
         price:  price,
         shares: _shares,
       );
@@ -172,24 +249,23 @@ class _SellSharesPageState extends State<SellSharesPage>
       final code    = result['code'] as int?;
       final message = result['message'] as String? ?? 'Order placed.';
 
-      if (code == 9000) {
-        HapticFeedback.mediumImpact();
-        setState(() {
-          _loading = false;
+      setState(() {
+        _loading = false;
+        if (code == 9000) {
           _success = message;
-        });
-      } else {
-        setState(() {
-          _loading = false;
-          _error   = message;
-        });
-      }
+        } else {
+          _error = message;
+        }
+      });
+      if (code == 9000) HapticFeedback.mediumImpact();
     } catch (e) {
       setState(() { _loading = false; _error = e.toString(); });
     }
   }
 
-  // ── UI ─────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,7 +277,8 @@ class _SellSharesPageState extends State<SellSharesPage>
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // ── App Bar ───────────────────────────────────────────────────
+
+              // ── App Bar ──────────────────────────────────────────────────
               SliverAppBar(
                 backgroundColor: _C.bg,
                 pinned: true,
@@ -219,34 +296,41 @@ class _SellSharesPageState extends State<SellSharesPage>
                   ),
                   onPressed: () => Navigator.pop(context),
                 ),
-                title: Row(
-                  children: [
-                    Container(
-                      width: 34, height: 34,
+                title: Row(children: [
+                  Container(
+                    width: 34, height: 34,
+                    decoration: BoxDecoration(
+                      color: _C.red.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _C.red.withOpacity(0.35)),
+                    ),
+                    child: const Icon(Icons.trending_down_rounded,
+                        color: _C.red, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                    Text('Sell Shares',
+                        style: TextStyle(color: _C.txtPrim, fontSize: 17,
+                            fontWeight: FontWeight.w900, letterSpacing: -0.3)),
+                    Text('DSE — Dar es Salaam Stock Exchange',
+                        style: TextStyle(color: _C.txtSec, fontSize: 9)),
+                  ]),
+                ]),
+                actions: [
+                  // Refresh securities button
+                  IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _C.red.withOpacity(0.12),
+                        color: _C.surface,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _C.red.withOpacity(0.35)),
+                        border: Border.all(color: _C.border),
                       ),
-                      child: const Icon(Icons.trending_down_rounded,
-                          color: _C.red, size: 18),
+                      child: const Icon(Icons.refresh_rounded, size: 14, color: _C.blue),
                     ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('Sell Shares',
-                            style: TextStyle(
-                                color: _C.txtPrim, fontSize: 17,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.3)),
-                        Text('DSE — Dar es Salaam Stock Exchange',
-                            style: TextStyle(
-                                color: _C.txtSec, fontSize: 9)),
-                      ],
-                    ),
-                  ],
-                ),
+                    onPressed: _loadingMarket ? null : _loadSecurities,
+                  ),
+                ],
               ),
 
               // ── Body ──────────────────────────────────────────────────────
@@ -257,7 +341,7 @@ class _SellSharesPageState extends State<SellSharesPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
 
-                      // ── Hero banner ──────────────────────────────────────
+                      // ── Hero banner ────────────────────────────────────
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -273,136 +357,105 @@ class _SellSharesPageState extends State<SellSharesPage>
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: _C.red.withOpacity(0.22)),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _symbolCtrl.text.isNotEmpty
-                                        ? _symbolCtrl.text.toUpperCase()
-                                        : 'SELL ORDER',
-                                    style: const TextStyle(
-                                        color: _C.red, fontSize: 26,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: -1),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _priceCtrl.text.isNotEmpty
-                                        ? 'At TZS ${_priceCtrl.text} per share'
-                                        : 'Enter price and quantity below',
-                                    style: const TextStyle(
-                                        color: _C.txtSec, fontSize: 12),
-                                  ),
-                                ],
+                        child: Row(children: [
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(
+                                _selected != null ? _selected!.name : 'SELL ORDER',
+                                style: const TextStyle(
+                                    color: _C.red, fontSize: 22,
+                                    fontWeight: FontWeight.w900, letterSpacing: -0.8),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            Container(
-                              width: 56, height: 56,
-                              decoration: BoxDecoration(
-                                color: _C.red.withOpacity(0.12),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: _C.red.withOpacity(0.28)),
+                              const SizedBox(height: 4),
+                              Text(
+                                _priceCtrl.text.isNotEmpty
+                                    ? 'At TZS ${_priceCtrl.text} per share'
+                                    : 'Select a security below',
+                                style: const TextStyle(color: _C.txtSec, fontSize: 12),
                               ),
-                              child: const Icon(Icons.arrow_downward_rounded,
-                                  color: _C.red, size: 26),
+                            ]),
+                          ),
+                          Container(
+                            width: 56, height: 56,
+                            decoration: BoxDecoration(
+                              color: _C.red.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: _C.red.withOpacity(0.28)),
                             ),
-                          ],
-                        ),
+                            child: const Icon(Icons.arrow_downward_rounded,
+                                color: _C.red, size: 26),
+                          ),
+                        ]),
                       ),
                       const SizedBox(height: 24),
 
-                      // ── Security Reference ───────────────────────────────
-                      _SectionLabel(label: 'Security Reference'),
+                      // ── Security dropdown ──────────────────────────────
+                      const _SectionLabel(label: 'Security'),
                       const SizedBox(height: 8),
-                      _InputBox(
-                        controller: _symbolCtrl,
-                        hint: 'e.g. CRDB, NMB, TBL',
-                        icon: Icons.business_rounded,
-                        color: _C.red,
-                        keyboardType: TextInputType.text,
-                        onChanged: (_) => setState(() {}),
-                        textCapitalization: TextCapitalization.characters,
+                      _SecurityDropdown(
+                        securities: _securities,
+                        selected:   _selected,
+                        loading:    _loadingMarket,
+                        error:      _marketError,
+                        color:      _C.red,
+                        onChanged:  _onSecuritySelected,
+                        onRetry:    _loadSecurities,
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Price ────────────────────────────────────────────
-                      _SectionLabel(label: 'Price per Share (TZS)'),
+                      // ── Price (auto-filled, still editable) ────────────
+                      const _SectionLabel(label: 'Price per Share (TZS)'),
                       const SizedBox(height: 8),
-                      _InputBox(
+                      _PriceInput(
                         controller: _priceCtrl,
-                        hint: 'e.g. 1000.00',
-                        icon: Icons.attach_money_rounded,
-                        color: _C.red,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        onChanged: (_) => setState(() {}),
+                        color:      _C.red,
+                        onChanged:  (_) => setState(() {}),
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Shares stepper ───────────────────────────────────
-                      _SectionLabel(label: 'Number of Shares'),
+                      // ── Shares stepper ─────────────────────────────────
+                      const _SectionLabel(label: 'Number of Shares'),
                       const SizedBox(height: 8),
                       _SharesStepper(
-                        value: _shares,
-                        color: _C.red,
-                        onDecrement: () =>
-                            setState(() => _shares = max(100, _shares - 100)),
-                        onIncrement: () =>
-                            setState(() => _shares += 100),
-                        onDecrementSmall: () =>
-                            setState(() => _shares = max(1, _shares - 1)),
-                        onIncrementSmall: () =>
-                            setState(() => _shares += 1),
+                        value:     _shares,
+                        color:     _C.red,
+                        onChanged: (v) => setState(() => _shares = v),
                       ),
                       const SizedBox(height: 24),
 
-                      // ── Estimated total ──────────────────────────────────
+                      // ── Total card ─────────────────────────────────────
                       _TotalCard(
-                        total: _total,
+                        total:  _total,
                         shares: _shares,
-                        color: _C.red,
-                        label: 'Estimated Sell Total',
+                        color:  _C.red,
+                        label:  'Estimated Sell Total',
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Success banner ───────────────────────────────────
+                      // ── Banners ────────────────────────────────────────
                       if (_success != null) ...[
-                        _StatusBanner(
-                          message: _success!,
-                          color: _C.green,
-                          icon: Icons.check_circle_rounded,
-                        ),
+                        _StatusBanner(message: _success!, color: _C.green,
+                            icon: Icons.check_circle_rounded),
                         const SizedBox(height: 16),
                       ],
-
-                      // ── Error banner ─────────────────────────────────────
                       if (_error != null) ...[
-                        _StatusBanner(
-                          message: _error!,
-                          color: _C.red,
-                          icon: Icons.error_rounded,
-                        ),
+                        _StatusBanner(message: _error!, color: _C.red,
+                            icon: Icons.error_rounded),
                         const SizedBox(height: 16),
                       ],
 
-                      // ── Submit button ────────────────────────────────────
+                      // ── Submit ─────────────────────────────────────────
                       _SubmitButton(
-                        label: _loading
-                            ? 'Placing Order…'
-                            : 'Confirm Sell Order',
-                        color: _C.red,
+                        label:   _loading ? 'Placing Order…' : 'Confirm Sell Order',
+                        color:   _C.red,
                         loading: _loading,
-                        icon: Icons.trending_down_rounded,
-                        onTap: _loading ? null : _submit,
+                        icon:    Icons.trending_down_rounded,
+                        onTap:   _loading ? null : _submit,
                       ),
-
                       const SizedBox(height: 16),
 
-                      // ── Disclaimer ───────────────────────────────────────
+                      // ── Disclaimer ─────────────────────────────────────
                       const _Disclaimer(),
                     ],
                   ),
@@ -417,39 +470,186 @@ class _SellSharesPageState extends State<SellSharesPage>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SHARED WIDGETS
+// SECURITY DROPDOWN WIDGET
 // ─────────────────────────────────────────────────────────────────────────────
+class _SecurityDropdown extends StatelessWidget {
+  final List<_Security>         securities;
+  final _Security?              selected;
+  final bool                    loading;
+  final String?                 error;
+  final Color                   color;
+  final ValueChanged<_Security> onChanged;
+  final VoidCallback            onRetry;
 
-class _SectionLabel extends StatelessWidget {
-  final String label;
-  const _SectionLabel({required this.label});
+  const _SecurityDropdown({
+    required this.securities,
+    required this.selected,
+    required this.loading,
+    required this.error,
+    required this.color,
+    required this.onChanged,
+    required this.onRetry,
+  });
 
   @override
-  Widget build(BuildContext context) => Text(
-    label,
-    style: const TextStyle(
-        color: _C.txtSec, fontSize: 11, fontWeight: FontWeight.w700,
-        letterSpacing: 0.4),
-  );
+  Widget build(BuildContext context) {
+    // ── Loading state ─────────────────────────────────────────────────────
+    if (loading) {
+      return Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: _C.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.border),
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 20, height: 20,
+            child: CircularProgressIndicator(color: _C.blue, strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    // ── Error state ───────────────────────────────────────────────────────
+    if (error != null) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _C.red.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.red.withOpacity(0.3)),
+        ),
+        child: Row(children: [
+          const Icon(Icons.wifi_off_rounded, color: _C.red, size: 16),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('Could not load securities.',
+                style: TextStyle(color: _C.red, fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+          ),
+          GestureDetector(
+            onTap: onRetry,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _C.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _C.red.withOpacity(0.3)),
+              ),
+              child: const Text('Retry',
+                  style: TextStyle(color: _C.red, fontSize: 11,
+                      fontWeight: FontWeight.w800)),
+            ),
+          ),
+        ]),
+      );
+    }
+
+    // ── Dropdown ──────────────────────────────────────────────────────────
+    return Container(
+      decoration: BoxDecoration(
+        color: _C.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: selected != null ? color.withOpacity(0.45) : _C.border,
+            width: selected != null ? 1.5 : 1),
+        boxShadow: [
+          BoxShadow(color: color.withOpacity(0.05),
+              blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<_Security>(
+          value: selected,
+          isExpanded: true,
+          hint: const Text('Select a security…',
+              style: TextStyle(color: _C.txtHint, fontSize: 14)),
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: color),
+          dropdownColor: _C.card,
+          borderRadius: BorderRadius.circular(14),
+          onChanged: (s) {
+            if (s != null) {
+              HapticFeedback.selectionClick();
+              onChanged(s);
+            }
+          },
+          items: securities.map((s) => DropdownMenuItem<_Security>(
+            value: s,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(children: [
+                // Coloured avatar
+                Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: color.withOpacity(0.25)),
+                  ),
+                  child: Center(
+                    child: Text(
+                      s.name.substring(0, min(2, s.name.length)),
+                      style: TextStyle(color: color, fontSize: 11,
+                          fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(s.name,
+                          style: const TextStyle(color: _C.txtPrim,
+                              fontSize: 13, fontWeight: FontWeight.w800),
+                          overflow: TextOverflow.ellipsis),
+                      Text('TZS ${s.marketPrice.toStringAsFixed(2)}',
+                          style: TextStyle(color: color, fontSize: 11,
+                              fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+              ]),
+            ),
+          )).toList(),
+          // What shows in the collapsed field
+          selectedItemBuilder: (_) => securities.map((s) => Align(
+            alignment: Alignment.centerLeft,
+            child: Row(children: [
+              Icon(Icons.business_rounded, color: color, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(s.name,
+                    style: TextStyle(color: color, fontSize: 14,
+                        fontWeight: FontWeight.w800),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              Text('TZS ${s.marketPrice.toStringAsFixed(2)}',
+                  style: TextStyle(color: color.withOpacity(0.7),
+                      fontSize: 12, fontWeight: FontWeight.w700)),
+            ]),
+          )).toList(),
+        ),
+      ),
+    );
+  }
 }
 
-class _InputBox extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// PRICE INPUT  (editable, auto-filled)
+// ─────────────────────────────────────────────────────────────────────────────
+class _PriceInput extends StatelessWidget {
   final TextEditingController controller;
-  final String hint;
-  final IconData icon;
   final Color color;
-  final TextInputType keyboardType;
   final ValueChanged<String> onChanged;
-  final TextCapitalization textCapitalization;
 
-  const _InputBox({
+  const _PriceInput({
     required this.controller,
-    required this.hint,
-    required this.icon,
     required this.color,
-    required this.keyboardType,
     required this.onChanged,
-    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -458,46 +658,40 @@ class _InputBox extends StatelessWidget {
       color: _C.card,
       borderRadius: BorderRadius.circular(14),
       border: Border.all(color: _C.border),
-      boxShadow: [
-        BoxShadow(
-            color: color.withOpacity(0.04),
-            blurRadius: 8, offset: const Offset(0, 2)),
-      ],
     ),
     child: TextField(
       controller: controller,
-      keyboardType: keyboardType,
-      textCapitalization: textCapitalization,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: onChanged,
-      style: const TextStyle(
-          color: _C.txtPrim, fontSize: 15, fontWeight: FontWeight.w700),
+      style: const TextStyle(color: _C.txtPrim, fontSize: 15,
+          fontWeight: FontWeight.w700),
       decoration: InputDecoration(
-        hintText: hint,
+        hintText: 'e.g. 1000.00',
         hintStyle: const TextStyle(color: _C.txtHint, fontSize: 14),
-        prefixIcon: Icon(icon, color: color, size: 18),
+        prefixIcon: Icon(Icons.attach_money_rounded, color: color, size: 18),
         border: InputBorder.none,
         contentPadding:
         const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        suffixText: 'TZS',
+        suffixStyle: TextStyle(color: color.withOpacity(0.6), fontSize: 12,
+            fontWeight: FontWeight.w700),
       ),
     ),
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARES STEPPER
+// ─────────────────────────────────────────────────────────────────────────────
 class _SharesStepper extends StatelessWidget {
   final int value;
   final Color color;
-  final VoidCallback onDecrement;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrementSmall;
-  final VoidCallback onIncrementSmall;
+  final ValueChanged<int> onChanged;
 
   const _SharesStepper({
     required this.value,
     required this.color,
-    required this.onDecrement,
-    required this.onIncrement,
-    required this.onDecrementSmall,
-    required this.onIncrementSmall,
+    required this.onChanged,
   });
 
   @override
@@ -508,43 +702,45 @@ class _SharesStepper extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       border: Border.all(color: _C.border),
     ),
-    child: Row(
-      children: [
-        _Btn(label: '−100', color: color, onTap: onDecrement),
-        const SizedBox(width: 6),
-        _Btn(label: '−1',   color: color, onTap: onDecrementSmall),
-        const Spacer(),
-        Column(
-          children: [
-            Text('$value',
-                style: TextStyle(
-                    color: color, fontSize: 26,
-                    fontWeight: FontWeight.w900, letterSpacing: -1)),
-            const Text('shares',
-                style: TextStyle(color: _C.txtHint, fontSize: 10)),
-          ],
-        ),
-        const Spacer(),
-        _Btn(label: '+1',   color: color, onTap: onIncrementSmall),
-        const SizedBox(width: 6),
-        _Btn(label: '+100', color: color, onTap: onIncrement),
-      ],
-    ),
+    child: Row(children: [
+      _Btn(label: '−100', color: color, onTap: () => onChanged(max(100, value - 100))),
+      const SizedBox(width: 6),
+      _Btn(label: '−1',   color: color, onTap: () => onChanged(max(1, value - 1))),
+      const Spacer(),
+      Column(children: [
+        Text('$value',
+            style: TextStyle(color: color, fontSize: 26,
+                fontWeight: FontWeight.w900, letterSpacing: -1)),
+        const Text('shares', style: TextStyle(color: _C.txtHint, fontSize: 10)),
+      ]),
+      const Spacer(),
+      _Btn(label: '+1',   color: color, onTap: () => onChanged(value + 1)),
+      const SizedBox(width: 6),
+      _Btn(label: '+100', color: color, onTap: () => onChanged(value + 100)),
+    ]),
   );
 }
 
-class _Btn extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED WIDGETS
+// ─────────────────────────────────────────────────────────────────────────────
+class _SectionLabel extends StatelessWidget {
   final String label;
-  final Color color;
-  final VoidCallback onTap;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) => Text(label,
+      style: const TextStyle(color: _C.txtSec, fontSize: 11,
+          fontWeight: FontWeight.w700, letterSpacing: 0.4));
+}
+
+class _Btn extends StatelessWidget {
+  final String label; final Color color; final VoidCallback onTap;
   const _Btn({required this.label, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-    onTap: () {
-      HapticFeedback.selectionClick();
-      onTap();
-    },
+    onTap: () { HapticFeedback.selectionClick(); onTap(); },
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
@@ -553,21 +749,16 @@ class _Btn extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.25)),
       ),
       child: Text(label,
-          style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+          style: TextStyle(color: color, fontSize: 11,
+              fontWeight: FontWeight.w800)),
     ),
   );
 }
 
 class _TotalCard extends StatelessWidget {
-  final double total;
-  final int shares;
-  final Color color;
-  final String label;
-  const _TotalCard({
-    required this.total, required this.shares,
-    required this.color, required this.label,
-  });
+  final double total; final int shares; final Color color; final String label;
+  const _TotalCard({required this.total, required this.shares,
+    required this.color, required this.label});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -577,39 +768,25 @@ class _TotalCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: color.withOpacity(0.2)),
     ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    color: _C.txtSec, fontSize: 11,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text('$shares shares',
-                style: const TextStyle(
-                    color: _C.txtHint, fontSize: 10)),
-          ],
-        ),
-        Text(
-          _fmtMoney(total),
-          style: TextStyle(
-              color: color, fontSize: 20,
-              fontWeight: FontWeight.w900, letterSpacing: -0.5),
-        ),
-      ],
-    ),
+    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: const TextStyle(color: _C.txtSec, fontSize: 11,
+            fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text('$shares shares',
+            style: const TextStyle(color: _C.txtHint, fontSize: 10)),
+      ]),
+      Text(_fmtMoney(total),
+          style: TextStyle(color: color, fontSize: 20,
+              fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+    ]),
   );
 }
 
 class _StatusBanner extends StatelessWidget {
-  final String message;
-  final Color color;
-  final IconData icon;
-  const _StatusBanner(
-      {required this.message, required this.color, required this.icon});
+  final String message; final Color color; final IconData icon;
+  const _StatusBanner({required this.message, required this.color,
+    required this.icon});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -619,33 +796,21 @@ class _StatusBanner extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: color.withOpacity(0.25)),
     ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(message,
-              style: TextStyle(
-                  color: color, fontSize: 12,
-                  fontWeight: FontWeight.w600)),
-        ),
-      ],
-    ),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, color: color, size: 18),
+      const SizedBox(width: 10),
+      Expanded(child: Text(message,
+          style: TextStyle(color: color, fontSize: 12,
+              fontWeight: FontWeight.w600))),
+    ]),
   );
 }
 
 class _SubmitButton extends StatelessWidget {
-  final String label;
-  final Color color;
-  final bool loading;
-  final IconData icon;
-  final VoidCallback? onTap;
-  const _SubmitButton({
-    required this.label, required this.color,
-    required this.loading, required this.icon,
-    required this.onTap,
-  });
+  final String label; final Color color; final bool loading;
+  final IconData icon; final VoidCallback? onTap;
+  const _SubmitButton({required this.label, required this.color,
+    required this.loading, required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -655,41 +820,29 @@ class _SubmitButton extends StatelessWidget {
       height: 56,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
           colors: loading
               ? [color.withOpacity(0.4), color.withOpacity(0.3)]
               : [color, color.withOpacity(0.75)],
         ),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: loading
-            ? []
-            : [
-          BoxShadow(
-              color: color.withOpacity(0.35),
-              blurRadius: 18,
-              offset: const Offset(0, 6)),
+        boxShadow: loading ? [] : [
+          BoxShadow(color: color.withOpacity(0.35),
+              blurRadius: 18, offset: const Offset(0, 6)),
         ],
       ),
       child: Center(
         child: loading
-            ? const SizedBox(
-          width: 22, height: 22,
-          child: CircularProgressIndicator(
-              color: Colors.white, strokeWidth: 2.5),
-        )
-            : Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text(label,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.3)),
-          ],
-        ),
+            ? const SizedBox(width: 22, height: 22,
+            child: CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 2.5))
+            : Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(color: Colors.white,
+              fontSize: 15, fontWeight: FontWeight.w900,
+              letterSpacing: 0.3)),
+        ]),
       ),
     ),
   );
@@ -706,22 +859,15 @@ class _Disclaimer extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: _C.border),
     ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Icon(Icons.info_outline_rounded, size: 14, color: _C.txtHint),
-        SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Orders are subject to market conditions and DSE regulations. '
-                'Prices may differ from execution price. '
-                'This is a UAT environment — no real trades are placed.',
-            style: TextStyle(
-                color: _C.txtHint, fontSize: 10,
-                height: 1.5),
-          ),
-        ),
-      ],
-    ),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+      Icon(Icons.info_outline_rounded, size: 14, color: _C.txtHint),
+      SizedBox(width: 8),
+      Expanded(child: Text(
+        'Orders are subject to market conditions and DSE regulations. '
+            'Prices may differ from execution price. '
+            'This is a UAT environment — no real trades are placed.',
+        style: TextStyle(color: _C.txtHint, fontSize: 10, height: 1.5),
+      )),
+    ]),
   );
 }
