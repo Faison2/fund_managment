@@ -4,6 +4,7 @@ import '../buysell/buy.dart';
 import '../buysell/sell.dart';
 import '../market_watch/market_watch.dart';
 import 'drawer.dart';
+import 'my_oders.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THEME COLORS
@@ -34,38 +35,6 @@ class PastelColors {
   static const List<Color> buyGrad   = [Color(0xFF4CAF50), Color(0xFF2E7D32)];
   static const List<Color> sellGrad  = [Color(0xFFFF8AA8), Color(0xFFFF6B8A)];
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ORDER MODEL
-// ─────────────────────────────────────────────────────────────────────────────
-class _Order {
-  final String symbol;
-  final String company;
-  final String type;
-  final String status;
-  final String time;
-  final double price;
-  final int quantity;
-
-  const _Order({
-    required this.symbol,
-    required this.company,
-    required this.type,
-    required this.status,
-    required this.time,
-    required this.price,
-    required this.quantity,
-  });
-}
-
-const List<_Order> _kOrders = [
-  _Order(symbol: 'CRDB', company: 'CRDB Bank',         type: 'BUY',  status: 'Filled',    time: 'Today, 09:42',     price: 420.00,  quantity: 500),
-  _Order(symbol: 'NMB',  company: 'NMB Bank',           type: 'SELL', status: 'Filled',    time: 'Today, 10:15',     price: 3850.00, quantity: 100),
-  _Order(symbol: 'TBL',  company: 'Tanzania Breweries', type: 'BUY',  status: 'Pending',   time: 'Today, 11:02',     price: 2750.00, quantity: 200),
-  _Order(symbol: 'DCB',  company: 'DCB Commercial',     type: 'BUY',  status: 'Filled',    time: 'Yesterday, 14:30', price: 390.00,  quantity: 1000),
-  _Order(symbol: 'SWIS', company: 'Swissport TZ',       type: 'SELL', status: 'Cancelled', time: 'Yesterday, 15:55', price: 620.00,  quantity: 150),
-  _Order(symbol: 'TOL',  company: 'Tanga Cement',       type: 'BUY',  status: 'Filled',    time: 'Mon, 09:10',       price: 1180.00, quantity: 300),
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN WIDGET
@@ -360,8 +329,6 @@ class _TradeDashboardState extends State<TradeDashboard>
   Widget _vDivider() => Container(height: 32, width: 1, color: Colors.white24);
 
   // ── 2 × 2 Action Grid ─────────────────────────────────────────────────────
-  //   [ BUY  gradient ]  [ SELL gradient ]
-  //   [ My Orders     ]  [ Market Watch  ]
   Widget _buildActionGrid() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -400,14 +367,14 @@ class _TradeDashboardState extends State<TradeDashboard>
           Expanded(
             child: _secondaryBtn(
               label: 'My Orders',
-              sublabel: '${_kOrders.length} orders',
+              sublabel: '${kOrders.length} orders', // ← uses exported constant
               icon: Icons.receipt_long_rounded,
               iconColor: PastelColors.accent,
               iconBg: PastelColors.accentLt,
               borderColor: PastelColors.accent.withOpacity(0.30),
               onTap: () {
                 HapticFeedback.mediumImpact();
-                _push(const _OrdersPage());
+                _push(const OrdersPage()); // ← public class from my_orders.dart
               },
             ),
           ),
@@ -589,348 +556,6 @@ class _TradeDashboardState extends State<TradeDashboard>
               ),
               child: const Icon(Icons.arrow_forward_rounded,
                   color: PastelColors.accent, size: 18),
-            ),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ORDERS PAGE
-// ─────────────────────────────────────────────────────────────────────────────
-class _OrdersPage extends StatefulWidget {
-  const _OrdersPage({Key? key}) : super(key: key);
-
-  @override
-  State<_OrdersPage> createState() => _OrdersPageState();
-}
-
-class _OrdersPageState extends State<_OrdersPage> {
-  int _filterIndex = 0;
-
-  List<_Order> get _filtered {
-    if (_filterIndex == 1) return _kOrders.where((o) => o.type == 'BUY').toList();
-    if (_filterIndex == 2) return _kOrders.where((o) => o.type == 'SELL').toList();
-    return _kOrders;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filled    = _kOrders.where((o) => o.status == 'Filled').length;
-    final pending   = _kOrders.where((o) => o.status == 'Pending').length;
-    final cancelled = _kOrders.where((o) => o.status == 'Cancelled').length;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: PastelColors.bg,
-        body: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            // ── App bar ───────────────────────────────────────────────────
-            SliverAppBar(
-              backgroundColor: PastelColors.bg,
-              elevation: 0,
-              floating: true,
-              pinned: true,
-              automaticallyImplyLeading: false,
-              leading: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: PastelColors.surface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: PastelColors.border),
-                    ),
-                    child: const Icon(Icons.arrow_back_rounded,
-                        size: 18, color: PastelColors.txtPrim),
-                  ),
-                ),
-              ),
-              title: Row(children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: PastelColors.fabGrad),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text('TRADE',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5)),
-                ),
-                const SizedBox(width: 10),
-                const Text('My Orders',
-                    style: TextStyle(
-                        color: PastelColors.txtPrim,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800)),
-              ]),
-            ),
-
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Column(children: [
-                  // Summary card
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: PastelColors.heroGrad),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                            color: PastelColors.accent.withOpacity(0.28),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8)),
-                      ],
-                    ),
-                    child: Row(children: [
-                      _stat('${_kOrders.length}', 'Total',     Colors.white),
-                      _sDivider(),
-                      _stat('$filled',            'Filled',    const Color(0xFF4ADE80)),
-                      _sDivider(),
-                      _stat('$pending',           'Pending',   PastelColors.gold),
-                      _sDivider(),
-                      _stat('$cancelled',         'Cancelled', PastelColors.red),
-                    ]),
-                  ),
-                  const SizedBox(height: 18),
-                  // Filter chips
-                  _buildFilterChips(),
-                  const SizedBox(height: 16),
-                ]),
-              ),
-            ),
-
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => _OrderCard(order: _filtered[i]),
-                  childCount: _filtered.length,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _stat(String value, String label, Color color) => Expanded(
-    child: Column(children: [
-      Text(value,
-          style: TextStyle(
-              color: color, fontSize: 22, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 2),
-      Text(label,
-          style: const TextStyle(color: Colors.white60, fontSize: 10)),
-    ]),
-  );
-
-  Widget _sDivider() => Container(height: 36, width: 1, color: Colors.white24);
-
-  Widget _buildFilterChips() {
-    const labels = ['All', 'Buy', 'Sell'];
-    const colors = [PastelColors.accent, PastelColors.accent2, PastelColors.red];
-
-    return Row(
-      children: List.generate(labels.length, (i) {
-        final sel = _filterIndex == i;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() => _filterIndex = i);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.only(right: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-            decoration: BoxDecoration(
-              color: sel ? colors[i] : PastelColors.surface,
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                  color: sel ? colors[i] : PastelColors.border, width: 1.5),
-              boxShadow: sel
-                  ? [BoxShadow(
-                  color: colors[i].withOpacity(0.30),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4))]
-                  : [],
-            ),
-            child: Text(labels[i],
-                style: TextStyle(
-                    color: sel ? Colors.white : PastelColors.txtSec,
-                    fontSize: 13,
-                    fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ORDER CARD
-// ─────────────────────────────────────────────────────────────────────────────
-class _OrderCard extends StatelessWidget {
-  final _Order order;
-  const _OrderCard({required this.order});
-
-  @override
-  Widget build(BuildContext context) {
-    final isBuy     = order.type == 'BUY';
-    final grad      = isBuy ? PastelColors.buyGrad  : PastelColors.sellGrad;
-    final typeBg    = isBuy ? PastelColors.greenLt  : PastelColors.redLt;
-    final typeColor = isBuy ? PastelColors.accent2   : PastelColors.red;
-
-    Color statusColor;
-    Color statusBg;
-    IconData statusIcon;
-    switch (order.status) {
-      case 'Filled':
-        statusColor = PastelColors.green;
-        statusBg    = PastelColors.greenLt;
-        statusIcon  = Icons.check_circle_rounded;
-        break;
-      case 'Pending':
-        statusColor = PastelColors.gold;
-        statusBg    = PastelColors.goldLt;
-        statusIcon  = Icons.schedule_rounded;
-        break;
-      default:
-        statusColor = PastelColors.txtHint;
-        statusBg    = PastelColors.border;
-        statusIcon  = Icons.cancel_rounded;
-    }
-
-    final total = (order.price * order.quantity)
-        .toStringAsFixed(0)
-        .replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: PastelColors.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: PastelColors.border),
-        boxShadow: [
-          BoxShadow(
-              color: PastelColors.accent.withOpacity(0.06),
-              blurRadius: 14,
-              offset: const Offset(0, 4)),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            // Colored left bar
-            Container(
-              width: 5,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: grad,
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  // Symbol · company · status
-                  Row(children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: grad),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Text(order.symbol,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5)),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(order.company,
-                          style: const TextStyle(
-                              color: PastelColors.txtPrim,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700),
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: statusBg, borderRadius: BorderRadius.circular(20)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(statusIcon, size: 11, color: statusColor),
-                        const SizedBox(width: 3),
-                        Text(order.status,
-                            style: TextStyle(
-                                color: statusColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700)),
-                      ]),
-                    ),
-                  ]),
-                  const SizedBox(height: 10),
-                  // Type · shares · price
-                  Row(children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                          color: typeBg, borderRadius: BorderRadius.circular(6)),
-                      child: Text(order.type,
-                          style: TextStyle(
-                              color: typeColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8)),
-                    ),
-                    const SizedBox(width: 8),
-                    Text('${order.quantity} shares',
-                        style: const TextStyle(
-                            color: PastelColors.txtSec, fontSize: 12)),
-                    const Spacer(),
-                    Text('TZS ${order.price.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            color: PastelColors.txtPrim,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800)),
-                  ]),
-                  const SizedBox(height: 6),
-                  // Time · total
-                  Row(children: [
-                    const Icon(Icons.access_time_rounded,
-                        size: 11, color: PastelColors.txtHint),
-                    const SizedBox(width: 4),
-                    Text(order.time,
-                        style: const TextStyle(
-                            color: PastelColors.txtHint, fontSize: 11)),
-                    const Spacer(),
-                    Text('Total: TZS $total',
-                        style: const TextStyle(
-                            color: PastelColors.txtSec,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600)),
-                  ]),
-                ]),
-              ),
             ),
           ]),
         ),
