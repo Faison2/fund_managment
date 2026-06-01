@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 
@@ -283,7 +284,7 @@ class _SettingsPageState extends State<SettingsPage> {
               }
 
               final url = Uri.parse(
-                  'cSharpApi/ChangePassword');
+                  '$cSharpApi/ChangePassword');
               final response = await http.post(url,
                   headers: {'Content-Type': 'application/json'},
                   body: json.encode({

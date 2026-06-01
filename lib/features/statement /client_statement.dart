@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../funds/model/model.dart';
@@ -135,7 +136,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     _listCtrl.reset();
     try {
       final response = await http.post(
-        Uri.parse('cSharpApi/GetTransactions'),
+        Uri.parse('$cSharpApi/GetTransactions'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',

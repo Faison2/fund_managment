@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../constants/constants.dart';
 import '../../funds/model/model.dart';
 import '../../funds/repository/repository.dart';
 import '../../../../provider/locale_provider.dart';
@@ -212,7 +213,7 @@ class _DepositPageState extends State<DepositPage> {
       setState(() { _isLoadingUser = true; _userError = ''; });
 
       final res = await http.post(
-        Uri.parse('cSharpApi/UserBasicDetails'),
+        Uri.parse('$cSharpApi/UserBasicDetails'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'CDSNumber': _cdsNumber}),
       ).timeout(const Duration(seconds: 12));
@@ -282,7 +283,7 @@ class _DepositPageState extends State<DepositPage> {
     setState(() => _isSubmitting = true);
     try {
       final res = await http.post(
-        Uri.parse('cSharpApi/Deposit'),
+        Uri.parse('$cSharpApi/Deposit'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername':    'User2',

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
+import '../../constants/constants.dart';
 import '../funds/view/fund.dart';
 import '../portifolio/portfolio.dart';
 import '../profile/profile.dart';
@@ -132,7 +133,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     try {
       setState(() => _isLoadingUserData = true);
       final response = await http.post(
-        Uri.parse('cSharpApi/UserBasicDetails'),
+        Uri.parse('$cSharpApi/UserBasicDetails'),
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: json.encode({'CDSNumber': cdsNumber}),
       ).timeout(const Duration(seconds: 10),

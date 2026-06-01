@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../constants/constants.dart';
 import '../login/view/login.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -19,7 +20,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   static const String _apiUsername = 'User2';
   static const String _apiPassword = 'CBZ1234#2';
   static const String _requestResetUrl =
-      'cSharpApi/RequestReset';
+      '$cSharpApi/RequestReset';
 
   // ─── Step 1: Request OTP ────────────────────────────────────────────────────
   Future<void> _sendOTP() async {
@@ -269,7 +270,7 @@ class _ResetPasswordScreen extends StatefulWidget {
   final String apiPassword;
 
   static const String _confirmResetUrl =
-      'cSharpApi/ConfirmReset';
+      '$cSharpApi/ConfirmReset';
 
   const _ResetPasswordScreen({
     required this.email,
@@ -296,7 +297,7 @@ class _ResetPasswordScreenState extends State<_ResetPasswordScreen> {
     _showSnackBar('Resending OTP…');
     try {
       final response = await http.post(
-        Uri.parse('cSharpApi/RequestReset'),
+        Uri.parse('$cSharpApi/RequestReset'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': widget.apiUsername,

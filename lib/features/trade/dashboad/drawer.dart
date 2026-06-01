@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../constants/constants.dart';
 import '../market_watch/market_watch.dart';
 import 'trade_dashboad.dart'; // for PastelColors
 
@@ -79,7 +80,7 @@ class _TradeDrawerState extends State<TradeDrawer>
   bool   _shimmerTick = false;
 
   static const _apiUrl =
-      'cSharpApi/UserBasicDetails';
+      '$cSharpApi/UserBasicDetails';
 
   @override
   void initState() {

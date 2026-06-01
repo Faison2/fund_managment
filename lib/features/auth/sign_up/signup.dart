@@ -157,7 +157,7 @@ class _ClientTypePicker extends StatelessWidget {
           _PickCard(
             icon: Icons.manage_accounts_rounded,
             title: 'Existing Client',
-            subtitle: 'Already have a Account number? Set up online access',
+            subtitle: 'Already have an Account number? Set up online access',
             onTap: () => onPick(false),
           ),
           const SizedBox(height: 32),
@@ -211,8 +211,7 @@ class _PickCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.7),
           borderRadius: BorderRadius.circular(20),
-          border:
-          Border.all(color: Colors.white.withOpacity(0.9), width: 1.5),
+          border: Border.all(color: Colors.white.withOpacity(0.9), width: 1.5),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -225,8 +224,7 @@ class _PickCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                  color: _softMint,
-                  borderRadius: BorderRadius.circular(14)),
+                  color: _softMint, borderRadius: BorderRadius.circular(14)),
               child: Icon(icon, color: _primaryGreen, size: 26),
             ),
             const SizedBox(width: 16),
@@ -283,7 +281,6 @@ class _NewClientFlowState extends State<_NewClientFlow> {
   Color get _dark => widget.textDark;
   Color get _muted => widget.textMuted;
 
-  // ── Save credentials to SharedPreferences ──────────────────────────────────
   Future<void> _saveCredentials(String email, String phone) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_email', email);
@@ -292,7 +289,10 @@ class _NewClientFlowState extends State<_NewClientFlow> {
 
   Future<void> _register() async {
     if (!_validate()) return;
-    if (!_agreeToTerms) { _snack('Please agree to the Terms & Conditions'); return; }
+    if (!_agreeToTerms) {
+      _snack('Please agree to the Terms & Conditions');
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       String phone = _phoneCtrl.text.trim();
@@ -313,8 +313,8 @@ class _NewClientFlowState extends State<_NewClientFlow> {
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
         if (d['status'] == 'success') {
-          // ── Save to SharedPreferences on success ──
-          await _saveCredentials(_emailCtrl.text.trim(), _phoneCtrl.text.trim());
+          await _saveCredentials(
+              _emailCtrl.text.trim(), _phoneCtrl.text.trim());
           _showSuccessDialog();
         } else {
           _snack(d['statusDesc'] ?? 'Registration failed');
@@ -330,11 +330,21 @@ class _NewClientFlowState extends State<_NewClientFlow> {
 
   bool _validate() {
     if (_emailCtrl.text.isEmpty || !_emailCtrl.text.contains('@')) {
-      _snack('Please enter a valid email'); return false;
+      _snack('Please enter a valid email');
+      return false;
     }
-    if (_phoneCtrl.text.isEmpty) { _snack('Please enter your phone number'); return false; }
-    if (_passCtrl.text.length < 6) { _snack('Password must be at least 6 characters'); return false; }
-    if (_passCtrl.text != _confirmPassCtrl.text) { _snack('Passwords do not match'); return false; }
+    if (_phoneCtrl.text.isEmpty) {
+      _snack('Please enter your phone number');
+      return false;
+    }
+    if (_passCtrl.text.length < 6) {
+      _snack('Password must be at least 6 characters');
+      return false;
+    }
+    if (_passCtrl.text != _confirmPassCtrl.text) {
+      _snack('Passwords do not match');
+      return false;
+    }
     return true;
   }
 
@@ -363,32 +373,43 @@ class _NewClientFlowState extends State<_NewClientFlow> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: widget.softMint, shape: BoxShape.circle),
-              child: Icon(Icons.check_rounded, color: widget.primaryGreen, size: 44),
+              decoration: BoxDecoration(
+                  color: widget.softMint, shape: BoxShape.circle),
+              child: Icon(Icons.check_rounded,
+                  color: widget.primaryGreen, size: 44),
             ),
             const SizedBox(height: 20),
             Text('Account Created!',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: widget.textDark)),
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: widget.textDark)),
             const SizedBox(height: 10),
             Text('Your account has been created successfully.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: widget.textMuted, height: 1.5)),
+                style: TextStyle(
+                    fontSize: 14, color: widget.textMuted, height: 1.5)),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.person_add_rounded, size: 18, color: Colors.white),
+                icon: const Icon(Icons.person_add_rounded,
+                    size: 18, color: Colors.white),
                 label: const Text('Create Individual Account',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                     backgroundColor: widget.primaryGreen,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14))),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.pushReplacement(context,
-                      MaterialPageRoute(builder: (_) => const IndividualAccountScreen()));
+                  Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const IndividualAccountScreen()));
                 },
               ),
             ),
@@ -396,13 +417,17 @@ class _NewClientFlowState extends State<_NewClientFlow> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                icon: Icon(Icons.login_rounded, size: 18, color: widget.primaryGreen),
+                icon: Icon(Icons.login_rounded,
+                    size: 18, color: widget.primaryGreen),
                 label: Text('Go to Login',
-                    style: TextStyle(color: widget.primaryGreen, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        color: widget.primaryGreen,
+                        fontWeight: FontWeight.w600)),
                 style: OutlinedButton.styleFrom(
                     side: BorderSide(color: widget.primaryGreen, width: 1.5),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14))),
                 onPressed: () {
                   Navigator.of(context).pop();
                   Navigator.pushReplacement(context,
@@ -418,8 +443,10 @@ class _NewClientFlowState extends State<_NewClientFlow> {
 
   @override
   void dispose() {
-    _emailCtrl.dispose(); _phoneCtrl.dispose();
-    _passCtrl.dispose(); _confirmPassCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmPassCtrl.dispose();
     super.dispose();
   }
 
@@ -427,7 +454,8 @@ class _NewClientFlowState extends State<_NewClientFlow> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child:
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         GestureDetector(
           onTap: widget.onBack,
           child: Container(
@@ -435,39 +463,57 @@ class _NewClientFlowState extends State<_NewClientFlow> {
             decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1A2332), size: 18),
+            child: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Color(0xFF1A2332), size: 18),
           ),
         ),
         const SizedBox(height: 10),
         const Text('New Client',
-            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold,
-                color: Color(0xFF1A2332), letterSpacing: -0.5)),
+            style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1A2332),
+                letterSpacing: -0.5)),
         const SizedBox(height: 6),
         Text('Fill in your details to get started',
             style: TextStyle(fontSize: 15, color: _muted)),
         const SizedBox(height: 28),
         _card(children: [
           _sectionLabel('Account Info'),
-          _inputField(controller: _emailCtrl, label: 'Email Address',
-              icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+          _inputField(
+              controller: _emailCtrl,
+              label: 'Email Address',
+              icon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress),
           const SizedBox(height: 14),
-          _inputField(controller: _phoneCtrl, label: 'Phone Number',
-              icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
+          _inputField(
+              controller: _phoneCtrl,
+              label: 'Phone Number',
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone),
           const SizedBox(height: 22),
           _sectionLabel('Security'),
-          _passField(controller: _passCtrl, label: 'Password',
-              isVisible: _passVisible, onToggle: () => setState(() => _passVisible = !_passVisible)),
+          _passField(
+              controller: _passCtrl,
+              label: 'Password',
+              isVisible: _passVisible,
+              onToggle: () =>
+                  setState(() => _passVisible = !_passVisible)),
           const SizedBox(height: 14),
-          _passField(controller: _confirmPassCtrl, label: 'Confirm Password',
+          _passField(
+              controller: _confirmPassCtrl,
+              label: 'Confirm Password',
               isVisible: _confirmVisible,
-              onToggle: () => setState(() => _confirmVisible = !_confirmVisible)),
+              onToggle: () =>
+                  setState(() => _confirmVisible = !_confirmVisible)),
           const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.only(left: 4, top: 6),
             child: Row(children: [
               Icon(Icons.info_outline_rounded, size: 13, color: _muted),
               const SizedBox(width: 5),
-              Text('Minimum 6 characters', style: TextStyle(fontSize: 12, color: _muted)),
+              Text('Minimum 6 characters',
+                  style: TextStyle(fontSize: 12, color: _muted)),
             ]),
           ),
         ]),
@@ -475,25 +521,34 @@ class _NewClientFlowState extends State<_NewClientFlow> {
         GestureDetector(
           onTap: () => setState(() => _agreeToTerms = !_agreeToTerms),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: _agreeToTerms ? _mint : Colors.white.withOpacity(0.5),
+              color:
+              _agreeToTerms ? _mint : Colors.white.withOpacity(0.5),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: _agreeToTerms ? _g : Colors.grey.withOpacity(0.2),
+                  color:
+                  _agreeToTerms ? _g : Colors.grey.withOpacity(0.2),
                   width: _agreeToTerms ? 1.5 : 1),
             ),
             child: Row(children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                width: 22, height: 22,
+                width: 22,
+                height: 22,
                 decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _agreeToTerms ? _g : Colors.transparent,
+                    color:
+                    _agreeToTerms ? _g : Colors.transparent,
                     border: Border.all(
-                        color: _agreeToTerms ? _g : Colors.grey[400]!, width: 2)),
+                        color: _agreeToTerms
+                            ? _g
+                            : Colors.grey[400]!,
+                        width: 2)),
                 child: _agreeToTerms
-                    ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                    ? const Icon(Icons.check_rounded,
+                    size: 14, color: Colors.white)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -502,9 +557,13 @@ class _NewClientFlowState extends State<_NewClientFlow> {
                   style: TextStyle(fontSize: 14, color: _muted),
                   children: [
                     const TextSpan(text: 'I agree to the '),
-                    TextSpan(text: 'Terms & Conditions',
-                        style: TextStyle(color: _g, fontWeight: FontWeight.w700,
-                            decoration: TextDecoration.underline, fontSize: 14)),
+                    TextSpan(
+                        text: 'Terms & Conditions',
+                        style: TextStyle(
+                            color: _g,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.underline,
+                            fontSize: 14)),
                   ],
                 )),
               ),
@@ -513,34 +572,48 @@ class _NewClientFlowState extends State<_NewClientFlow> {
         ),
         const SizedBox(height: 24),
         SizedBox(
-          width: double.infinity, height: 54,
+          width: double.infinity,
+          height: 54,
           child: ElevatedButton(
             onPressed: _isLoading ? null : _register,
             style: ElevatedButton.styleFrom(
-                backgroundColor: _g, foregroundColor: Colors.white, elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                backgroundColor: _g,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
                 disabledBackgroundColor: _g.withOpacity(0.5)),
             child: _isLoading
-                ? const SizedBox(height: 22, width: 22,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text('Create Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              SizedBox(width: 8),
-              Icon(Icons.arrow_forward_rounded, size: 18),
-            ]),
+                ? const SizedBox(
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2.5))
+                : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Create Account',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700)),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward_rounded, size: 18),
+                ]),
           ),
         ),
         const SizedBox(height: 20),
         Center(
           child: GestureDetector(
-            onTap: () => Navigator.pushReplacement(
-                context, MaterialPageRoute(builder: (_) => const LoginScreen())),
+            onTap: () => Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (_) => const LoginScreen())),
             child: Text.rich(TextSpan(
               style: TextStyle(fontSize: 14, color: _muted),
               children: [
                 const TextSpan(text: 'Already have an account? '),
-                TextSpan(text: 'Sign In',
-                    style: TextStyle(color: _g, fontWeight: FontWeight.w700)),
+                TextSpan(
+                    text: 'Sign In',
+                    style: TextStyle(
+                        color: _g, fontWeight: FontWeight.w700)),
               ],
             )),
           ),
@@ -555,62 +628,102 @@ class _NewClientFlowState extends State<_NewClientFlow> {
     decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.8), width: 1)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+        border:
+        Border.all(color: Colors.white.withOpacity(0.8), width: 1)),
+    child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children),
   );
 
   Widget _sectionLabel(String label) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(children: [
-      Container(width: 3, height: 14,
-          decoration: BoxDecoration(color: _g, borderRadius: BorderRadius.circular(2))),
+      Container(
+          width: 3,
+          height: 14,
+          decoration: BoxDecoration(
+              color: _g, borderRadius: BorderRadius.circular(2))),
       const SizedBox(width: 8),
-      Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-          color: Color(0xFF1A2332), letterSpacing: 0.3)),
+      Text(label,
+          style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A2332),
+              letterSpacing: 0.3)),
     ]),
   );
 
-  Widget _inputField({required TextEditingController controller,
-    required String label, required IconData icon, TextInputType? keyboardType}) =>
+  Widget _inputField(
+      {required TextEditingController controller,
+        required String label,
+        required IconData icon,
+        TextInputType? keyboardType}) =>
       Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))]),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2))
+            ]),
         child: TextField(
-          controller: controller, keyboardType: keyboardType,
+          controller: controller,
+          keyboardType: keyboardType,
           style: const TextStyle(fontSize: 15, color: Color(0xFF1A2332)),
           decoration: InputDecoration(
-              labelText: label, labelStyle: TextStyle(color: _muted, fontSize: 14),
+              labelText: label,
+              labelStyle: TextStyle(color: _muted, fontSize: 14),
               prefixIcon: Icon(icon, color: _g, size: 20),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
               floatingLabelBehavior: FloatingLabelBehavior.auto),
         ),
       );
 
-  Widget _passField({required TextEditingController controller, required String label,
-    required bool isVisible, required VoidCallback onToggle}) =>
+  Widget _passField(
+      {required TextEditingController controller,
+        required String label,
+        required bool isVisible,
+        required VoidCallback onToggle}) =>
       Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))]),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2))
+            ]),
         child: TextField(
-          controller: controller, obscureText: !isVisible,
+          controller: controller,
+          obscureText: !isVisible,
           style: const TextStyle(fontSize: 15, color: Color(0xFF1A2332)),
           decoration: InputDecoration(
-              labelText: label, labelStyle: TextStyle(color: _muted, fontSize: 14),
+              labelText: label,
+              labelStyle: TextStyle(color: _muted, fontSize: 14),
               prefixIcon: Icon(Icons.lock_outline_rounded, color: _g, size: 20),
               suffixIcon: GestureDetector(
                   onTap: onToggle,
-                  child: Icon(isVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                      color: _muted, size: 20)),
+                  child: Icon(
+                      isVisible
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: _muted,
+                      size: 20)),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
               floatingLabelBehavior: FloatingLabelBehavior.auto),
         ),
       );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EXISTING CLIENT FLOW  (3 steps: validate → KYC → set password)
+// EXISTING CLIENT FLOW  (3 steps: validate → KYC → complete setup)
 // ─────────────────────────────────────────────────────────────────────────────
 class _ExistingClientFlow extends StatefulWidget {
   final Color primaryGreen, softMint, textDark, textMuted;
@@ -627,7 +740,7 @@ class _ExistingClientFlow extends StatefulWidget {
 }
 
 class _ExistingClientFlowState extends State<_ExistingClientFlow> {
-  // Step 0 = verify, 1 = KYC review, 2 = set password
+  // Step 0 = verify, 1 = KYC review, 2 = complete setup
   int _step = 0;
 
   // Step 0
@@ -638,7 +751,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   // Fetched client data
   Map<String, dynamic>? _clientData;
 
-  // KYC controllers (auto-filled)
+  // KYC controllers (auto-filled from API)
   final _kycNameCtrl = TextEditingController();
   final _kycEmailCtrl = TextEditingController();
   final _kycMobileCtrl = TextEditingController();
@@ -648,9 +761,37 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   final _kycAccNameCtrl = TextEditingController();
   final _kycBranchCtrl = TextEditingController();
 
-  // Step 2: Set password
+  // Step 2: Additional required fields
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
+  final _firstNameCtrl = TextEditingController();
+  final _surnameCtrl = TextEditingController();
+  final _otherNamesCtrl = TextEditingController();
+  final _dobCtrl = TextEditingController();
+  final _birthPlaceCtrl = TextEditingController();
+  final _occupationCtrl = TextEditingController();
+  final _nationalityCtrl = TextEditingController();
+  final _idTypeCtrl = TextEditingController();
+  final _idCtrl = TextEditingController();
+  final _idExpiryCtrl = TextEditingController();
+  final _issuingAuthorityCtrl = TextEditingController();
+  final _cityCtrl = TextEditingController();
+  final _countryCtrl = TextEditingController();
+  final _swiftCodeCtrl = TextEditingController();
+  final _bankAddressCtrl = TextEditingController();
+  final _initialAmountCtrl = TextEditingController();
+
+  // Dropdowns
+  String _gender = 'Male';
+  String _title = 'Mr';
+  String _investmentPurpose = 'Wealth Creation';
+  String _incomeSource = 'Salary';
+  String _riskTolerance = 'Medium';
+  String _investmentPeriod = 'Long Term';
+  String _amountCurrency = 'USD';
+  String _bankType = 'Local';
+  String _disclosure = 'No';
+
   bool _passVisible = false, _confirmVisible = false;
   bool _submitting = false;
 
@@ -659,7 +800,6 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   Color get _dark => widget.textDark;
   Color get _muted => widget.textMuted;
 
-  // ── Save credentials to SharedPreferences ──────────────────────────────────
   Future<void> _saveCredentials(String email, String phone) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_email', email);
@@ -670,13 +810,19 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   Future<void> _validateClient() async {
     final email = _emailCtrl.text.trim();
     final cds = _cdsCtrl.text.trim();
-    if (email.isEmpty || !email.contains('@')) { _snack('Enter a valid email'); return; }
-    if (cds.isEmpty) { _snack('Enter your Account number'); return; }
+    if (email.isEmpty || !email.contains('@')) {
+      _snack('Enter a valid email');
+      return;
+    }
+    if (cds.isEmpty) {
+      _snack('Enter your Account number');
+      return;
+    }
 
     setState(() => _validating = true);
     try {
       final res = await http.post(
-        Uri.parse('cSharpApi/UserBasicDetails'),
+        Uri.parse('$cSharpApi/UserBasicDetails'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({"CDSNumber": cds}),
       );
@@ -694,6 +840,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             return;
           }
           _clientData = Map<String, dynamic>.from(data);
+
+          // Auto-fill KYC fields
           _kycNameCtrl.text = data['Names'] ?? '';
           _kycEmailCtrl.text = data['Email'] ?? '';
           _kycMobileCtrl.text = data['Mobile'] ?? '';
@@ -702,6 +850,27 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           _kycAccNoCtrl.text = data['AccountNo'] ?? '';
           _kycAccNameCtrl.text = data['AccountName'] ?? '';
           _kycBranchCtrl.text = data['Branch'] ?? '';
+
+          // Pre-fill step-2 fields from same data where available
+          final fullName = (data['Names'] ?? '').toString().trim();
+          final parts = fullName.split(' ');
+          _firstNameCtrl.text = parts.isNotEmpty ? parts.first : '';
+          _surnameCtrl.text = parts.length > 1 ? parts.last : '';
+          _otherNamesCtrl.text = parts.length > 2
+              ? parts.sublist(1, parts.length - 1).join(' ')
+              : '';
+          _cityCtrl.text = data['City'] ?? '';
+          _countryCtrl.text = data['Country'] ?? '';
+          _nationalityCtrl.text = data['Nationality'] ?? '';
+          _occupationCtrl.text = data['Occupation'] ?? '';
+          _idCtrl.text = data['IDNumber'] ?? '';
+          _idTypeCtrl.text =
+          (data['IDType'] ?? '').toString().isNotEmpty
+              ? data['IDType']
+              : 'National ID';
+          _bankAddressCtrl.text = data['BankAddress'] ?? '';
+          _swiftCodeCtrl.text = data['SwiftCode'] ?? '';
+
           setState(() => _step = 1);
         } else {
           _snack('Account not found. Please check your details.');
@@ -715,13 +884,26 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     }
   }
 
-  // ── Step 1 → Step 2: KYC confirmed, move to set password ──────────────────
-  void _proceedToSetPassword() {
-    setState(() => _step = 2);
-  }
+  void _proceedToSetPassword() => setState(() => _step = 2);
 
-  // ── Step 2: Validate password and complete registration ────────────────────
+  // ── Step 2: Submit to CreateAccountEXISTSING ──────────────────────────────
   Future<void> _submitRegistration() async {
+    if (_firstNameCtrl.text.trim().isEmpty) {
+      _snack('First name is required');
+      return;
+    }
+    if (_surnameCtrl.text.trim().isEmpty) {
+      _snack('Surname is required');
+      return;
+    }
+    if (_dobCtrl.text.trim().isEmpty) {
+      _snack('Date of birth is required');
+      return;
+    }
+    if (_idCtrl.text.trim().isEmpty) {
+      _snack('ID number is required');
+      return;
+    }
     if (_passCtrl.text.length < 6) {
       _snack('Password must be at least 6 characters');
       return;
@@ -734,37 +916,145 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     setState(() => _submitting = true);
 
     try {
-      // ── Call your registration API here ──────────────────────────────────
-      // Example payload — adjust fields to match your actual API:
-      // final res = await http.post(
-      //   Uri.parse('$cSharpApi/ExistingClientSignUp'),
-      //   headers: {'Content-Type': 'application/json'},
-      //   body: jsonEncode({
-      //     "CDSNumber": _cdsCtrl.text.trim(),
-      //     "Email": _kycEmailCtrl.text.trim(),
-      //     "Password": _passCtrl.text,
-      //     "Source": "Mobile",
-      //   }),
-      // );
+      String mobile = _kycMobileCtrl.text.trim();
+      if (mobile.startsWith('0')) mobile = '255${mobile.substring(1)}';
 
-      // ── Save email + phone to SharedPreferences ───────────────────────────
-      await _saveCredentials(
-        _kycEmailCtrl.text.trim(),
-        _kycMobileCtrl.text.trim(),
+      final payload = {
+        "APIUsername": "User2",
+        "APIPassword": "CBZ1234#2",
+        "AccountType": "Individual",
+        "Title": _title,
+        "JointName": "",
+        "FirstName": _firstNameCtrl.text.trim(),
+        "Surname": _surnameCtrl.text.trim(),
+        "OtherNames": _otherNamesCtrl.text.trim(),
+        "DOB": _dobCtrl.text.trim(),
+        "BirthPlace": _birthPlaceCtrl.text.trim(),
+        "Gender": _gender,
+        "Occupation": _occupationCtrl.text.trim(),
+        "Nationality": _nationalityCtrl.text.trim(),
+        "IdentificatinType": _idTypeCtrl.text.trim(),
+        "ID": _idCtrl.text.trim(),
+        "IdentificationExpiryDate": _idExpiryCtrl.text.trim(),
+        "IssuingAuthority": _issuingAuthorityCtrl.text.trim(),
+        "City": _cityCtrl.text.trim(),
+        "PhysicalAddress": _kycAddrCtrl.text.trim(),
+        "Country": _countryCtrl.text.trim(),
+        "Email": _kycEmailCtrl.text.trim(),
+        "MobileNumber": mobile,
+        "InvestmentPurpose": _investmentPurpose,
+        "IncomeSource": _incomeSource,
+        "InvestmentAccountType": "Standard",
+        "InvestorType": "Individual",
+        "Disclosure": _disclosure,
+        "PositionHeld": "None",
+        "BankType": _bankType,
+        "BankAccountNumber": _kycAccNoCtrl.text.trim(),
+        "BankAccountName": _kycAccNameCtrl.text.trim(),
+        "BankName": _kycBankCtrl.text.trim(),
+        "BankBranch": _kycBranchCtrl.text.trim(),
+        "BankSwiftCode": _swiftCodeCtrl.text.trim(),
+        "BankAddress": _bankAddressCtrl.text.trim(),
+        "InitialAmountInvested": _initialAmountCtrl.text.trim().isEmpty
+            ? "0"
+            : _initialAmountCtrl.text.trim(),
+        "AmountSuppliedIn": _amountCurrency,
+        "ServiceRequired": "Trading",
+        "InvestmentPeriod": _investmentPeriod,
+        "RiskTolerance": _riskTolerance,
+        "Charge": "0",
+        "Source": "Mobile",
+        "myExistingCDS": _cdsCtrl.text.trim(),
+        "Password": _passCtrl.text,
+      };
+
+      final res = await http.post(
+        Uri.parse(
+            'https://portaluat.tsl.co.tz/FMSAPI/Home/CreateAccountEXISTSING'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
       );
 
       setState(() => _submitting = false);
 
-      if (!mounted) return;
-      _snack('Account setup complete! Redirecting to login…');
-      await Future.delayed(const Duration(seconds: 2));
-      if (!mounted) return;
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+      if (res.statusCode == 200) {
+        final d = jsonDecode(res.body);
+        final status = d['status'];
+        final desc = (d['statusDesc'] ?? '').toString().toLowerCase();
+
+        if (status == 200 || desc == 'success') {
+          await _saveCredentials(
+            _kycEmailCtrl.text.trim(),
+            _kycMobileCtrl.text.trim(),
+          );
+          if (!mounted) return;
+          _showSuccessDialog();
+        } else {
+          _snack(d['statusDesc'] ?? 'Registration failed. Please try again.');
+        }
+      } else {
+        _snack('Server error (${res.statusCode}). Please try again.');
+      }
     } catch (e) {
       setState(() => _submitting = false);
-      _snack('An error occurred. Please try again.');
+      _snack('An error occurred. Please check your connection.');
     }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                  color: widget.softMint, shape: BoxShape.circle),
+              child: Icon(Icons.check_rounded,
+                  color: widget.primaryGreen, size: 44),
+            ),
+            const SizedBox(height: 20),
+            Text('Account Setup Complete!',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: widget.textDark)),
+            const SizedBox(height: 10),
+            Text('Your online account is ready. You can now sign in.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 14, color: widget.textMuted, height: 1.5)),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.login_rounded,
+                    size: 18, color: Colors.white),
+                label: const Text('Go to Login',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: widget.primaryGreen,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14))),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()));
+                },
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
   }
 
   void _snack(String msg) {
@@ -776,18 +1066,42 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       ]),
       behavior: SnackBarBehavior.floating,
       backgroundColor: widget.textDark,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape:
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.all(16),
     ));
   }
 
   @override
   void dispose() {
-    _emailCtrl.dispose(); _cdsCtrl.dispose();
-    _kycNameCtrl.dispose(); _kycEmailCtrl.dispose(); _kycMobileCtrl.dispose();
-    _kycAddrCtrl.dispose(); _kycBankCtrl.dispose(); _kycAccNoCtrl.dispose();
-    _kycAccNameCtrl.dispose(); _kycBranchCtrl.dispose();
-    _passCtrl.dispose(); _confirmPassCtrl.dispose();
+    _emailCtrl.dispose();
+    _cdsCtrl.dispose();
+    _kycNameCtrl.dispose();
+    _kycEmailCtrl.dispose();
+    _kycMobileCtrl.dispose();
+    _kycAddrCtrl.dispose();
+    _kycBankCtrl.dispose();
+    _kycAccNoCtrl.dispose();
+    _kycAccNameCtrl.dispose();
+    _kycBranchCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmPassCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _surnameCtrl.dispose();
+    _otherNamesCtrl.dispose();
+    _dobCtrl.dispose();
+    _birthPlaceCtrl.dispose();
+    _occupationCtrl.dispose();
+    _nationalityCtrl.dispose();
+    _idTypeCtrl.dispose();
+    _idCtrl.dispose();
+    _idExpiryCtrl.dispose();
+    _issuingAuthorityCtrl.dispose();
+    _cityCtrl.dispose();
+    _countryCtrl.dispose();
+    _swiftCodeCtrl.dispose();
+    _bankAddressCtrl.dispose();
+    _initialAmountCtrl.dispose();
     super.dispose();
   }
 
@@ -795,9 +1109,12 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child:
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         GestureDetector(
-          onTap: _step == 0 ? widget.onBack : () => setState(() => _step -= 1),
+          onTap: _step == 0
+              ? widget.onBack
+              : () => setState(() => _step -= 1),
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -808,8 +1125,11 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           ),
         ),
         const SizedBox(height: 16),
-        // ── Now 3 steps ──
-        _StepIndicator(current: _step, total: 3, primaryGreen: _g, softMint: _mint),
+        _StepIndicator(
+            current: _step,
+            total: 3,
+            primaryGreen: _g,
+            softMint: _mint),
         const SizedBox(height: 24),
         if (_step == 0) _buildStep0(),
         if (_step == 1) _buildStep1(),
@@ -818,22 +1138,31 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     );
   }
 
-  // ── Step 0: Verify ────────────────────────────────────────────────────────
+  // ── Step 0: Verify ─────────────────────────────────────────────────────────
   Widget _buildStep0() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Verify Your Account',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
-              color: _dark, letterSpacing: -0.5)),
+          style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: _dark,
+              letterSpacing: -0.5)),
       const SizedBox(height: 6),
-      Text('Enter your registered email and account number to continue.',
+      Text(
+          'Enter your registered email and account number to continue.',
           style: TextStyle(fontSize: 14, color: _muted)),
       const SizedBox(height: 24),
       _card(children: [
         _sectionLabel('Identity'),
-        _inputField(controller: _emailCtrl, label: 'Registered Email',
-            icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+        _inputField(
+            controller: _emailCtrl,
+            label: 'Registered Email',
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 14),
-        _inputField(controller: _cdsCtrl, label: 'Account Number',
+        _inputField(
+            controller: _cdsCtrl,
+            label: 'Account Number',
             icon: Icons.badge_outlined),
       ]),
       const SizedBox(height: 24),
@@ -846,72 +1175,106 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     ]);
   }
 
-  // ── Step 1: KYC ───────────────────────────────────────────────────────────
+  // ── Step 1: KYC ────────────────────────────────────────────────────────────
   Widget _buildStep1() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Complete Your Profile',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
-              color: _dark, letterSpacing: -0.5)),
+      Text('Confirm Your Profile',
+          style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: _dark,
+              letterSpacing: -0.5)),
       const SizedBox(height: 6),
-      Text('Review and confirm your information pulled from our records.',
+      Text(
+          'Review and confirm your information pulled from our records.',
           style: TextStyle(fontSize: 14, color: _muted)),
       const SizedBox(height: 16),
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(color: _mint, borderRadius: BorderRadius.circular(12)),
+        padding:
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+            color: _mint, borderRadius: BorderRadius.circular(12)),
         child: Row(children: [
           Icon(Icons.waving_hand_rounded, color: _g, size: 18),
           const SizedBox(width: 8),
-          Text('Welcome back, ${(_clientData?['Names'] ?? '').toString().split(' ').first}!',
-              style: TextStyle(color: _g, fontWeight: FontWeight.w600, fontSize: 14)),
+          Text(
+              'Welcome back, ${(_clientData?['Names'] ?? '').toString().split(' ').first}!',
+              style: TextStyle(
+                  color: _g,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14)),
         ]),
       ),
       const SizedBox(height: 16),
       Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-            color: _mint, borderRadius: BorderRadius.circular(12),
+            color: _mint,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _g.withOpacity(0.3))),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.auto_awesome_rounded, color: _g, size: 18),
           const SizedBox(width: 10),
-          Expanded(child: Text(
-            'Your details have been pre-filled from the FMS core system. '
-                'You may edit any field if needed.',
-            style: TextStyle(fontSize: 13, color: _g, height: 1.4),
-          )),
+          Expanded(
+              child: Text(
+                'Your details have been pre-filled from the FMS core system. '
+                    'You may edit any field if needed.',
+                style: TextStyle(fontSize: 13, color: _g, height: 1.4),
+              )),
         ]),
       ),
       const SizedBox(height: 20),
       _card(children: [
         _sectionLabel('Personal Information'),
-        _kycField(controller: _kycNameCtrl, label: 'Full Name', icon: Icons.person_outline_rounded),
+        _kycField(
+            controller: _kycNameCtrl,
+            label: 'Full Name',
+            icon: Icons.person_outline_rounded),
         const SizedBox(height: 14),
-        _kycField(controller: _kycEmailCtrl, label: 'Email Address',
-            icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+        _kycField(
+            controller: _kycEmailCtrl,
+            label: 'Email Address',
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 14),
-        _kycField(controller: _kycMobileCtrl, label: 'Mobile Number',
-            icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
+        _kycField(
+            controller: _kycMobileCtrl,
+            label: 'Mobile Number',
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone),
         const SizedBox(height: 14),
-        _kycField(controller: _kycAddrCtrl, label: 'Address',
+        _kycField(
+            controller: _kycAddrCtrl,
+            label: 'Address',
             icon: Icons.location_on_outlined),
       ]),
       const SizedBox(height: 16),
       _card(children: [
         _sectionLabel('Banking Details'),
-        _kycField(controller: _kycBankCtrl, label: 'Bank Name', icon: Icons.account_balance_outlined),
+        _kycField(
+            controller: _kycBankCtrl,
+            label: 'Bank Name',
+            icon: Icons.account_balance_outlined),
         const SizedBox(height: 14),
-        _kycField(controller: _kycAccNoCtrl, label: 'Account Number',
-            icon: Icons.credit_card_outlined, keyboardType: TextInputType.number),
+        _kycField(
+            controller: _kycAccNoCtrl,
+            label: 'Account Number',
+            icon: Icons.credit_card_outlined,
+            keyboardType: TextInputType.number),
         const SizedBox(height: 14),
-        _kycField(controller: _kycAccNameCtrl, label: 'Account Name',
+        _kycField(
+            controller: _kycAccNameCtrl,
+            label: 'Account Name',
             icon: Icons.badge_outlined),
         const SizedBox(height: 14),
-        _kycField(controller: _kycBranchCtrl, label: 'Branch', icon: Icons.store_outlined),
+        _kycField(
+            controller: _kycBranchCtrl,
+            label: 'Branch',
+            icon: Icons.store_outlined),
       ]),
       const SizedBox(height: 24),
       _primaryBtn(
-        label: 'Confirm & Set Password',
+        label: 'Confirm & Continue',
         icon: Icons.arrow_forward_rounded,
         loading: false,
         onPressed: _proceedToSetPassword,
@@ -920,39 +1283,244 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     ]);
   }
 
-  // ── Step 2: Set Password ──────────────────────────────────────────────────
+  // ── Step 2: Complete Setup ─────────────────────────────────────────────────
   Widget _buildStep2() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Set Your Password',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
-              color: _dark, letterSpacing: -0.5)),
+      Text('Complete Setup',
+          style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: _dark,
+              letterSpacing: -0.5)),
       const SizedBox(height: 6),
-      Text('Choose a strong password to secure your account.',
+      Text('Fill in the remaining details and set your password.',
           style: TextStyle(fontSize: 14, color: _muted)),
-      const SizedBox(height: 24),
+      const SizedBox(height: 20),
 
-      // ── Confirmed email chip ─────────────────────────────────────────────
+      // Email chip
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(color: _mint, borderRadius: BorderRadius.circular(12),
+        padding:
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+            color: _mint,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _g.withOpacity(0.3))),
         child: Row(children: [
           Icon(Icons.email_outlined, color: _g, size: 18),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Setting password for', style: TextStyle(fontSize: 12, color: _muted)),
-              const SizedBox(height: 2),
-              Text(_kycEmailCtrl.text.trim(),
-                  style: TextStyle(fontSize: 14, color: _dark, fontWeight: FontWeight.w600)),
-            ]),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Setting up account for',
+                      style: TextStyle(fontSize: 12, color: _muted)),
+                  const SizedBox(height: 2),
+                  Text(_kycEmailCtrl.text.trim(),
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: _dark,
+                          fontWeight: FontWeight.w600)),
+                ]),
           ),
         ]),
       ),
       const SizedBox(height: 20),
 
+      // ── Personal Details ───────────────────────────────────────────────────
       _card(children: [
-        _sectionLabel('Security'),
+        _sectionLabel('Personal Details'),
+        _dropdownField(
+          label: 'Title',
+          icon: Icons.person_outline_rounded,
+          value: _title,
+          items: ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof'],
+          onChanged: (v) => setState(() => _title = v!),
+        ),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _firstNameCtrl,
+            label: 'First Name',
+            icon: Icons.badge_outlined),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _surnameCtrl,
+            label: 'Surname',
+            icon: Icons.badge_outlined),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _otherNamesCtrl,
+            label: 'Other Names (optional)',
+            icon: Icons.badge_outlined),
+        const SizedBox(height: 14),
+        _dropdownField(
+          label: 'Gender',
+          icon: Icons.wc_rounded,
+          value: _gender,
+          items: ['Male', 'Female'],
+          onChanged: (v) => setState(() => _gender = v!),
+        ),
+        const SizedBox(height: 14),
+        _datePicker(
+          controller: _dobCtrl,
+          label: 'Date of Birth',
+          icon: Icons.cake_outlined,
+          firstDate: DateTime(1940),
+          lastDate:
+          DateTime.now().subtract(const Duration(days: 365 * 18)),
+        ),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _birthPlaceCtrl,
+            label: 'Birth Place',
+            icon: Icons.place_outlined),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _nationalityCtrl,
+            label: 'Nationality',
+            icon: Icons.flag_outlined),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _occupationCtrl,
+            label: 'Occupation',
+            icon: Icons.work_outline_rounded),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _cityCtrl,
+            label: 'City',
+            icon: Icons.location_city_outlined),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _countryCtrl,
+            label: 'Country',
+            icon: Icons.public_outlined),
+      ]),
+      const SizedBox(height: 16),
+
+      // ── Identification ─────────────────────────────────────────────────────
+      _card(children: [
+        _sectionLabel('Identification'),
+        _inputField(
+            controller: _idTypeCtrl,
+            label: 'ID Type (e.g. National ID, Passport)',
+            icon: Icons.credit_card_outlined),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _idCtrl,
+            label: 'ID Number',
+            icon: Icons.numbers_outlined),
+        const SizedBox(height: 14),
+        _datePicker(
+          controller: _idExpiryCtrl,
+          label: 'ID Expiry Date',
+          icon: Icons.event_outlined,
+          firstDate: DateTime.now(),
+          lastDate: DateTime(2060),
+        ),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _issuingAuthorityCtrl,
+            label: 'Issuing Authority',
+            icon: Icons.account_balance_outlined),
+      ]),
+      const SizedBox(height: 16),
+
+      // ── Additional Banking ─────────────────────────────────────────────────
+      _card(children: [
+        _sectionLabel('Additional Banking'),
+        _dropdownField(
+          label: 'Bank Type',
+          icon: Icons.account_balance_outlined,
+          value: _bankType,
+          items: ['Local', 'Foreign'],
+          onChanged: (v) => setState(() => _bankType = v!),
+        ),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _swiftCodeCtrl,
+            label: 'SWIFT Code',
+            icon: Icons.code_outlined),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _bankAddressCtrl,
+            label: 'Bank Address',
+            icon: Icons.location_on_outlined),
+      ]),
+      const SizedBox(height: 16),
+
+      // ── Investment Preferences ─────────────────────────────────────────────
+      _card(children: [
+        _sectionLabel('Investment Preferences'),
+        _dropdownField(
+          label: 'Investment Purpose',
+          icon: Icons.trending_up_rounded,
+          value: _investmentPurpose,
+          items: [
+            'Wealth Creation',
+            'Retirement',
+            'Education',
+            'Income',
+            'Speculation'
+          ],
+          onChanged: (v) => setState(() => _investmentPurpose = v!),
+        ),
+        const SizedBox(height: 14),
+        _dropdownField(
+          label: 'Income Source',
+          icon: Icons.attach_money_rounded,
+          value: _incomeSource,
+          items: [
+            'Salary',
+            'Business',
+            'Investments',
+            'Inheritance',
+            'Other'
+          ],
+          onChanged: (v) => setState(() => _incomeSource = v!),
+        ),
+        const SizedBox(height: 14),
+        _dropdownField(
+          label: 'Risk Tolerance',
+          icon: Icons.speed_rounded,
+          value: _riskTolerance,
+          items: ['Low', 'Medium', 'High'],
+          onChanged: (v) => setState(() => _riskTolerance = v!),
+        ),
+        const SizedBox(height: 14),
+        _dropdownField(
+          label: 'Investment Period',
+          icon: Icons.timelapse_rounded,
+          value: _investmentPeriod,
+          items: ['Short Term', 'Medium Term', 'Long Term'],
+          onChanged: (v) => setState(() => _investmentPeriod = v!),
+        ),
+        const SizedBox(height: 14),
+        _inputField(
+            controller: _initialAmountCtrl,
+            label: 'Initial Amount (optional)',
+            icon: Icons.savings_outlined,
+            keyboardType: TextInputType.number),
+        const SizedBox(height: 14),
+        _dropdownField(
+          label: 'Currency',
+          icon: Icons.currency_exchange_rounded,
+          value: _amountCurrency,
+          items: ['USD', 'TZS', 'KES', 'ZAR'],
+          onChanged: (v) => setState(() => _amountCurrency = v!),
+        ),
+        const SizedBox(height: 14),
+        _dropdownField(
+          label: 'PEP Disclosure',
+          icon: Icons.policy_outlined,
+          value: _disclosure,
+          items: ['No', 'Yes'],
+          onChanged: (v) => setState(() => _disclosure = v!),
+        ),
+      ]),
+      const SizedBox(height: 16),
+
+      // ── Password ───────────────────────────────────────────────────────────
+      _card(children: [
+        _sectionLabel('Set Password'),
         _passField(
           controller: _passCtrl,
           label: 'New Password',
@@ -964,7 +1532,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           controller: _confirmPassCtrl,
           label: 'Confirm Password',
           isVisible: _confirmVisible,
-          onToggle: () => setState(() => _confirmVisible = !_confirmVisible),
+          onToggle: () =>
+              setState(() => _confirmVisible = !_confirmVisible),
         ),
         const SizedBox(height: 6),
         Padding(
@@ -972,7 +1541,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           child: Row(children: [
             Icon(Icons.info_outline_rounded, size: 13, color: _muted),
             const SizedBox(width: 5),
-            Text('Minimum 6 characters', style: TextStyle(fontSize: 12, color: _muted)),
+            Text('Minimum 6 characters',
+                style: TextStyle(fontSize: 12, color: _muted)),
           ]),
         ),
       ]),
@@ -983,7 +1553,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         loading: _submitting,
         onPressed: _submitRegistration,
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 24),
     ]);
   }
 
@@ -993,50 +1563,89 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.8), width: 1)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+        border:
+        Border.all(color: Colors.white.withOpacity(0.8), width: 1)),
+    child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children),
   );
 
   Widget _sectionLabel(String label) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(children: [
-      Container(width: 3, height: 14,
-          decoration: BoxDecoration(color: _g, borderRadius: BorderRadius.circular(2))),
+      Container(
+          width: 3,
+          height: 14,
+          decoration: BoxDecoration(
+              color: _g, borderRadius: BorderRadius.circular(2))),
       const SizedBox(width: 8),
-      Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-          color: _dark, letterSpacing: 0.3)),
+      Text(label,
+          style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _dark,
+              letterSpacing: 0.3)),
     ]),
   );
 
-  Widget _inputField({required TextEditingController controller,
-    required String label, required IconData icon, TextInputType? keyboardType}) =>
+  Widget _fieldContainer(Widget child) => Container(
+    decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ]),
+    child: child,
+  );
+
+  Widget _inputField(
+      {required TextEditingController controller,
+        required String label,
+        required IconData icon,
+        TextInputType? keyboardType}) =>
       _fieldContainer(TextField(
-        controller: controller, keyboardType: keyboardType,
+        controller: controller,
+        keyboardType: keyboardType,
         style: TextStyle(fontSize: 15, color: _dark),
         decoration: InputDecoration(
-            labelText: label, labelStyle: TextStyle(color: _muted, fontSize: 14),
+            labelText: label,
+            labelStyle: TextStyle(color: _muted, fontSize: 14),
             prefixIcon: Icon(icon, color: _g, size: 20),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
             floatingLabelBehavior: FloatingLabelBehavior.auto),
       ));
 
-  Widget _kycField({required TextEditingController controller,
-    required String label, required IconData icon, TextInputType? keyboardType}) =>
+  Widget _kycField(
+      {required TextEditingController controller,
+        required String label,
+        required IconData icon,
+        TextInputType? keyboardType}) =>
       _fieldContainer(TextField(
-        controller: controller, keyboardType: keyboardType,
+        controller: controller,
+        keyboardType: keyboardType,
         style: TextStyle(fontSize: 15, color: _dark),
         decoration: InputDecoration(
-            labelText: label, labelStyle: TextStyle(color: _muted, fontSize: 14),
+            labelText: label,
+            labelStyle: TextStyle(color: _muted, fontSize: 14),
             prefixIcon: Icon(icon, color: _g, size: 20),
-            suffixIcon: Icon(Icons.edit_outlined, color: _muted, size: 16),
+            suffixIcon:
+            Icon(Icons.edit_outlined, color: _muted, size: 16),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
             floatingLabelBehavior: FloatingLabelBehavior.auto),
       ));
 
-  Widget _passField({required TextEditingController controller, required String label,
-    required bool isVisible, required VoidCallback onToggle}) =>
+  Widget _passField(
+      {required TextEditingController controller,
+        required String label,
+        required bool isVisible,
+        required VoidCallback onToggle}) =>
       _fieldContainer(TextField(
         controller: controller,
         obscureText: !isVisible,
@@ -1044,39 +1653,121 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         decoration: InputDecoration(
             labelText: label,
             labelStyle: TextStyle(color: _muted, fontSize: 14),
-            prefixIcon: Icon(Icons.lock_outline_rounded, color: _g, size: 20),
+            prefixIcon:
+            Icon(Icons.lock_outline_rounded, color: _g, size: 20),
             suffixIcon: GestureDetector(
                 onTap: onToggle,
                 child: Icon(
-                    isVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                    color: _muted, size: 20)),
+                    isVisible
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: _muted,
+                    size: 20)),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
             floatingLabelBehavior: FloatingLabelBehavior.auto),
       ));
 
-  Widget _fieldContainer(Widget child) => Container(
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04),
-            blurRadius: 8, offset: const Offset(0, 2))]),
-    child: child,
-  );
+  Widget _dropdownField({
+    required String label,
+    required IconData icon,
+    required String value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) =>
+      _fieldContainer(DropdownButtonFormField<String>(
+        value: value,
+        onChanged: onChanged,
+        decoration: InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(color: _muted, fontSize: 14),
+            prefixIcon: Icon(icon, color: _g, size: 20),
+            border: InputBorder.none,
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            floatingLabelBehavior: FloatingLabelBehavior.auto),
+        style: TextStyle(fontSize: 15, color: _dark),
+        dropdownColor: Colors.white,
+        items: items
+            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+            .toList(),
+      ));
 
-  Widget _primaryBtn({required String label, required IconData icon,
-    required bool loading, required VoidCallback onPressed}) =>
+  Widget _datePicker({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required DateTime firstDate,
+    required DateTime lastDate,
+  }) =>
+      _fieldContainer(TextField(
+        controller: controller,
+        readOnly: true,
+        style: TextStyle(fontSize: 15, color: _dark),
+        decoration: InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(color: _muted, fontSize: 14),
+            prefixIcon: Icon(icon, color: _g, size: 20),
+            suffixIcon: Icon(Icons.calendar_today_outlined,
+                color: _muted, size: 18),
+            border: InputBorder.none,
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+            floatingLabelBehavior: FloatingLabelBehavior.auto),
+        onTap: () async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: controller.text.isNotEmpty
+                ? DateTime.tryParse(controller.text) ?? lastDate
+                : lastDate,
+            firstDate: firstDate,
+            lastDate: lastDate,
+            builder: (ctx, child) => Theme(
+              data: Theme.of(ctx).copyWith(
+                colorScheme: ColorScheme.light(
+                    primary: _g,
+                    onPrimary: Colors.white,
+                    surface: Colors.white),
+              ),
+              child: child!,
+            ),
+          );
+          if (picked != null) {
+            controller.text =
+            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+          }
+        },
+      ));
+
+  Widget _primaryBtn({
+    required String label,
+    required IconData icon,
+    required bool loading,
+    required VoidCallback onPressed,
+  }) =>
       SizedBox(
-        width: double.infinity, height: 54,
+        width: double.infinity,
+        height: 54,
         child: ElevatedButton(
           onPressed: loading ? null : onPressed,
           style: ElevatedButton.styleFrom(
-              backgroundColor: _g, foregroundColor: Colors.white, elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              backgroundColor: _g,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
               disabledBackgroundColor: _g.withOpacity(0.5)),
           child: loading
-              ? const SizedBox(height: 22, width: 22,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+              ? const SizedBox(
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(
+                  color: Colors.white, strokeWidth: 2.5))
               : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(width: 8),
             Icon(icon, size: 18),
           ]),
@@ -1089,14 +1780,15 @@ class _StepIndicator extends StatelessWidget {
   final int current, total;
   final Color primaryGreen, softMint;
   const _StepIndicator(
-      {required this.current, required this.total,
-        required this.primaryGreen, required this.softMint});
+      {required this.current,
+        required this.total,
+        required this.primaryGreen,
+        required this.softMint});
 
   @override
   Widget build(BuildContext context) {
-    // Labels adapt to total steps
     final labels = total == 3
-        ? ['Verify', 'KYC Info', 'Password']
+        ? ['Verify', 'KYC Info', 'Setup']
         : ['Verify', 'KYC Info'];
 
     return Row(
@@ -1111,15 +1803,23 @@ class _StepIndicator extends StatelessWidget {
                   duration: const Duration(milliseconds: 300),
                   height: 4,
                   decoration: BoxDecoration(
-                      color: done || active ? primaryGreen : Colors.white.withOpacity(0.5),
+                      color: done || active
+                          ? primaryGreen
+                          : Colors.white.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(2)),
                 ),
                 const SizedBox(height: 6),
                 Text(labels[i],
                     style: TextStyle(
                         fontSize: 11,
-                        color: active ? primaryGreen : done ? primaryGreen.withOpacity(0.7) : Colors.grey[400],
-                        fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
+                        color: active
+                            ? primaryGreen
+                            : done
+                            ? primaryGreen.withOpacity(0.7)
+                            : Colors.grey[400],
+                        fontWeight: active
+                            ? FontWeight.w700
+                            : FontWeight.normal)),
               ]),
             ),
             if (i < total - 1) const SizedBox(width: 6),

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../deposits/view/deposits.dart';
@@ -233,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final prefs = await SharedPreferences.getInstance();
       _cdsNumber  = prefs.getString('cdsNumber') ?? '';
       final response = await http.post(
-        Uri.parse('cSharpApi/GetFundsDetailed'),
+        Uri.parse('$cSharpApi/GetFundsDetailed'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2',
@@ -269,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() { _isLoadingFundTxns = true; });
     try {
       final response = await http.post(
-        Uri.parse('cSharpApi/GetTransactions'),
+        Uri.parse('$cSharpApi/GetTransactions'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2',
@@ -320,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       final results = await Future.wait([
         http.post(
-          Uri.parse('cSharpApi/GetSMAPortfolios'),
+          Uri.parse('$cSharpApi/GetSMAPortfolios'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
@@ -328,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           }),
         ).timeout(const Duration(seconds: 15)),
         http.post(
-          Uri.parse('cSharpApi/GetSMAInvestments'),
+          Uri.parse('$cSharpApi/GetSMAInvestments'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
@@ -336,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           }),
         ).timeout(const Duration(seconds: 15)),
         http.post(
-          Uri.parse('cSharpApi/GetSMACashTransactions'),
+          Uri.parse('$cSharpApi/GetSMACashTransactions'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',

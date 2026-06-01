@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../constants/constants.dart';
 import '../../funds/model/model.dart';
 import '../../funds/repository/repository.dart';
 import '../../../../provider/locale_provider.dart';
@@ -205,7 +206,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
     });
     try {
       final res = await http.post(
-        Uri.parse('cSharpApi/GetAvailableBalance'),
+        Uri.parse('$cSharpApi/GetAvailableBalance'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2',
@@ -247,7 +248,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
     setState(() => _isSubmitting = true);
     try {
       final res = await http.post(
-        Uri.parse('cSharpApi/Redeem'),
+        Uri.parse('$cSharpApi/Redeem'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername':    'User2',

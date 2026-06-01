@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../provider/locale_provider.dart';
 import '../../../../provider/theme_provider.dart';
+import '../../constants/constants.dart';
 
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _SS {
@@ -199,7 +200,7 @@ class _SMAPageState extends State<SMAPage>
       // ── Fire both requests in parallel ────────────────────────────────────
       final results = await Future.wait([
         http.post(
-          Uri.parse('cSharpApi/GetSMAInvestments'),
+          Uri.parse('$cSharpApi/GetSMAInvestments'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2',
@@ -208,7 +209,7 @@ class _SMAPageState extends State<SMAPage>
           }),
         ).timeout(const Duration(seconds: 15)),
         http.post(
-          Uri.parse('cSharpApi/GetSMACashTransactions'),
+          Uri.parse('$cSharpApi/GetSMACashTransactions'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2',
