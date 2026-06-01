@@ -11,7 +11,7 @@ class FundsBloc extends Bloc<FundsEvent, FundsState> {
   FundsBloc({required this.fundsRepository}) : super(const FundsInitial()) {
     on<LoadFunds>(_onLoadFunds);
     on<RefreshFunds>(_onRefreshFunds);
-    on<SubscribeToFund>(_onSubscribeToFund); // ← new
+    on<SubscribeToFund>(_onSubscribeToFund);
   }
 
   Future<void> _onLoadFunds(LoadFunds event, Emitter<FundsState> emit) async {
@@ -46,15 +46,24 @@ class FundsBloc extends Bloc<FundsEvent, FundsState> {
       _                       => <Fund>[],
     };
 
+    final fundingCode = event.fund.fundingCode ?? '';
+    final fundingName = event.fund.fundingName ?? '';
+
     // Show spinner on the tapped card only
     emit(FundSubscribing(
-      fundingCode: event.fund.fundingCode ?? '',
+      fundingCode: fundingCode,
       funds: currentFunds,
     ));
 
     try {
-      final subAccount = await fundsRepository.subscribeToFund(
-        fundingCode: event.fund.fundingCode ?? '', authToken: '',
+      final subAccount = await fundsRepository.createSubAccounts(
+        cdsNo: event.cdsNo,
+        subAccounts: [
+          SubAccountEntry(
+            fundingCode: fundingCode,
+            fundingName: fundingName,
+          ),
+        ],
       );
 
       emit(FundSubscribed(subAccount: subAccount, funds: currentFunds));

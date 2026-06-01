@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../model/model.dart'; // adjust path to wherever your Fund model lives
+import '../model/model.dart';
 
 abstract class FundsEvent extends Equatable {
   const FundsEvent();
@@ -18,8 +18,13 @@ class RefreshFunds extends FundsEvent {
 
 class SubscribeToFund extends FundsEvent {
   final Fund fund;
-  const SubscribeToFund(this.fund);
+  final String cdsNo;
+
+  const SubscribeToFund({
+    required this.fund,
+    required this.cdsNo,
+  });
 
   @override
-  List<Object> get props => [fund];
+  List<Object> get props => [fund, cdsNo];
 }

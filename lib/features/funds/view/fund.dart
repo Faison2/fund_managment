@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import '../../auth/login/repository/repository.dart';
 import '../bloc/bloc.dart';
 import '../bloc/event.dart';
 import '../bloc/state.dart';
@@ -342,13 +343,21 @@ class FundsScreen extends StatelessWidget {
                             statusColor:   _statusColor(fund.status),
                             isSubscribing: subscribingCode == fund.fundingCode,
                             onSubscribe: () async {
-                              final confirmed =
-                              await _confirm(context, fund, s, dark);
+                              final confirmed = await _confirm(context, fund, s, dark);
                               if (confirmed && context.mounted) {
                                 HapticFeedback.mediumImpact();
-                                context
-                                    .read<FundsBloc>()
-                                    .add(SubscribeToFund(fund));
+
+                                final userData = await LoginRepository.getUserData();
+                                final cdsNo = userData['cdsNumber'] ?? '';
+
+                                if (!context.mounted) return;
+
+                                context.read<FundsBloc>().add(
+                                  SubscribeToFund(
+                                    fund:  fund,
+                                    cdsNo: cdsNo,
+                                  ),
+                                );
                               }
                             },
                           );

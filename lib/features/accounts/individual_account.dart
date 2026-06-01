@@ -62,7 +62,7 @@ extension _IdentityTypeExt on _IdentityType {
   String get label {
     switch (this) {
       case _IdentityType.nida:
-        return 'NIDA';
+      //  return 'NIDA';
       case _IdentityType.drivingLicense:
         return 'Driving License';
       case _IdentityType.voterId:

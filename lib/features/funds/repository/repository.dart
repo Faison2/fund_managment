@@ -26,7 +26,6 @@ class FundsRepository {
           if (data.isNotEmpty) {
             print("First item Units field: ${data[0]['Units']} (${data[0]['Units'].runtimeType})");
           }
-
           return data.map((fundJson) => Fund.fromJson(fundJson)).toList();
         } else {
           throw Exception("Failed: ${jsonData['statusDesc']}");
@@ -39,24 +38,24 @@ class FundsRepository {
     }
   }
 
-  Future<SubAccount> subscribeToFund({
-    required String fundingCode,
-    required String authToken,
+  /// Creates sub-accounts for a given CDS number.
+  /// [cdsNo] - the client's CDS number
+  /// [subAccounts] - list of funds to subscribe to (Funding_Code + Funding_Name)
+  Future<SubAccount> createSubAccounts({
+    required String cdsNo,
+    required List<SubAccountEntry> subAccounts,
   }) async {
-    // TODO: replace with your real endpoint
-    const url = "$cSharpApi/SubscribeToFund";
+    const url = "$cSharpApi/CreateSubAccounts";
 
     try {
       final response = await http.post(
         Uri.parse(url),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $authToken",
-        },
+        headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "APIUsername": "User2",
           "APIPassword": "CBZ1234#2",
-          "FundingCode": fundingCode,
+          "cdsNo": cdsNo,
+          "SubAccountsList": subAccounts.map((e) => e.toJson()).toList(),
         }),
       );
 
@@ -69,11 +68,26 @@ class FundsRepository {
           throw Exception("Failed: ${jsonData['statusDesc']}");
         }
       } else {
-        throw Exception(
-            "Failed to subscribe. Status code: ${response.statusCode}");
+        throw Exception("Failed to create sub-accounts. Status code: ${response.statusCode}");
       }
     } catch (e) {
       throw Exception("Network error: $e");
     }
   }
+}
+
+/// Represents a single entry in the SubAccountsList payload.
+class SubAccountEntry {
+  final String fundingCode;
+  final String fundingName;
+
+  const SubAccountEntry({
+    required this.fundingCode,
+    required this.fundingName,
+  });
+
+  Map<String, dynamic> toJson() => {
+    "Funding_Code": fundingCode,
+    "Funding_Name": fundingName,
+  };
 }

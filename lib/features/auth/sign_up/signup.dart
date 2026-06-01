@@ -157,7 +157,7 @@ class _ClientTypePicker extends StatelessWidget {
           _PickCard(
             icon: Icons.manage_accounts_rounded,
             title: 'Existing Client',
-            subtitle: 'Already have a CDS number? Set up online access',
+            subtitle: 'Already have a Account number? Set up online access',
             onTap: () => onPick(false),
           ),
           const SizedBox(height: 32),
@@ -671,7 +671,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     final email = _emailCtrl.text.trim();
     final cds = _cdsCtrl.text.trim();
     if (email.isEmpty || !email.contains('@')) { _snack('Enter a valid email'); return; }
-    if (cds.isEmpty) { _snack('Enter your CDS/Account number'); return; }
+    if (cds.isEmpty) { _snack('Enter your Account number'); return; }
 
     setState(() => _validating = true);
     try {
@@ -825,7 +825,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
               color: _dark, letterSpacing: -0.5)),
       const SizedBox(height: 6),
-      Text('Enter your registered email and CDS number to continue.',
+      Text('Enter your registered email and account number to continue.',
           style: TextStyle(fontSize: 14, color: _muted)),
       const SizedBox(height: 24),
       _card(children: [
@@ -833,7 +833,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         _inputField(controller: _emailCtrl, label: 'Registered Email',
             icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 14),
-        _inputField(controller: _cdsCtrl, label: 'CDS / Account Number',
+        _inputField(controller: _cdsCtrl, label: 'Account Number',
             icon: Icons.badge_outlined),
       ]),
       const SizedBox(height: 24),
