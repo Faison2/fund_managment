@@ -233,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final prefs = await SharedPreferences.getInstance();
       _cdsNumber  = prefs.getString('cdsNumber') ?? '';
       final response = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetFundsDetailed'),
+        Uri.parse('cSharpApi/GetFundsDetailed'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2',
@@ -269,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() { _isLoadingFundTxns = true; });
     try {
       final response = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetTransactions'),
+        Uri.parse('cSharpApi/GetTransactions'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2',
@@ -320,7 +320,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       final results = await Future.wait([
         http.post(
-          Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetSMAPortfolios'),
+          Uri.parse('cSharpApi/GetSMAPortfolios'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
@@ -328,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           }),
         ).timeout(const Duration(seconds: 15)),
         http.post(
-          Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetSMAInvestments'),
+          Uri.parse('cSharpApi/GetSMAInvestments'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
@@ -336,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           }),
         ).timeout(const Duration(seconds: 15)),
         http.post(
-          Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetSMACashTransactions'),
+          Uri.parse('cSharpApi/GetSMACashTransactions'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
@@ -927,7 +927,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ? Colors.white.withOpacity(0.05)
         : Colors.black.withOpacity(0.05);
 
-    // Determine trend colour: green if net positive, red if negative
     final double lastVal = points.isNotEmpty ? points.last.value : 0;
     final lineColor = lastVal >= 0 ? green : Colors.red.shade400;
 
@@ -942,7 +941,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             blurRadius: 12, offset: const Offset(0, 5))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // ── Header ──
         Row(children: [
           Container(
             padding: const EdgeInsets.all(7),
@@ -963,7 +961,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 style: TextStyle(fontSize: 10, color: txtS),
               ),
           ])),
-          // Trend badge
           if (!_isLoadingFundTxns && points.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -992,7 +989,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         const SizedBox(height: 16),
 
-        // ── Chart area ──
         SizedBox(
           height: 200,
           child: _isLoadingFundTxns
@@ -1347,6 +1343,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final units         = (fund['investorUnits']  as num).toDouble();
     final nav           = (fund['nav']            as num).toDouble();
     final status        = fund['status'] as String;
+    final subAccount    = fund['SubAccount'] as String? ?? '';
     final hasInvestment = portfolioVal > 0;
 
     Color statusColor; IconData statusIcon;
@@ -1379,6 +1376,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // ── Card header row ──
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1392,6 +1390,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         letterSpacing: 0.5)),
               ),
               const SizedBox(width: 8),
+              // ── Fund name + description + SubAccount ──
               Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(fund['fundName'] as String,
@@ -1399,10 +1398,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         fontWeight: FontWeight.w800, color: Colors.white,
                         letterSpacing: 0.1),
                     overflow: TextOverflow.ellipsis),
-                Text(fund['description'] as String,
-                    style: TextStyle(fontSize: 10,
-                        color: Colors.white.withOpacity(0.55))),
+                const SizedBox(height: 3),
+                Row(children: [
+                  Text(fund['description'] as String,
+                      style: TextStyle(fontSize: 10,
+                          color: Colors.white.withOpacity(0.55))),
+                  if (subAccount.isNotEmpty) ...[
+                    Text('  ·  ', style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white.withOpacity(0.3))),
+                    // ── Sub Account badge ──
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.2),
+                            width: 0.8),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Text('Sub A/C  ',
+                            style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white54,
+                                letterSpacing: 0.3)),
+                        Text(subAccount,
+                            style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white70,
+                                letterSpacing: 0.4)),
+                      ]),
+                    ),
+                  ],
+                ]),
               ])),
+              // ── Status badge ──
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -1429,6 +1463,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ]),
             const Spacer(),
+            // ── Portfolio value row ──
             Row(children: [
               Expanded(flex: 5, child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1527,7 +1562,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 class _LinePoint {
   final DateTime date;
   final double value;
-  final String type; // 'Deposit' | 'Withdrawal'
+  final String type;
   const _LinePoint({required this.date, required this.value, required this.type});
 }
 
@@ -1616,7 +1651,6 @@ class _LineChartState extends State<_LineChart>
           builder: (_, __) {
             return Stack(children: [
 
-              // ── Chart canvas ──
               Positioned(left: yLabelW, top: 0, width: chartW + 8, height: chartH,
                 child: CustomPaint(
                   painter: _LinePainter(
@@ -1634,7 +1668,6 @@ class _LineChartState extends State<_LineChart>
                 ),
               ),
 
-              // ── Y-axis labels ──
               ...List.generate(5, (i) {
                 final v = visMin + visRange * i / 4;
                 final y = toY(v);
@@ -1647,7 +1680,6 @@ class _LineChartState extends State<_LineChart>
                 );
               }),
 
-              // ── X-axis date labels ──
               ...List.generate(n, (i) {
                 if (i % labelStep != 0 && i != n - 1) return const SizedBox.shrink();
                 final cx = toX(i);
@@ -1661,7 +1693,6 @@ class _LineChartState extends State<_LineChart>
                 );
               }),
 
-              // ── Tooltip ──
               if (_hoveredIndex != null && _lineAnim.value == 1.0)
                 Builder(builder: (_) {
                   final idx = _hoveredIndex!;
@@ -1761,7 +1792,6 @@ class _LinePainter extends CustomPainter {
     if (points.length < 2) return;
     final n = points.length;
 
-    // ── Grid ──
     final gridPaint = Paint()
       ..color       = gridColor
       ..strokeWidth = 1
@@ -1778,16 +1808,13 @@ class _LinePainter extends CustomPainter {
       canvas.drawPath(path, gridPaint);
     }
 
-    // ── Build full path ──
     final allOffsets = List.generate(n, (i) {
       return Offset(_toX(i), _toY(points[i].value));
     });
 
-    // ── Clip to progress (animate drawing) ──
     canvas.save();
     canvas.clipRect(Rect.fromLTWH(0, 0, chartW * progress, chartH));
 
-    // ── Gradient fill ──
     final fillPath = Path();
     fillPath.moveTo(allOffsets.first.dx, chartH);
     fillPath.lineTo(allOffsets.first.dx, allOffsets.first.dy);
@@ -1814,7 +1841,6 @@ class _LinePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawPath(fillPath, fillPaint);
 
-    // ── Smooth line ──
     final linePath = Path();
     linePath.moveTo(allOffsets.first.dx, allOffsets.first.dy);
     for (int i = 0; i < n - 1; i++) {
@@ -1824,7 +1850,6 @@ class _LinePainter extends CustomPainter {
       linePath.cubicTo(cpX, p0.dy, cpX, p1.dy, p1.dx, p1.dy);
     }
 
-    // Glow effect
     canvas.drawPath(
       linePath,
       Paint()
@@ -1836,7 +1861,6 @@ class _LinePainter extends CustomPainter {
         ..maskFilter  = const MaskFilter.blur(BlurStyle.normal, 4),
     );
 
-    // Main line
     canvas.drawPath(
       linePath,
       Paint()
@@ -1849,7 +1873,6 @@ class _LinePainter extends CustomPainter {
 
     canvas.restore();
 
-    // ── Data point dots (only when fully drawn) ──
     if (progress == 1.0) {
       final int step = max(1, (n / 8).ceil());
       for (int i = 0; i < n; i++) {
@@ -1859,7 +1882,6 @@ class _LinePainter extends CustomPainter {
         final r         = isHovered ? 6.0 : 3.5;
 
         if (isHovered) {
-          // Vertical crosshair
           canvas.drawLine(
             Offset(o.dx, 0), Offset(o.dx, chartH),
             Paint()
@@ -1867,17 +1889,14 @@ class _LinePainter extends CustomPainter {
               ..strokeWidth = 1
               ..style       = PaintingStyle.stroke,
           );
-          // Halo
           canvas.drawCircle(o, 10,
               Paint()..color = lineColor.withOpacity(0.15));
         }
 
-        // Outer white ring
         canvas.drawCircle(o, r + 1.5,
             Paint()..color = (dark ? Colors.black : Colors.white)
               ..style = PaintingStyle.fill);
 
-        // Coloured dot
         canvas.drawCircle(o, r,
             Paint()..color = lineColor ..style = PaintingStyle.fill);
       }

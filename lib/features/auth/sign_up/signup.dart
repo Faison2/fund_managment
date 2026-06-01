@@ -676,7 +676,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     setState(() => _validating = true);
     try {
       final res = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails'),
+        Uri.parse('cSharpApi/UserBasicDetails'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({"CDSNumber": cds}),
       );

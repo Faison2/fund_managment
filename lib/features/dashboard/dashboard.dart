@@ -132,7 +132,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     try {
       setState(() => _isLoadingUserData = true);
       final response = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails'),
+        Uri.parse('cSharpApi/UserBasicDetails'),
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: json.encode({'CDSNumber': cdsNumber}),
       ).timeout(const Duration(seconds: 10),

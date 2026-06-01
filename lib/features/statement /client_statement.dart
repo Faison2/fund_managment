@@ -135,7 +135,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     _listCtrl.reset();
     try {
       final response = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetTransactions'),
+        Uri.parse('cSharpApi/GetTransactions'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',

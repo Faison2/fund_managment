@@ -283,7 +283,7 @@ class _SettingsPageState extends State<SettingsPage> {
               }
 
               final url = Uri.parse(
-                  'https://portaluat.tsl.co.tz/FMSAPI/home/ChangePassword');
+                  'cSharpApi/ChangePassword');
               final response = await http.post(url,
                   headers: {'Content-Type': 'application/json'},
                   body: json.encode({

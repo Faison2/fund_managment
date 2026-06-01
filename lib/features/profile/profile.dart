@@ -225,7 +225,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
 
       final url = Uri.parse(
-          'https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails');
+          'cSharpApi/UserBasicDetails');
       final response = await http.post(url,
           headers: {'Content-Type': 'application/json'},
           body: json.encode({'CDSNumber': cdsNumber}));
@@ -315,7 +315,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               }
 
               final url = Uri.parse(
-                  'https://portaluat.tsl.co.tz/FMSAPI/home/ChangePassword');
+                  'cSharpApi/ChangePassword');
               final response = await http.post(url,
                   headers: {'Content-Type': 'application/json'},
                   body: json.encode({

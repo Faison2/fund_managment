@@ -176,7 +176,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       _cdsNumber = prefs.getString('cdsNumber') ?? '';
 
       final response = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetFundsDetailed'),
+        Uri.parse('cSharpApi/GetFundsDetailed'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2',
@@ -737,8 +737,20 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                     const SizedBox(height: 3),
                     Text(fund['description'] as String,
                         style: TextStyle(fontSize: 12, color: _txtSec)),
+                    if ((fund['SubAccount'] as String?)?.isNotEmpty == true) ...[
+                      const SizedBox(height: 4),
+                      Row(children: [
+                        Icon(Icons.tag_rounded, size: 11, color: _txtHint),
+                        const SizedBox(width: 3),
+                        Text(fund['SubAccount'] as String,
+                            style: TextStyle(fontSize: 11,
+                                color: _teal, fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3)),
+                      ]),
+                    ],
                   ]),
             ),
+// Status badge
             // Status badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

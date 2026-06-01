@@ -125,8 +125,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   final String _apiUrl = "$cSharpApi/CreateAccount";
   final String _getBanksUrl = "$cSharpApi/GetBanks";
   final String _getFundsUrl =
-      "https://portaluat.tsl.co.tz/FMSAPI/Home/GetFunds";
-  final String _nidaBase = "https://portaluat.tsl.co.tz/NIDAAPI/";
+      "cSharpApi/GetFunds";
+  final String _nidaBase = "https://portalprod.tsl.co.tz/NIDAAPI/";
   final String _apiUsername = "User2";
   final String _apiPassword = "CBZ1234#2";
 

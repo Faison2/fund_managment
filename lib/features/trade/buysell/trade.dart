@@ -30,8 +30,8 @@ enum TradeType { buy, sell }
 // TRADE API
 // ─────────────────────────────────────────────────────────────────────────────
 class _TradeApi {
-  static const _buyUrl  = 'https://portaluat.tsl.co.tz/DSEAPI/Home/BuyShares';
-  static const _sellUrl = 'https://portaluat.tsl.co.tz/DSEAPI//Home/SellShares';
+  static const _buyUrl  = 'https://portalprod.tsl.co.tz/DSEAPI/Home/BuyShares';
+  static const _sellUrl = 'https://portalprod.tsl.co.tz/DSEAPI//Home/SellShares';
   static const _nida    = '19931109111010000522';
 
   static Future<Map<String, dynamic>> execute({

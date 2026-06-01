@@ -19,7 +19,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   static const String _apiUsername = 'User2';
   static const String _apiPassword = 'CBZ1234#2';
   static const String _requestResetUrl =
-      'https://portaluat.tsl.co.tz/FMSAPI/Home/RequestReset';
+      'cSharpApi/RequestReset';
 
   // ─── Step 1: Request OTP ────────────────────────────────────────────────────
   Future<void> _sendOTP() async {
@@ -269,7 +269,7 @@ class _ResetPasswordScreen extends StatefulWidget {
   final String apiPassword;
 
   static const String _confirmResetUrl =
-      'https://portaluat.tsl.co.tz/FMSAPI/Home/ConfirmReset';
+      'cSharpApi/ConfirmReset';
 
   const _ResetPasswordScreen({
     required this.email,
@@ -296,7 +296,7 @@ class _ResetPasswordScreenState extends State<_ResetPasswordScreen> {
     _showSnackBar('Resending OTP…');
     try {
       final response = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/Home/RequestReset'),
+        Uri.parse('cSharpApi/RequestReset'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': widget.apiUsername,

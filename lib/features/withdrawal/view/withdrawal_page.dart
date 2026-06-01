@@ -205,7 +205,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
     });
     try {
       final res = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetAvailableBalance'),
+        Uri.parse('cSharpApi/GetAvailableBalance'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2',
@@ -247,7 +247,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
     setState(() => _isSubmitting = true);
     try {
       final res = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/Redeem'),
+        Uri.parse('cSharpApi/Redeem'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername':    'User2',

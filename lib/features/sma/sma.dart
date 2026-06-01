@@ -199,7 +199,7 @@ class _SMAPageState extends State<SMAPage>
       // ── Fire both requests in parallel ────────────────────────────────────
       final results = await Future.wait([
         http.post(
-          Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetSMAInvestments'),
+          Uri.parse('cSharpApi/GetSMAInvestments'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2',
@@ -208,7 +208,7 @@ class _SMAPageState extends State<SMAPage>
           }),
         ).timeout(const Duration(seconds: 15)),
         http.post(
-          Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetSMACashTransactions'),
+          Uri.parse('cSharpApi/GetSMACashTransactions'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'APIUsername': 'User2',

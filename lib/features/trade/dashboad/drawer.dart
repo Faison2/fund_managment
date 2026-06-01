@@ -79,7 +79,7 @@ class _TradeDrawerState extends State<TradeDrawer>
   bool   _shimmerTick = false;
 
   static const _apiUrl =
-      'https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails';
+      'cSharpApi/UserBasicDetails';
 
   @override
   void initState() {

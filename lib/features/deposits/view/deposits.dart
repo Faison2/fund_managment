@@ -212,7 +212,7 @@ class _DepositPageState extends State<DepositPage> {
       setState(() { _isLoadingUser = true; _userError = ''; });
 
       final res = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/Home/UserBasicDetails'),
+        Uri.parse('cSharpApi/UserBasicDetails'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'CDSNumber': _cdsNumber}),
       ).timeout(const Duration(seconds: 12));
@@ -282,7 +282,7 @@ class _DepositPageState extends State<DepositPage> {
     setState(() => _isSubmitting = true);
     try {
       final res = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/Deposit'),
+        Uri.parse('cSharpApi/Deposit'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername':    'User2',

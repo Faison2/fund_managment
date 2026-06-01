@@ -171,7 +171,7 @@ List<double> _buildSparkline(double open, double high, double low, double close)
 // API SERVICE
 // ─────────────────────────────────────────────────────────────────────────────
 class _DseApi {
-  static const _url           = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
+  static const _url           = 'https://portalprod.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
   static const _hardcodedNida = '19931109111010000522';
 
   static Future<List<DseStock>> fetchMarketWatch() async {

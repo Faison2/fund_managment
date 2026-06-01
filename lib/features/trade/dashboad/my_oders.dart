@@ -66,8 +66,8 @@ class Order {
 // API SERVICE
 // ─────────────────────────────────────────────────────────────────────────────
 class _OrdersApi {
-  static const _buyUrl  = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetBuyOrders';
-  static const _sellUrl = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetSellOrders';
+  static const _buyUrl  = 'https://portalprod.tsl.co.tz/DSEAPI/Home/GetBuyOrders';
+  static const _sellUrl = 'https://portalprod.tsl.co.tz/DSEAPI/Home/GetSellOrders';
   static const _nida    = '19931109111010000522';
 
   static String _fmt(DateTime d) =>
