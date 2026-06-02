@@ -970,7 +970,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
 
       final res = await http.post(
         Uri.parse(
-            'https://portaluat.tsl.co.tz/FMSAPI/Home/CreateAccountEXISTSING'),
+            '$cSharpApi/CreateAccountEXISTSING'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(payload),
       );
@@ -1424,9 +1424,47 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       ]),
       const SizedBox(height: 16),
 
-      // ── Additional Banking ─────────────────────────────────────────────────
+      // ── Banking Details (pre-populated from KYC Step 1) ───────────────────
       _card(children: [
-        _sectionLabel('Additional Banking'),
+        _sectionLabel('Banking Details'),
+        // Info banner
+        Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+              color: _mint,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _g.withOpacity(0.3))),
+          child: Row(children: [
+            Icon(Icons.auto_awesome_rounded, color: _g, size: 15),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Pre-filled from your KYC profile. Edit if needed.',
+                  style: TextStyle(fontSize: 12, color: _g, height: 1.4)),
+            ),
+          ]),
+        ),
+        _kycField(
+            controller: _kycBankCtrl,
+            label: 'Bank Name',
+            icon: Icons.account_balance_outlined),
+        const SizedBox(height: 14),
+        _kycField(
+            controller: _kycAccNoCtrl,
+            label: 'Account Number',
+            icon: Icons.credit_card_outlined,
+            keyboardType: TextInputType.number),
+        const SizedBox(height: 14),
+        _kycField(
+            controller: _kycAccNameCtrl,
+            label: 'Account Name',
+            icon: Icons.badge_outlined),
+        const SizedBox(height: 14),
+        _kycField(
+            controller: _kycBranchCtrl,
+            label: 'Branch',
+            icon: Icons.store_outlined),
+        const SizedBox(height: 14),
         _dropdownField(
           label: 'Bank Type',
           icon: Icons.account_balance_outlined,
