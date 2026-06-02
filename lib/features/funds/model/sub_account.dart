@@ -1,23 +1,44 @@
 class SubAccount {
-  final String id;
-  final String fundingCode;
-  final String accountNumber;
+  final List<String> accountNumbers;
   final String status;
-  final DateTime createdAt;
 
   const SubAccount({
-    required this.id,
-    required this.fundingCode,
-    required this.accountNumber,
+    required this.accountNumbers,
     required this.status,
-    required this.createdAt,
   });
 
-  factory SubAccount.fromJson(Map<String, dynamic> json) => SubAccount(
-    id:            json['id'] as String,
-    fundingCode:   json['funding_code'] as String,
-    accountNumber: json['account_number'] as String,
-    status:        json['status'] as String,
-    createdAt:     DateTime.parse(json['created_at'] as String),
+  factory SubAccount.fromJson(Map<String, dynamic> json) {
+    // Debug — remove after confirming
+    print("SubAccount.fromJson input: $json");
+
+    final dynamic data = json['data'];
+    print("data field: $data (${data.runtimeType})");
+
+    List<String> numbers = [];
+
+    if (data is List) {
+      numbers = data
+          .where((e) => e != null)
+          .map((e) => e.toString())
+          .toList();
+    } else if (data is String && data.isNotEmpty) {
+      numbers = [data];
+    }
+
+    print("Parsed accountNumbers: $numbers");
+
+    return SubAccount(
+      accountNumbers: numbers,
+      status: json['status']?.toString() ?? '',
+    );
+  }
+
+  factory SubAccount.empty() => const SubAccount(
+    accountNumbers: [],
+    status: 'Pending',
   );
+
+  /// Joins all account numbers for display
+  String get accountNumber =>
+      accountNumbers.isNotEmpty ? accountNumbers.join(', ') : 'N/A';
 }

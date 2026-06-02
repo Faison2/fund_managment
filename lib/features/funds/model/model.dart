@@ -1,5 +1,3 @@
-
-// models/fund.dart
 class Fund {
   final String? fundingName;
   final String? fundingCode;
@@ -8,7 +6,7 @@ class Fund {
   final String? status;
   final int? units;
 
-  Fund({
+  const Fund({
     this.fundingName,
     this.fundingCode,
     this.issuer,
@@ -19,33 +17,36 @@ class Fund {
 
   factory Fund.fromJson(Map<String, dynamic> json) {
     return Fund(
-      fundingName: json['fundingName'],
-      fundingCode: json['fundingCode'],
-      issuer: json['issuer'],
-      description: json['description'],
-      status: json['status'],
-      units: _parseUnits(json['Units']),
+      // Try multiple casing variants the API might send
+      fundingName: _str(json['fundingName'] ?? json['FundingName'] ?? json['funding_name']),
+      fundingCode: _str(json['fundingCode'] ?? json['FundingCode'] ?? json['funding_code']),
+      issuer:      _str(json['issuer']      ?? json['Issuer']),
+      description: _str(json['description'] ?? json['Description']),
+      status:      _str(json['status']      ?? json['Status']),
+      units:       _parseInt(json['Units']  ?? json['units']),
     );
   }
 
-  // Helper method to safely parse units (handles both String and int)
-  static int? _parseUnits(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is String) {
-      return int.tryParse(value);
-    }
+  static String? _str(dynamic v) {
+    if (v == null) return null;
+    final s = v.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
+  static int? _parseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is double) return v.toInt();
+    if (v is String) return int.tryParse(v.trim());
     return null;
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'fundingName': fundingName,
-      'fundingCode': fundingCode,
-      'issuer': issuer,
-      'description': description,
-      'status': status,
-      'Units': units,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'fundingName': fundingName,
+    'fundingCode': fundingCode,
+    'issuer':      issuer,
+    'description': description,
+    'status':      status,
+    'Units':       units,
+  };
 }

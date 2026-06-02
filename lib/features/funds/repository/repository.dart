@@ -21,26 +21,31 @@ class FundsRepository {
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
+
         if (jsonData["status"] == "success") {
-          final List<dynamic> data = jsonData["data"];
-          if (data.isNotEmpty) {
-            print("First item Units field: ${data[0]['Units']} (${data[0]['Units'].runtimeType})");
+          final dynamic raw = jsonData["data"];
+
+          if (raw == null) return [];
+
+          if (raw is! List) {
+            throw Exception("Unexpected funds format: ${raw.runtimeType}");
           }
-          return data.map((fundJson) => Fund.fromJson(fundJson)).toList();
+
+          return raw
+              .whereType<Map<String, dynamic>>()
+              .map((fundJson) => Fund.fromJson(fundJson))
+              .toList();
         } else {
-          throw Exception("Failed: ${jsonData['statusDesc']}");
+          throw Exception(jsonData['statusDesc'] ?? 'Unknown error');
         }
       } else {
-        throw Exception("Failed to fetch funds. Status code: ${response.statusCode}");
+        throw Exception("HTTP ${response.statusCode}");
       }
     } catch (e) {
       throw Exception("Network error: $e");
     }
   }
 
-  /// Creates sub-accounts for a given CDS number.
-  /// [cdsNo] - the client's CDS number
-  /// [subAccounts] - list of funds to subscribe to (Funding_Code + Funding_Name)
   Future<SubAccount> createSubAccounts({
     required String cdsNo,
     required List<SubAccountEntry> subAccounts,
@@ -60,18 +65,18 @@ class FundsRepository {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonData = jsonDecode(response.body);
+        final Map<String, dynamic> jsonData = jsonDecode(response.body);
 
         if (jsonData["status"] == "success") {
-          return SubAccount.fromJson(jsonData["data"]);
+          return SubAccount.fromJson(jsonData);
         } else {
-          throw Exception("Failed: ${jsonData['statusDesc']}");
+          throw Exception(jsonData['statusDesc'] ?? 'Subscription failed');
         }
       } else {
-        throw Exception("Failed to create sub-accounts. Status code: ${response.statusCode}");
+        throw Exception("HTTP ${response.statusCode}");
       }
     } catch (e) {
-      throw Exception("Network error: $e");
+      throw Exception("$e");
     }
   }
 }
