@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -196,8 +197,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _kDeposit, _kUnitPrices, _kWithdrawal, _kTransactions,
   ];
 
+  // watch versions — only call from build()
   bool get _dark => context.watch<ThemeProvider>().isDark;
   _HS  get _s    => context.watch<LocaleProvider>().isSwahili ? _hsSw : _hsEn;
+
+  // listen:false versions — safe to call from event handlers
+  bool get _darkSafe => context.read<ThemeProvider>().isDark;
+  _HS  get _sSafe    => context.read<LocaleProvider>().isSwahili ? _hsSw : _hsEn;
 
   bool get _onSMASlide =>
       _funds.isNotEmpty && _currentFundIndex == _funds.length;
@@ -214,6 +220,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   double get _totalWithdrawals => _activeTransactions
       .where((t) => t['type'] == 'Withdrawal')
       .fold(0.0, (s, t) => s + (t['amount'] as double));
+
+  // ── Current fund shown in PageView (null if on SMA slide) ─────────────────
+  Map<String, dynamic>? get _currentFund =>
+      (!_isLoadingFunds && _funds.isNotEmpty && _currentFundIndex < _funds.length)
+          ? _funds[_currentFundIndex]
+          : null;
+
+  bool get _currentFundNeedsSubscribe {
+    final f = _currentFund;
+    if (f == null) return false;
+    final sub = f['SubAccount'] as String? ?? '';
+    return sub.isEmpty;
+  }
 
   @override
   void initState() {
@@ -249,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ).timeout(const Duration(seconds: 15));
       final json = jsonDecode(response.body);
       if (response.statusCode == 200 && json['status'] == 'success') {
-        final data              = json['data'];
+        final data           = json['data'];
         final List<dynamic> fundsRaw = data['funds'] ?? [];
         setState(() {
           _funds          = fundsRaw.map((f) => Map<String, dynamic>.from(f)).toList();
@@ -270,7 +289,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── Fund transactions ──────────────────────────────────────────────────────
   Future<void> _fetchFundTransactions(String fundName) async {
     setState(() { _isLoadingFundTxns = true; });
     try {
@@ -320,34 +338,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── SMA data ───────────────────────────────────────────────────────────────
   Future<void> _fetchSMAData() async {
     setState(() { _isLoadingSMA = true; _isLoadingSMATxns = true; });
     try {
       final results = await Future.wait([
-        http.post(
-          Uri.parse('$cSharpApi/GetSMAPortfolios'),
+        http.post(Uri.parse('$cSharpApi/GetSMAPortfolios'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
-            'cdsNumber': _cdsNumber,
-          }),
+          body: jsonEncode({'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+            'cdsNumber': _cdsNumber}),
         ).timeout(const Duration(seconds: 15)),
-        http.post(
-          Uri.parse('$cSharpApi/GetSMAInvestments'),
+        http.post(Uri.parse('$cSharpApi/GetSMAInvestments'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
-            'cdsNumber': _cdsNumber,
-          }),
+          body: jsonEncode({'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+            'cdsNumber': _cdsNumber}),
         ).timeout(const Duration(seconds: 15)),
-        http.post(
-          Uri.parse('$cSharpApi/GetSMACashTransactions'),
+        http.post(Uri.parse('$cSharpApi/GetSMACashTransactions'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
-            'cdsNumber': _cdsNumber,
-          }),
+          body: jsonEncode({'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+            'cdsNumber': _cdsNumber}),
         ).timeout(const Duration(seconds: 15)),
       ]);
 
@@ -358,7 +366,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           _smaPortfolios = raw.map((e) => Map<String, dynamic>.from(e)).toList();
         }
       }
-
       if (results[1].statusCode == 200) {
         final j = jsonDecode(results[1].body);
         if (j['status'] == 'success') {
@@ -372,14 +379,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             catch (_) { dt = DateTime.now(); }
             return {
               'description': item['Description'] as String? ?? '',
-              'date':        dt,
-              'txnId':       item['TrxnID']?.toString() ?? '',
-              'amount':      (item['Amount'] as num?)?.toDouble() ?? 0.0,
+              'date': dt,
+              'txnId': item['TrxnID']?.toString() ?? '',
+              'amount': (item['Amount'] as num?)?.toDouble() ?? 0.0,
             };
           }).toList();
         }
       }
-
       if (results[2].statusCode == 200) {
         final j = jsonDecode(results[2].body);
         if (j['status'] == 'success') {
@@ -407,24 +413,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       }
 
-      setState(() {
-        _isLoadingSMA     = false;
-        _isLoadingSMATxns = false;
-      });
+      setState(() { _isLoadingSMA = false; _isLoadingSMATxns = false; });
       if (_onSMASlide) _chartFadeCtrl..reset()..forward();
     } catch (_) {
       setState(() { _isLoadingSMA = false; _isLoadingSMATxns = false; });
     }
   }
 
-  // ── Subscribe to fund ──────────────────────────────────────────────────────
+  // ── Subscribe — copied exactly from FundsScreen logic ─────────────────────
   Future<void> _subscribeToFund(Map<String, dynamic> fund) async {
     final fundCode = fund['fundCode'] as String;
     final fundName = fund['fundName'] as String;
-    final dark     = _dark;
+    // Use read (listen:false) — this runs in an event handler, not build()
+    final dark     = _darkSafe;
     final Color cardBg = dark ? const Color(0xFF132013) : Colors.white;
     final Color txtP   = dark ? const Color(0xFFE8F5E9) : const Color(0xFF1A2E1A);
     final Color txtS   = dark ? const Color(0xFF81A884)  : const Color(0xFF5A7A5C);
+
+    // ── Step 1: haptic + confirm dialog ───────────────────────────────────
+    HapticFeedback.mediumImpact();
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -449,8 +456,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 style: TextStyle(fontSize: 18,
                     fontWeight: FontWeight.w800, color: txtP)),
             const SizedBox(height: 10),
-            Text(
-              'A sub account will be created for "$fundName".',
+            Text('A sub account will be created for "$fundName".',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: txtS, height: 1.5),
             ),
@@ -494,6 +500,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     if (!confirmed || !mounted) return;
 
+    // ── Step 2: show spinner ───────────────────────────────────────────────
     setState(() => _subscribingFundCode = fundCode);
 
     try {
@@ -507,6 +514,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (!mounted) return;
       setState(() => _subscribingFundCode = null);
 
+      // ── Step 3: success snackbar ───────────────────────────────────────
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFF132013),
@@ -632,6 +640,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final cardBg2 = dark ? const Color(0xFF0F1A10)  : Colors.white.withOpacity(0.55);
     final border  = dark ? const Color(0xFF1E3320)  : Colors.white.withOpacity(0.7);
     final divider = dark ? const Color(0xFF1E3320)  : Colors.black.withOpacity(0.05);
+    final baseColor = _cardColor(_currentFundIndex);
 
     final int totalSlides = _funds.isNotEmpty ? _funds.length + 1 : 0;
 
@@ -653,9 +662,92 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildPortfolioSection(dark, txtP, txtS, s),
-                const SizedBox(height: 10),
 
+                // ── PageView cards ────────────────────────────────────────
+                _buildPortfolioSection(dark, txtP, txtS, s),
+                // ── PageView card height increases to include button area
+                // Subscribe button is outside PageView (no gesture conflict)
+                // but uses negative margin to sit flush against card bottom
+                const SizedBox(height: 0),
+
+                if (!_isLoadingFunds && _fundsError == null &&
+                    !_onSMASlide && _currentFundNeedsSubscribe)
+                  Transform.translate(
+                      offset: const Offset(0, -2),
+                      child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [
+                                baseColor.withOpacity(0.95),
+                                baseColor.withOpacity(0.75),
+                              ]),
+                              borderRadius: const BorderRadius.vertical(
+                                  bottom: Radius.circular(22)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: baseColor.withOpacity(0.45),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 6),
+                                )
+                              ],
+                            ),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              child: _subscribingFundCode ==
+                                  (_currentFund?['fundCode'] as String?)
+                                  ? Container(
+                                key: const ValueKey('sub-loading'),
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 16, height: 16,
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text('Subscribing…',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700)),
+                                  ],
+                                ),
+                              )
+                                  : GestureDetector(
+                                key: const ValueKey('sub-btn'),
+                                onTap: () {
+                                  final f = _currentFund;
+                                  if (f != null) _subscribeToFund(f);
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 13),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.account_balance_wallet_rounded,
+                                          color: Colors.white, size: 16),
+                                      SizedBox(width: 8),
+                                      Text('Subscribe',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 0.2)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ))),
+
+                const SizedBox(height: 6),
+
+                // ── Page dots ─────────────────────────────────────────────
                 if (!_isLoadingFunds && _fundsError == null && totalSlides > 0)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -797,7 +889,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 if (_onSMASlide) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
                       color: smaAccent.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
@@ -816,12 +909,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ? const SMAPage()
                             : const ClientStatementPage())),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
                     color: _onSMASlide ? smaAccent : green,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [BoxShadow(
-                        color: (_onSMASlide ? smaAccent : green).withOpacity(0.3),
+                        color: (_onSMASlide ? smaAccent : green)
+                            .withOpacity(0.3),
                         blurRadius: 8, offset: const Offset(0, 3))],
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -852,11 +947,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Summary pills ──────────────────────────────────────────────────────────
   Widget _buildSummaryPills(bool dark, _HS s) {
     final net        = _totalDeposits - _totalWithdrawals;
     final isPositive = net >= 0;
-    final depFg = _onSMASlide ? const Color(0xFF0891B2) : const Color(0xFF2E7D32);
+    final depFg = _onSMASlide
+        ? const Color(0xFF0891B2) : const Color(0xFF2E7D32);
     final depBg = dark ? const Color(0xFF1A2E1A) : const Color(0xFFE8F5E9);
     final witBg = dark ? const Color(0xFF2A1010) : const Color(0xFFFFEBEE);
     final netBg = isPositive
@@ -908,11 +1003,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       );
 
-  // ── SMA investment preview ─────────────────────────────────────────────────
   Widget _buildSMAInvestmentsPreview(
       bool dark, Color txtP, Color txtS, Color txtH, Color border, _HS s) {
     const Color accent = Color(0xFF0891B2);
-    final cardBg = dark ? const Color(0xFF132013) : Colors.white.withOpacity(0.62);
+    final cardBg = dark
+        ? const Color(0xFF132013) : Colors.white.withOpacity(0.62);
 
     if (_isLoadingSMA) {
       return Container(
@@ -938,7 +1033,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             border: Border.all(color: border, width: 1.5)),
         child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.account_tree_outlined, size: 32, color: txtS.withOpacity(0.4)),
+          Icon(Icons.account_tree_outlined,
+              size: 32, color: txtS.withOpacity(0.4)),
           const SizedBox(height: 8),
           Text(s.noSMA, style: TextStyle(fontSize: 13, color: txtS)),
         ])),
@@ -964,7 +1060,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             decoration: BoxDecoration(
                 color: accent.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(9)),
-            child: const Icon(Icons.account_tree_outlined, color: accent, size: 16),
+            child: const Icon(Icons.account_tree_outlined,
+                color: accent, size: 16),
           ),
           const SizedBox(width: 10),
           Expanded(child: Column(
@@ -1047,7 +1144,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Line Chart Card ────────────────────────────────────────────────────────
   Widget _buildLineChartCard(
       bool dark, Color txtP, Color txtS, Color green,
       Color cardBg, Color border, _HS s) {
@@ -1056,7 +1152,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final gridColor  = dark
         ? Colors.white.withOpacity(0.05)
         : Colors.black.withOpacity(0.05);
-
     final double lastVal = points.isNotEmpty ? points.last.value : 0;
     final lineColor = lastVal >= 0 ? green : Colors.red.shade400;
 
@@ -1087,7 +1182,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             if (!_isLoadingFundTxns && points.isNotEmpty)
               Text(
                 '${points.length} ${s.tradingDays} · '
-                    '${_currentFundIndex < _funds.length ? _funds[_currentFundIndex]['fundName'] : ''}',
+                    '${_currentFundIndex < _funds.length
+                    ? _funds[_currentFundIndex]['fundName'] : ''}',
                 style: TextStyle(fontSize: 10, color: txtS),
               ),
           ])),
@@ -1120,16 +1216,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ? Center(child: Column(
               mainAxisAlignment: MainAxisAlignment.center, children: [
             SizedBox(width: 22, height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, color: green)),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: green)),
             const SizedBox(height: 10),
-            Text(s.loadingChart, style: TextStyle(fontSize: 12, color: txtS)),
+            Text(s.loadingChart,
+                style: TextStyle(fontSize: 12, color: txtS)),
           ]))
               : points.isEmpty
               ? Center(child: Column(
               mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(Icons.show_chart_rounded, size: 40, color: txtS.withOpacity(0.4)),
+            Icon(Icons.show_chart_rounded,
+                size: 40, color: txtS.withOpacity(0.4)),
             const SizedBox(height: 10),
-            Text(s.noTransactions, style: TextStyle(fontSize: 13, color: txtS)),
+            Text(s.noTransactions,
+                style: TextStyle(fontSize: 13, color: txtS)),
           ]))
               : FadeTransition(
             opacity: _chartFadeAnim,
@@ -1147,14 +1247,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Recent list ────────────────────────────────────────────────────────────
   Widget _buildRecentList(
       bool dark, Color txtP, Color txtS, Color cardBg, Color divider, _HS s) {
     if (_isLoadingActiveTxns || _activeTransactions.isEmpty) {
       return const SizedBox.shrink();
     }
-    const Color smaAccent  = Color(0xFF0891B2);
-    final depositColor = _onSMASlide ? smaAccent : const Color(0xFF2E7D32);
+    const Color smaAccent = Color(0xFF0891B2);
+    final depositColor =
+    _onSMASlide ? smaAccent : const Color(0xFF2E7D32);
     final recent = _activeTransactions.reversed.take(5).toList();
 
     return Column(
@@ -1234,14 +1334,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Portfolio section ──────────────────────────────────────────────────────
+  // ── Portfolio section (PageView only — NO subscribe button inside) ─────────
   Widget _buildPortfolioSection(
       bool dark, Color txtP, Color txtS, _HS s) {
     if (_isLoadingFunds) {
-      return _blankCard(height: 200, color: const Color(0xFF1B5E20),
+      return _blankCard(height: 175, color: const Color(0xFF1B5E20),
         child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center, children: [
-          const CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
+          const CircularProgressIndicator(
+              color: Colors.white54, strokeWidth: 2),
           const SizedBox(height: 12),
           Text(s.loadingPortfolio,
               style: const TextStyle(color: Colors.white54, fontSize: 13)),
@@ -1249,10 +1350,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
     if (_fundsError != null) {
-      return _blankCard(height: 200, color: const Color(0xFF1B5E20),
+      return _blankCard(height: 175, color: const Color(0xFF1B5E20),
         child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.cloud_off_outlined, color: Colors.white54, size: 28),
+          const Icon(Icons.cloud_off_outlined,
+              color: Colors.white54, size: 28),
           const SizedBox(height: 8),
           Text(_fundsError!, textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 12)),
@@ -1273,23 +1375,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    // ── KEY FIX: wrap PageView in _TapIsolatedPageView ─────────────────────
-    return _TapIsolatedPageView(
-      height: 200,
-      controller: _fundPageController,
-      itemCount: _funds.length + 1,
-      onPageChanged: (i) {
-        setState(() => _currentFundIndex = i);
-        if (i < _funds.length) {
-          _fetchFundTransactions(_funds[i]['fundName'] as String);
-        } else {
-          if (_smaCashTxns.isNotEmpty) _chartFadeCtrl..reset()..forward();
-        }
-      },
-      itemBuilder: (_, i) {
-        if (i == _funds.length) return _buildSMASlideCard(dark, txtP, txtS, s);
-        return _buildFundCard(_funds[i], i, dark, txtP, txtS, s);
-      },
+    return SizedBox(
+      height: 175,
+      child: PageView.builder(
+        controller: _fundPageController,
+        itemCount: _funds.length + 1,
+        onPageChanged: (i) {
+          setState(() => _currentFundIndex = i);
+          if (i < _funds.length) {
+            _fetchFundTransactions(_funds[i]['fundName'] as String);
+          } else {
+            if (_smaCashTxns.isNotEmpty) _chartFadeCtrl..reset()..forward();
+          }
+        },
+        itemBuilder: (_, i) {
+          if (i == _funds.length) {
+            return _buildSMASlideCard(dark, txtP, txtS, s);
+          }
+          return _buildFundCard(_funds[i], i, dark, txtP, txtS, s);
+        },
+      ),
     );
   }
 
@@ -1353,7 +1458,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       overflow: TextOverflow.ellipsis),
                 ])),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
@@ -1428,7 +1534,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Fund card ──────────────────────────────────────────────────────────────
+  // ── Fund card — NO subscribe button inside ─────────────────────────────────
   Widget _buildFundCard(Map<String, dynamic> fund, int index,
       bool dark, Color txtP, Color txtS, _HS s) {
     final baseColor     = _cardColor(index);
@@ -1440,7 +1546,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final fundCode      = fund['fundCode'] as String;
     final fundName      = fund['fundName'] as String;
     final hasInvestment = portfolioVal > 0;
-    final isSubscribing = _subscribingFundCode == fundCode;
     final showSubscribe = subAccount.isEmpty;
 
     Color statusColor; IconData statusIcon;
@@ -1462,7 +1567,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         gradient: LinearGradient(
             colors: [baseColor, baseColor.withOpacity(0.72)],
             begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(22),
+        // Flat bottom when subscribe button is shown so it connects seamlessly
+        borderRadius: showSubscribe
+            ? const BorderRadius.vertical(
+            top: Radius.circular(22), bottom: Radius.circular(4))
+            : BorderRadius.circular(22),
         boxShadow: [BoxShadow(color: baseColor.withOpacity(0.45),
             blurRadius: 16, offset: const Offset(0, 6))],
       ),
@@ -1476,10 +1585,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-            // ── Header row ─────────────────────────────────────────────────
+            // ── Header ─────────────────────────────────────────────────────
             Row(children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
@@ -1504,7 +1614,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           color: Colors.white.withOpacity(0.55))),
                   if (subAccount.isNotEmpty) ...[
                     Text('  ·  ', style: TextStyle(
-                        fontSize: 10, color: Colors.white.withOpacity(0.3))),
+                        fontSize: 10,
+                        color: Colors.white.withOpacity(0.3))),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
@@ -1512,24 +1623,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         color: Colors.white.withOpacity(0.10),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                            color: Colors.white.withOpacity(0.2), width: 0.8),
+                            color: Colors.white.withOpacity(0.2),
+                            width: 0.8),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         const Text('Sub A/C  ',
                             style: TextStyle(fontSize: 9,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.white54, letterSpacing: 0.3)),
+                                color: Colors.white54,
+                                letterSpacing: 0.3)),
                         Text(subAccount,
                             style: const TextStyle(fontSize: 9,
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white70, letterSpacing: 0.4)),
+                                color: Colors.white70,
+                                letterSpacing: 0.4)),
                       ]),
                     ),
                   ],
                 ]),
               ])),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -1572,7 +1687,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         fontWeight: FontWeight.w900, color: Colors.white,
                         letterSpacing: -0.3))
                     : Text(s.notInvestedYet, style: TextStyle(
-                    fontSize: 12, color: Colors.white.withOpacity(0.4),
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.4),
                     fontStyle: FontStyle.italic)),
               ])),
               _vDivider(),
@@ -1597,63 +1713,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     fontWeight: FontWeight.w700, color: Colors.white)),
               ])),
             ]),
-
-            // ── Subscribe button ────────────────────────────────────────────
-            if (showSubscribe) ...[
-              const SizedBox(height: 12),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: isSubscribing
-                    ? Container(
-                  key: const ValueKey('loading'),
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(width: 14, height: 14,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2)),
-                      SizedBox(width: 8),
-                      Text('Subscribing…', style: TextStyle(
-                          color: Colors.white, fontSize: 12,
-                          fontWeight: FontWeight.w700)),
-                    ],
-                  ),
-                )
-                // ── ElevatedButton properly claims the pointer event,
-                //    preventing PageView from stealing the tap ──────────────
-                    : SizedBox(
-                  key: const ValueKey('button'),
-                  width: double.infinity,
-                  height: 38,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _subscribeToFund(fund),
-                    icon: const Icon(Icons.account_balance_wallet_rounded,
-                        size: 14, color: Colors.white),
-                    label: const Text('Subscribe', style: TextStyle(
-                        color: Colors.white, fontSize: 12,
-                        fontWeight: FontWeight.w800, letterSpacing: 0.2)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.18),
-                      foregroundColor: Colors.white,
-                      shadowColor: Colors.transparent,
-                      elevation: 0,
-                      side: BorderSide(
-                          color: Colors.white.withOpacity(0.35), width: 1),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ]),
         ),
       ]),
@@ -1661,7 +1720,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _blankCard({required Widget child, required Color color,
-    double height = 200}) =>
+    double height = 175}) =>
       Container(
         height: height,
         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -1724,77 +1783,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 }
 
-// ── TapIsolatedPageView ───────────────────────────────────────────────────────
-// Detects whether the finger is tapping (not swiping) and temporarily
-// disables the PageView scroll so the tap lands on the button inside.
-class _TapIsolatedPageView extends StatefulWidget {
-  final double height;
-  final PageController controller;
-  final int itemCount;
-  final ValueChanged<int> onPageChanged;
-  final NullableIndexedWidgetBuilder itemBuilder;
-
-  const _TapIsolatedPageView({
-    required this.height,
-    required this.controller,
-    required this.itemCount,
-    required this.onPageChanged,
-    required this.itemBuilder,
-  });
-
-  @override
-  State<_TapIsolatedPageView> createState() => _TapIsolatedPageViewState();
-}
-
-class _TapIsolatedPageViewState extends State<_TapIsolatedPageView> {
-  bool _pagingLocked = false;
-  Offset? _pointerDown;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: widget.height,
-      child: Listener(
-        onPointerDown: (e) {
-          _pointerDown = e.localPosition;
-          // Do not lock yet — wait to see if it's a tap or swipe
-        },
-        onPointerMove: (e) {
-          if (_pointerDown == null) return;
-          final delta = e.localPosition - _pointerDown!;
-          // If vertical movement is dominant → it's a tap/scroll attempt on
-          // the button area, lock horizontal paging
-          if (delta.dy.abs() > delta.dx.abs() && !_pagingLocked) {
-            setState(() => _pagingLocked = true);
-          }
-          // If horizontal movement is dominant → it's a swipe, unlock
-          if (delta.dx.abs() > delta.dy.abs() + 4 && _pagingLocked) {
-            setState(() => _pagingLocked = false);
-          }
-        },
-        onPointerUp: (_) {
-          _pointerDown = null;
-          if (_pagingLocked) setState(() => _pagingLocked = false);
-        },
-        onPointerCancel: (_) {
-          _pointerDown = null;
-          if (_pagingLocked) setState(() => _pagingLocked = false);
-        },
-        child: PageView.builder(
-          controller: widget.controller,
-          // Lock paging when the pointer is moving vertically (tapping a button)
-          physics: _pagingLocked
-              ? const NeverScrollableScrollPhysics()
-              : const PageScrollPhysics(),
-          itemCount: widget.itemCount,
-          onPageChanged: widget.onPageChanged,
-          itemBuilder: widget.itemBuilder,
-        ),
-      ),
-    );
-  }
-}
-
 // ── Line data model ────────────────────────────────────────────────────────────
 class _LinePoint {
   final DateTime date;
@@ -1834,7 +1822,8 @@ class _LineChartState extends State<_LineChart>
     super.initState();
     _lineAnimCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 900));
-    _lineAnim = CurvedAnimation(parent: _lineAnimCtrl, curve: Curves.easeInOut);
+    _lineAnim = CurvedAnimation(
+        parent: _lineAnimCtrl, curve: Curves.easeInOut);
     _lineAnimCtrl.forward();
   }
 
@@ -1862,8 +1851,10 @@ class _LineChartState extends State<_LineChart>
       final visMin   = dataMin - range * 0.15;
       final visRange = visMax - visMin;
 
-      double toY(double v) => chartH - ((v - visMin) / visRange) * chartH;
-      double toX(int i)    => yLabelW + (i / (widget.points.length - 1)) * chartW;
+      double toY(double v) =>
+          chartH - ((v - visMin) / visRange) * chartH;
+      double toX(int i) =>
+          yLabelW + (i / (widget.points.length - 1)) * chartW;
 
       final int n         = widget.points.length;
       final int labelStep = max(1, (n / 5).ceil());
@@ -1887,7 +1878,8 @@ class _LineChartState extends State<_LineChart>
           animation: _lineAnim,
           builder: (_, __) {
             return Stack(children: [
-              Positioned(left: yLabelW, top: 0,
+              Positioned(
+                left: yLabelW, top: 0,
                 width: chartW + 8, height: chartH,
                 child: CustomPaint(
                   painter: _LinePainter(
@@ -1911,28 +1903,32 @@ class _LineChartState extends State<_LineChart>
                   left: 0, top: y - 7, width: yLabelW - 4,
                   child: Text(widget.shortAmt(v),
                       textAlign: TextAlign.right,
-                      style: TextStyle(fontSize: 9, color: widget.labelColor)),
+                      style: TextStyle(
+                          fontSize: 9, color: widget.labelColor)),
                 );
               }),
               ...List.generate(n, (i) {
-                if (i % labelStep != 0 && i != n - 1) return const SizedBox.shrink();
+                if (i % labelStep != 0 && i != n - 1) {
+                  return const SizedBox.shrink();
+                }
                 final cx = toX(i);
                 return Positioned(
                   left: cx - 18, top: chartH + 3, width: 36,
                   child: Text(
                     DateFormat('dd/MM').format(widget.points[i].date),
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 9, color: widget.labelColor),
+                    style: TextStyle(
+                        fontSize: 9, color: widget.labelColor),
                   ),
                 );
               }),
               if (_hoveredIndex != null && _lineAnim.value == 1.0)
                 Builder(builder: (_) {
-                  final idx    = _hoveredIndex!;
-                  final pt     = widget.points[idx];
-                  final cx     = toX(idx);
-                  final cy     = toY(pt.value);
-                  const ttW    = 110.0;
+                  final idx     = _hoveredIndex!;
+                  final pt      = widget.points[idx];
+                  final cx      = toX(idx);
+                  final cy      = toY(pt.value);
+                  const ttW     = 110.0;
                   double ttLeft = cx + 10;
                   if (ttLeft + ttW > w) ttLeft = cx - ttW - 10;
                   final ttTop = max(0.0, cy - 70.0);
@@ -1949,19 +1945,24 @@ class _LineChartState extends State<_LineChart>
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [BoxShadow(
                             color: Colors.black.withOpacity(0.25),
-                            blurRadius: 12, offset: const Offset(0, 4))],
+                            blurRadius: 12,
+                            offset: const Offset(0, 4))],
                       ),
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(DateFormat('dd MMM yyyy').format(pt.date),
-                                style: const TextStyle(fontSize: 9,
-                                    color: Colors.white60,
-                                    fontWeight: FontWeight.w600)),
+                            Text(
+                              DateFormat('dd MMM yyyy').format(pt.date),
+                              style: const TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.white60,
+                                  fontWeight: FontWeight.w600),
+                            ),
                             const SizedBox(height: 4),
                             Row(children: [
-                              Container(width: 6, height: 6,
+                              Container(
+                                width: 6, height: 6,
                                 decoration: BoxDecoration(
                                     color: pt.type == 'Deposit'
                                         ? const Color(0xFF69F0AE)
@@ -1969,17 +1970,22 @@ class _LineChartState extends State<_LineChart>
                                     shape: BoxShape.circle),
                               ),
                               const SizedBox(width: 5),
-                              Text(pt.type, style: TextStyle(fontSize: 9,
-                                  color: pt.type == 'Deposit'
-                                      ? const Color(0xFF69F0AE)
-                                      : Colors.red.shade300,
-                                  fontWeight: FontWeight.w700)),
+                              Text(pt.type,
+                                  style: TextStyle(
+                                      fontSize: 9,
+                                      color: pt.type == 'Deposit'
+                                          ? const Color(0xFF69F0AE)
+                                          : Colors.red.shade300,
+                                      fontWeight: FontWeight.w700)),
                             ]),
                             const SizedBox(height: 3),
-                            Text('TZS ${widget.shortAmt(pt.value)}',
-                                style: const TextStyle(fontSize: 13,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900)),
+                            Text(
+                              'TZS ${widget.shortAmt(pt.value)}',
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900),
+                            ),
                           ]),
                     ),
                   );
@@ -2100,8 +2106,8 @@ class _LinePainter extends CustomPainter {
                 ..color       = lineColor.withOpacity(0.25)
                 ..strokeWidth = 1
                 ..style       = PaintingStyle.stroke);
-          canvas.drawCircle(o, 10,
-              Paint()..color = lineColor.withOpacity(0.15));
+          canvas.drawCircle(
+              o, 10, Paint()..color = lineColor.withOpacity(0.15));
         }
 
         canvas.drawCircle(o, r + 1.5, Paint()
