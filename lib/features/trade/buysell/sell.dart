@@ -46,7 +46,7 @@ class _Security {
 // MARKET WATCH API
 // ─────────────────────────────────────────────────────────────────────────────
 class _MarketWatchApi {
-  static const _url  = 'https://portalprod.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
+  static const _url  = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
   static const _nida = '19931109111010000522';
 
   static Future<List<_Security>> fetch() async {

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:tsl/constants/constants.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import '../../accounts/individual_account.dart';
 import '../login/view/login.dart';
 
@@ -373,10 +377,10 @@ class _NewClientFlowState extends State<_NewClientFlow> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                  color: widget.softMint, shape: BoxShape.circle),
-              child: Icon(Icons.check_rounded,
-                  color: widget.primaryGreen, size: 44),
+              decoration:
+              BoxDecoration(color: widget.softMint, shape: BoxShape.circle),
+              child:
+              Icon(Icons.check_rounded, color: widget.primaryGreen, size: 44),
             ),
             const SizedBox(height: 20),
             Text('Account Created!',
@@ -454,8 +458,7 @@ class _NewClientFlowState extends State<_NewClientFlow> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child:
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         GestureDetector(
           onTap: widget.onBack,
           child: Container(
@@ -497,8 +500,7 @@ class _NewClientFlowState extends State<_NewClientFlow> {
               controller: _passCtrl,
               label: 'Password',
               isVisible: _passVisible,
-              onToggle: () =>
-                  setState(() => _passVisible = !_passVisible)),
+              onToggle: () => setState(() => _passVisible = !_passVisible)),
           const SizedBox(height: 14),
           _passField(
               controller: _confirmPassCtrl,
@@ -521,15 +523,12 @@ class _NewClientFlowState extends State<_NewClientFlow> {
         GestureDetector(
           onTap: () => setState(() => _agreeToTerms = !_agreeToTerms),
           child: Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color:
-              _agreeToTerms ? _mint : Colors.white.withOpacity(0.5),
+              color: _agreeToTerms ? _mint : Colors.white.withOpacity(0.5),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color:
-                  _agreeToTerms ? _g : Colors.grey.withOpacity(0.2),
+                  color: _agreeToTerms ? _g : Colors.grey.withOpacity(0.2),
                   width: _agreeToTerms ? 1.5 : 1),
             ),
             child: Row(children: [
@@ -539,12 +538,9 @@ class _NewClientFlowState extends State<_NewClientFlow> {
                 height: 22,
                 decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color:
-                    _agreeToTerms ? _g : Colors.transparent,
+                    color: _agreeToTerms ? _g : Colors.transparent,
                     border: Border.all(
-                        color: _agreeToTerms
-                            ? _g
-                            : Colors.grey[400]!,
+                        color: _agreeToTerms ? _g : Colors.grey[400]!,
                         width: 2)),
                 child: _agreeToTerms
                     ? const Icon(Icons.check_rounded,
@@ -594,8 +590,7 @@ class _NewClientFlowState extends State<_NewClientFlow> {
                 children: [
                   Text('Create Account',
                       style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700)),
+                          fontSize: 16, fontWeight: FontWeight.w700)),
                   SizedBox(width: 8),
                   Icon(Icons.arrow_forward_rounded, size: 18),
                 ]),
@@ -612,8 +607,8 @@ class _NewClientFlowState extends State<_NewClientFlow> {
                 const TextSpan(text: 'Already have an account? '),
                 TextSpan(
                     text: 'Sign In',
-                    style: TextStyle(
-                        color: _g, fontWeight: FontWeight.w700)),
+                    style:
+                    TextStyle(color: _g, fontWeight: FontWeight.w700)),
               ],
             )),
           ),
@@ -705,7 +700,8 @@ class _NewClientFlowState extends State<_NewClientFlow> {
           decoration: InputDecoration(
               labelText: label,
               labelStyle: TextStyle(color: _muted, fontSize: 14),
-              prefixIcon: Icon(Icons.lock_outline_rounded, color: _g, size: 20),
+              prefixIcon:
+              Icon(Icons.lock_outline_rounded, color: _g, size: 20),
               suffixIcon: GestureDetector(
                   onTap: onToggle,
                   child: Icon(
@@ -725,6 +721,42 @@ class _NewClientFlowState extends State<_NewClientFlow> {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXISTING CLIENT FLOW  (3 steps: validate → KYC → complete setup)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// SWIFT codes keyed by bank name (lowercase-contains match)
+const Map<String, String> _bankSwiftMap = {
+  'crdb': 'CORUTZTZ',
+  'nmb': 'NMBATZTZ',
+  'nbct': 'NLCBTZTX',
+  'national bank': 'NLCBTZTX',
+  'standard chartered': 'SCBLTZTX',
+  'stanchart': 'SCBLTZTX',
+  'barclays': 'BARCTZTZ',
+  'absa': 'BARCTZTZ',
+  'stanbic': 'SBICTZTX',
+  'exim': 'EXTNTZTZ',
+  'equity': 'EQBLTZTZ',
+  'kcb': 'KCBLTZTZ',
+  'azania': 'AZANTZTX',
+  'dtb': 'DTKETZTZ',
+  'diamond trust': 'DTKETZTZ',
+  'citi': 'CITITZTZ',
+  'citibank': 'CITITZTZ',
+  'tib': 'TIBDTZTX',
+  'uchumi': 'UCMTTZTZ',
+  'mkombozi': 'MKCBTZTZ',
+  'tpb': 'TPBKTZTZ',
+  'postal': 'TPBKTZTZ',
+  'people\'s bank': 'TPBKTZTZ',
+};
+
+String? _lookupSwift(String bankName) {
+  final lower = bankName.toLowerCase();
+  for (final entry in _bankSwiftMap.entries) {
+    if (lower.contains(entry.key)) return entry.value;
+  }
+  return null;
+}
+
 class _ExistingClientFlow extends StatefulWidget {
   final Color primaryGreen, softMint, textDark, textMuted;
   final VoidCallback onBack;
@@ -771,26 +803,45 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   final _birthPlaceCtrl = TextEditingController();
   final _occupationCtrl = TextEditingController();
   final _nationalityCtrl = TextEditingController();
-  final _idTypeCtrl = TextEditingController();
   final _idCtrl = TextEditingController();
   final _idExpiryCtrl = TextEditingController();
-  final _issuingAuthorityCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
   final _countryCtrl = TextEditingController();
   final _swiftCodeCtrl = TextEditingController();
   final _bankAddressCtrl = TextEditingController();
-  final _initialAmountCtrl = TextEditingController();
+  final _pepDetailsCtrl = TextEditingController();
 
-  // Dropdowns
+  // ── Dropdowns ─────────────────────────────────────────────────────────────
   String _gender = 'Male';
   String _title = 'Mr';
   String _investmentPurpose = 'Wealth Creation';
   String _incomeSource = 'Salary';
   String _riskTolerance = 'Medium';
   String _investmentPeriod = 'Long Term';
-  String _amountCurrency = 'USD';
   String _bankType = 'Local';
   String _disclosure = 'No';
+
+  // ID Type dropdown — Driving License, Voter ID, Zanzibar ID (NIDA coming later)
+  static const List<String> _idTypes = [
+    'Driving License',
+    'Voter ID',
+    'Zanzibar ID',
+  ];
+  String _idType = 'Driving License';
+
+  // Issuing Authority dropdown
+  static const List<String> _issuingAuthorities = [
+    'TRA',
+    'NEC',
+    'Zanzibar Registration Institute',
+  ];
+  String _issuingAuthority = 'TRA';
+
+  // ID document upload
+  File? _idDocument;
+  String? _idDocumentName;   // e.g. "passport.pdf", "id_front.jpg"
+  bool _idDocumentIsPdf = false;
+  final _imagePicker = ImagePicker();
 
   bool _passVisible = false, _confirmVisible = false;
   bool _submitting = false;
@@ -840,37 +891,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             return;
           }
           _clientData = Map<String, dynamic>.from(data);
-
-          // Auto-fill KYC fields
-          _kycNameCtrl.text = data['Names'] ?? '';
-          _kycEmailCtrl.text = data['Email'] ?? '';
-          _kycMobileCtrl.text = data['Mobile'] ?? '';
-          _kycAddrCtrl.text = data['Add_1'] ?? '';
-          _kycBankCtrl.text = data['Bank'] ?? '';
-          _kycAccNoCtrl.text = data['AccountNo'] ?? '';
-          _kycAccNameCtrl.text = data['AccountName'] ?? '';
-          _kycBranchCtrl.text = data['Branch'] ?? '';
-
-          // Pre-fill step-2 fields from same data where available
-          final fullName = (data['Names'] ?? '').toString().trim();
-          final parts = fullName.split(' ');
-          _firstNameCtrl.text = parts.isNotEmpty ? parts.first : '';
-          _surnameCtrl.text = parts.length > 1 ? parts.last : '';
-          _otherNamesCtrl.text = parts.length > 2
-              ? parts.sublist(1, parts.length - 1).join(' ')
-              : '';
-          _cityCtrl.text = data['City'] ?? '';
-          _countryCtrl.text = data['Country'] ?? '';
-          _nationalityCtrl.text = data['Nationality'] ?? '';
-          _occupationCtrl.text = data['Occupation'] ?? '';
-          _idCtrl.text = data['IDNumber'] ?? '';
-          _idTypeCtrl.text =
-          (data['IDType'] ?? '').toString().isNotEmpty
-              ? data['IDType']
-              : 'National ID';
-          _bankAddressCtrl.text = data['BankAddress'] ?? '';
-          _swiftCodeCtrl.text = data['SwiftCode'] ?? '';
-
+          _populateFields(data);
           setState(() => _step = 1);
         } else {
           _snack('Account not found. Please check your details.');
@@ -884,9 +905,239 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     }
   }
 
+  /// Map all fields from the API response into controllers and dropdowns.
+  void _populateFields(Map<String, dynamic> data) {
+    // ── KYC step 1 fields ────────────────────────────────────────────────────
+    final forenames = (data['Forenames'] ?? '').toString().trim();
+    final middle = (data['middlename'] ?? '').toString().trim();
+    final surname = (data['surname'] ?? '').toString().trim();
+    final fullName = [forenames, middle, surname]
+        .where((s) => s.isNotEmpty)
+        .join(' ');
+    _kycNameCtrl.text = fullName.isNotEmpty ? fullName : (data['Names'] ?? '');
+    _kycEmailCtrl.text = data['Email'] ?? '';
+    _kycMobileCtrl.text = data['Mobile'] ?? '';
+    _kycAddrCtrl.text = data['Add_1'] ?? '';
+    _kycBankCtrl.text = data['Bank'] ?? '';
+    _kycAccNoCtrl.text = data['AccountNo'] ?? '';
+    _kycAccNameCtrl.text = data['AccountName'] ?? '';
+    _kycBranchCtrl.text = data['Branch'] ?? '';
+
+    // ── Step 2 personal fields ───────────────────────────────────────────────
+    _firstNameCtrl.text = forenames.isNotEmpty ? forenames : '';
+    _surnameCtrl.text = surname.isNotEmpty ? surname : '';
+    _otherNamesCtrl.text = middle;
+
+    // Title
+    final apiTitle = (data['Title'] ?? '').toString().trim();
+    if (['Mr', 'Mrs', 'Ms', 'Dr', 'Prof'].contains(apiTitle)) {
+      _title = apiTitle;
+    }
+
+    // Gender
+    final apiGender = (data['Gender'] ?? '').toString().trim();
+    if (['Male', 'Female'].contains(apiGender)) {
+      _gender = apiGender;
+    }
+
+    // DOB — API returns "25-Feb-2019"; convert to yyyy-MM-dd
+    final rawDob = (data['DOB'] ?? '').toString().trim();
+    _dobCtrl.text = _parseDob(rawDob);
+
+    _birthPlaceCtrl.text = data['PlaceofBirth'] ?? '';
+    _occupationCtrl.text = data['Occupation'] ?? '';
+    _nationalityCtrl.text = data['Nationality'] ?? '';
+    _cityCtrl.text = data['City'] ?? '';
+    _countryCtrl.text = data['Country'] ?? '';
+
+    // Identification
+    _idCtrl.text = data['IdentificationNo'] ?? '';
+    final rawIdExpiry = (data['IDExpiry'] ?? '').toString().trim();
+    _idExpiryCtrl.text = rawIdExpiry; // already "2032-02-25"
+
+    // Issuing authority (placeofissue → closest match or keep as-is)
+    final rawAuthority = (data['placeofissue'] ?? '').toString().trim();
+    if (_issuingAuthorities.contains(rawAuthority)) {
+      _issuingAuthority = rawAuthority;
+    }
+
+    // ID type
+    final rawIdType = (data['IDtype'] ?? '').toString().trim();
+    if (_idTypes.contains(rawIdType)) {
+      _idType = rawIdType;
+    }
+
+    // Banking — prefer API SwiftCode directly; fall back to lookup map only if blank
+    _bankAddressCtrl.text = data['BankAddress'] ?? '';
+    final apiSwift = (data['SwiftCode'] ?? '').toString().trim();
+    final bankName = (data['Bank'] ?? '').toString().trim();
+    _swiftCodeCtrl.text =
+    apiSwift.isNotEmpty ? apiSwift : (_lookupSwift(bankName) ?? '');
+
+    // Investment preferences
+    final rawIncome = (data['SourceofIncome'] ?? '').toString().trim();
+    final incomeOptions = [
+      'Salary', 'Business', 'Investments', 'Inheritance', 'Other'
+    ];
+    _incomeSource = incomeOptions.contains(rawIncome) ? rawIncome : 'Salary';
+
+    final rawPurpose = (data['PurposeOfInvestment'] ?? '').toString().trim();
+    final purposeOptions = [
+      'Wealth Creation', 'Retirement', 'Education', 'Income', 'Speculation'
+    ];
+    _investmentPurpose =
+    purposeOptions.contains(rawPurpose) ? rawPurpose : 'Wealth Creation';
+
+    // PEP — matches "Yes", "yes", "YES", or legacy "Politically exposed person"
+    final rawPep = (data['PEPDisclosure'] ?? '').toString().trim();
+    _disclosure = (rawPep.toLowerCase() == 'yes' ||
+        rawPep.toLowerCase().contains('politically'))
+        ? 'Yes'
+        : 'No';
+
+    // PositionHeld → pre-fill the PEP details field when PEP is Yes
+    if (_disclosure == 'Yes') {
+      final positionHeld = (data['PositionHeld'] ?? '').toString().trim();
+      if (positionHeld.isNotEmpty && positionHeld.toLowerCase() != 'none') {
+        _pepDetailsCtrl.text = positionHeld;
+      }
+    }
+  }
+
+  /// Converts "25-Feb-2019" → "2019-02-25". Returns original string on failure.
+  String _parseDob(String raw) {
+    if (raw.isEmpty) return '';
+    try {
+      final parts = raw.split('-');
+      if (parts.length != 3) return raw;
+      const months = {
+        'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+        'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+        'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12',
+      };
+      final day = parts[0].padLeft(2, '0');
+      final month = months[parts[1].toLowerCase()] ?? parts[1];
+      final year = parts[2];
+      return '$year-$month-$day';
+    } catch (_) {
+      return raw;
+    }
+  }
+
   void _proceedToSetPassword() => setState(() => _step = 2);
 
-  // ── Step 2: Submit to CreateAccountEXISTSING ──────────────────────────────
+  // ── ID document picker ─────────────────────────────────────────────────────
+  Future<void> _pickIdDocument() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Text('Upload ID Document',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: _dark)),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text('PDF, PNG, JPG or JPEG accepted',
+                style: TextStyle(fontSize: 12, color: _muted)),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                  color: _mint, borderRadius: BorderRadius.circular(10)),
+              child: Icon(Icons.camera_alt_outlined, color: _g),
+            ),
+            title: const Text('Take a Photo'),
+            subtitle: Text('PNG / JPG', style: TextStyle(fontSize: 12, color: _muted)),
+            onTap: () async {
+              Navigator.pop(context);
+              final picked = await _imagePicker.pickImage(
+                  source: ImageSource.camera, imageQuality: 90);
+              if (picked != null) {
+                setState(() {
+                  _idDocument = File(picked.path);
+                  _idDocumentName = picked.name;
+                  _idDocumentIsPdf = false;
+                });
+              }
+            },
+          ),
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                  color: _mint, borderRadius: BorderRadius.circular(10)),
+              child: Icon(Icons.photo_library_outlined, color: _g),
+            ),
+            title: const Text('Choose Image from Gallery'),
+            subtitle: Text('PNG / JPG / JPEG',
+                style: TextStyle(fontSize: 12, color: _muted)),
+            onTap: () async {
+              Navigator.pop(context);
+              final picked = await _imagePicker.pickImage(
+                  source: ImageSource.gallery, imageQuality: 90);
+              if (picked != null) {
+                setState(() {
+                  _idDocument = File(picked.path);
+                  _idDocumentName = picked.name;
+                  _idDocumentIsPdf = false;
+                });
+              }
+            },
+          ),
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                  color: _mint, borderRadius: BorderRadius.circular(10)),
+              child: Icon(Icons.picture_as_pdf_outlined, color: _g),
+            ),
+            title: const Text('Browse File'),
+            subtitle: Text('PDF, PNG, JPG or JPEG',
+                style: TextStyle(fontSize: 12, color: _muted)),
+            onTap: () async {
+              Navigator.pop(context);
+              final result = await FilePicker.platform.pickFiles(
+                type: FileType.custom,
+                allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+                withData: false,
+                withReadStream: false,
+              );
+              if (result != null && result.files.single.path != null) {
+                final file = result.files.single;
+                final ext = (file.extension ?? '').toLowerCase();
+                setState(() {
+                  _idDocument = File(file.path!);
+                  _idDocumentName = file.name;
+                  _idDocumentIsPdf = ext == 'pdf';
+                });
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+        ]),
+      ),
+    );
+  }
+
+  // ── Step 2: Submit ─────────────────────────────────────────────────────────
   Future<void> _submitRegistration() async {
     if (_firstNameCtrl.text.trim().isEmpty) {
       _snack('First name is required');
@@ -919,6 +1170,16 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       String mobile = _kycMobileCtrl.text.trim();
       if (mobile.startsWith('0')) mobile = '255${mobile.substring(1)}';
 
+      // Base64-encode the ID document if one was selected
+      String idDocumentBase64 = '';
+      String idDocumentExtension = '';
+      if (_idDocument != null) {
+        final Uint8List bytes = await _idDocument!.readAsBytes();
+        idDocumentBase64 = base64Encode(bytes);
+        idDocumentExtension =
+            (_idDocumentName ?? '').split('.').last.toLowerCase();
+      }
+
       final payload = {
         "APIUsername": "User2",
         "APIPassword": "CBZ1234#2",
@@ -933,10 +1194,10 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         "Gender": _gender,
         "Occupation": _occupationCtrl.text.trim(),
         "Nationality": _nationalityCtrl.text.trim(),
-        "IdentificatinType": _idTypeCtrl.text.trim(),
+        "IdentificatinType": _idType,
         "ID": _idCtrl.text.trim(),
         "IdentificationExpiryDate": _idExpiryCtrl.text.trim(),
-        "IssuingAuthority": _issuingAuthorityCtrl.text.trim(),
+        "IssuingAuthority": _issuingAuthority,
         "City": _cityCtrl.text.trim(),
         "PhysicalAddress": _kycAddrCtrl.text.trim(),
         "Country": _countryCtrl.text.trim(),
@@ -947,6 +1208,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         "InvestmentAccountType": "Standard",
         "InvestorType": "Individual",
         "Disclosure": _disclosure,
+        "PEPDetails":
+        _disclosure == 'Yes' ? _pepDetailsCtrl.text.trim() : "",
         "PositionHeld": "None",
         "BankType": _bankType,
         "BankAccountNumber": _kycAccNoCtrl.text.trim(),
@@ -955,10 +1218,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         "BankBranch": _kycBranchCtrl.text.trim(),
         "BankSwiftCode": _swiftCodeCtrl.text.trim(),
         "BankAddress": _bankAddressCtrl.text.trim(),
-        "InitialAmountInvested": _initialAmountCtrl.text.trim().isEmpty
-            ? "0"
-            : _initialAmountCtrl.text.trim(),
-        "AmountSuppliedIn": _amountCurrency,
+        "AmountSuppliedIn": "TZS",
         "ServiceRequired": "Trading",
         "InvestmentPeriod": _investmentPeriod,
         "RiskTolerance": _riskTolerance,
@@ -966,11 +1226,12 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         "Source": "Mobile",
         "myExistingCDS": _cdsCtrl.text.trim(),
         "Password": _passCtrl.text,
+        "IDDocument": idDocumentBase64,
+        "IDDocumentExtension": idDocumentExtension,
       };
 
       final res = await http.post(
-        Uri.parse(
-            '$cSharpApi/CreateAccountEXISTSING'),
+        Uri.parse('$cSharpApi/CreateAccountEXISTSING'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(payload),
       );
@@ -1066,8 +1327,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       ]),
       behavior: SnackBarBehavior.floating,
       backgroundColor: widget.textDark,
-      shape:
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.all(16),
     ));
   }
@@ -1093,15 +1353,13 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     _birthPlaceCtrl.dispose();
     _occupationCtrl.dispose();
     _nationalityCtrl.dispose();
-    _idTypeCtrl.dispose();
     _idCtrl.dispose();
     _idExpiryCtrl.dispose();
-    _issuingAuthorityCtrl.dispose();
     _cityCtrl.dispose();
     _countryCtrl.dispose();
     _swiftCodeCtrl.dispose();
     _bankAddressCtrl.dispose();
-    _initialAmountCtrl.dispose();
+    _pepDetailsCtrl.dispose();
     super.dispose();
   }
 
@@ -1109,8 +1367,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child:
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         GestureDetector(
           onTap: _step == 0
               ? widget.onBack
@@ -1126,10 +1383,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         ),
         const SizedBox(height: 16),
         _StepIndicator(
-            current: _step,
-            total: 3,
-            primaryGreen: _g,
-            softMint: _mint),
+            current: _step, total: 3, primaryGreen: _g, softMint: _mint),
         const SizedBox(height: 24),
         if (_step == 0) _buildStep0(),
         if (_step == 1) _buildStep1(),
@@ -1148,8 +1402,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
               color: _dark,
               letterSpacing: -0.5)),
       const SizedBox(height: 6),
-      Text(
-          'Enter your registered email and account number to continue.',
+      Text('Enter your registered email and account number to continue.',
           style: TextStyle(fontSize: 14, color: _muted)),
       const SizedBox(height: 24),
       _card(children: [
@@ -1185,24 +1438,20 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
               color: _dark,
               letterSpacing: -0.5)),
       const SizedBox(height: 6),
-      Text(
-          'Review and confirm your information pulled from our records.',
+      Text('Review and confirm your information pulled from our records.',
           style: TextStyle(fontSize: 14, color: _muted)),
       const SizedBox(height: 16),
       Container(
-        padding:
-        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
             color: _mint, borderRadius: BorderRadius.circular(12)),
         child: Row(children: [
           Icon(Icons.waving_hand_rounded, color: _g, size: 18),
           const SizedBox(width: 8),
           Text(
-              'Welcome back, ${(_clientData?['Names'] ?? '').toString().split(' ').first}!',
+              'Welcome back, ${(_clientData?['Forenames'] ?? _clientData?['Names'] ?? '').toString().split(' ').first}!',
               style: TextStyle(
-                  color: _g,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14)),
+                  color: _g, fontWeight: FontWeight.w600, fontSize: 14)),
         ]),
       ),
       const SizedBox(height: 16),
@@ -1299,8 +1548,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
 
       // Email chip
       Container(
-        padding:
-        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
             color: _mint,
             borderRadius: BorderRadius.circular(12),
@@ -1365,8 +1613,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           label: 'Date of Birth',
           icon: Icons.cake_outlined,
           firstDate: DateTime(1940),
-          lastDate:
-          DateTime.now().subtract(const Duration(days: 365 * 18)),
+          lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
         ),
         const SizedBox(height: 14),
         _inputField(
@@ -1399,10 +1646,15 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       // ── Identification ─────────────────────────────────────────────────────
       _card(children: [
         _sectionLabel('Identification'),
-        _inputField(
-            controller: _idTypeCtrl,
-            label: 'ID Type (e.g. National ID, Passport)',
-            icon: Icons.credit_card_outlined),
+
+        // ID Type dropdown
+        _dropdownField(
+          label: 'ID Type',
+          icon: Icons.credit_card_outlined,
+          value: _idType,
+          items: _idTypes,
+          onChanged: (v) => setState(() => _idType = v!),
+        ),
         const SizedBox(height: 14),
         _inputField(
             controller: _idCtrl,
@@ -1417,17 +1669,164 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           lastDate: DateTime(2060),
         ),
         const SizedBox(height: 14),
-        _inputField(
-            controller: _issuingAuthorityCtrl,
-            label: 'Issuing Authority',
-            icon: Icons.account_balance_outlined),
+
+        // Issuing Authority dropdown
+        _dropdownField(
+          label: 'Issuing Authority',
+          icon: Icons.account_balance_outlined,
+          value: _issuingAuthority,
+          items: _issuingAuthorities,
+          onChanged: (v) => setState(() => _issuingAuthority = v!),
+        ),
+        const SizedBox(height: 16),
+
+        // ID Document Upload
+        _sectionLabel('Upload ID Document'),
+        GestureDetector(
+          onTap: _pickIdDocument,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 100),
+            decoration: BoxDecoration(
+              color: _idDocument != null ? _mint : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: _idDocument != null ? _g : Colors.grey.withOpacity(0.3),
+                  width: _idDocument != null ? 1.5 : 1),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ],
+            ),
+            child: _idDocument != null
+                ? Stack(
+              children: [
+                // ── PDF view ──────────────────────────────────────────
+                if (_idDocumentIsPdf)
+                  Container(
+                    width: double.infinity,
+                    height: 160,
+                    decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3F3),
+                        borderRadius: BorderRadius.circular(13)),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.picture_as_pdf_rounded,
+                            color: const Color(0xFFE53935), size: 52),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding:
+                          const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            _idDocumentName ?? 'document.pdf',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: _dark,
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                // ── Image view ────────────────────────────────────────
+                else
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(13),
+                    child: Image.file(_idDocument!,
+                        width: double.infinity,
+                        height: 160,
+                        fit: BoxFit.cover),
+                  ),
+
+                // ── Remove button ─────────────────────────────────────
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: () => setState(() {
+                      _idDocument = null;
+                      _idDocumentName = null;
+                      _idDocumentIsPdf = false;
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          shape: BoxShape.circle),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 16),
+                    ),
+                  ),
+                ),
+
+                // ── Uploaded badge ────────────────────────────────────
+                Positioned(
+                  bottom: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                        color: _g,
+                        borderRadius: BorderRadius.circular(8)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle_outline,
+                            color: Colors.white, size: 13),
+                        const SizedBox(width: 5),
+                        Text(
+                          _idDocumentIsPdf ? 'PDF Uploaded' : 'ID Uploaded',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            )
+                : Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration:
+                    BoxDecoration(color: _mint, shape: BoxShape.circle),
+                    child: Icon(Icons.upload_file_outlined,
+                        color: _g, size: 28),
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Tap to upload your ID document',
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: _dark,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text('PDF, PNG, JPG or JPEG accepted',
+                      style: TextStyle(fontSize: 12, color: _muted)),
+                ],
+              ),
+            ),
+          ),
+        ),
       ]),
       const SizedBox(height: 16),
 
-      // ── Banking Details (pre-populated from KYC Step 1) ───────────────────
+      // ── Banking Details ───────────────────────────────────────────────────
       _card(children: [
         _sectionLabel('Banking Details'),
-        // Info banner
         Container(
           margin: const EdgeInsets.only(bottom: 14),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1444,10 +1843,26 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             ),
           ]),
         ),
-        _kycField(
-            controller: _kycBankCtrl,
-            label: 'Bank Name',
-            icon: Icons.account_balance_outlined),
+        // Bank name — auto-fills SWIFT on change
+        _fieldContainer(TextField(
+          controller: _kycBankCtrl,
+          style: TextStyle(fontSize: 15, color: _dark),
+          onChanged: (val) {
+            final swift = _lookupSwift(val);
+            if (swift != null) {
+              setState(() => _swiftCodeCtrl.text = swift);
+            }
+          },
+          decoration: InputDecoration(
+              labelText: 'Bank Name',
+              labelStyle: TextStyle(color: _muted, fontSize: 14),
+              prefixIcon: Icon(Icons.account_balance_outlined, color: _g, size: 20),
+              suffixIcon: Icon(Icons.edit_outlined, color: _muted, size: 16),
+              border: InputBorder.none,
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+              floatingLabelBehavior: FloatingLabelBehavior.auto),
+        )),
         const SizedBox(height: 14),
         _kycField(
             controller: _kycAccNoCtrl,
@@ -1473,10 +1888,25 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           onChanged: (v) => setState(() => _bankType = v!),
         ),
         const SizedBox(height: 14),
-        _inputField(
-            controller: _swiftCodeCtrl,
-            label: 'SWIFT Code',
-            icon: Icons.code_outlined),
+        // SWIFT — auto-populated, but still editable
+        _fieldContainer(TextField(
+          controller: _swiftCodeCtrl,
+          style: TextStyle(fontSize: 15, color: _dark),
+          decoration: InputDecoration(
+              labelText: 'SWIFT Code',
+              labelStyle: TextStyle(color: _muted, fontSize: 14),
+              prefixIcon: Icon(Icons.code_outlined, color: _g, size: 20),
+              suffixIcon: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Icon(Icons.auto_awesome_rounded,
+                    color: _g.withOpacity(0.6), size: 16),
+              ),
+              suffixIconConstraints: const BoxConstraints(minWidth: 0),
+              border: InputBorder.none,
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+              floatingLabelBehavior: FloatingLabelBehavior.auto),
+        )),
         const SizedBox(height: 14),
         _inputField(
             controller: _bankAddressCtrl,
@@ -1506,13 +1936,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           label: 'Income Source',
           icon: Icons.attach_money_rounded,
           value: _incomeSource,
-          items: [
-            'Salary',
-            'Business',
-            'Investments',
-            'Inheritance',
-            'Other'
-          ],
+          items: ['Salary', 'Business', 'Investments', 'Inheritance', 'Other'],
           onChanged: (v) => setState(() => _incomeSource = v!),
         ),
         const SizedBox(height: 14),
@@ -1532,26 +1956,68 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           onChanged: (v) => setState(() => _investmentPeriod = v!),
         ),
         const SizedBox(height: 14),
-        _inputField(
-            controller: _initialAmountCtrl,
-            label: 'Initial Amount (optional)',
-            icon: Icons.savings_outlined,
-            keyboardType: TextInputType.number),
-        const SizedBox(height: 14),
-        _dropdownField(
-          label: 'Currency',
-          icon: Icons.currency_exchange_rounded,
-          value: _amountCurrency,
-          items: ['USD', 'TZS', 'KES', 'ZAR'],
-          onChanged: (v) => setState(() => _amountCurrency = v!),
-        ),
-        const SizedBox(height: 14),
+
+        // PEP Disclosure — reveals detail field when "Yes"
         _dropdownField(
           label: 'PEP Disclosure',
           icon: Icons.policy_outlined,
           value: _disclosure,
           items: ['No', 'Yes'],
           onChanged: (v) => setState(() => _disclosure = v!),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          child: _disclosure == 'Yes'
+              ? Column(children: [
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: const Color(0xFFFFB300).withOpacity(0.4))),
+              child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: Color(0xFFFFB300), size: 16),
+                    SizedBox(width: 8),
+                    Expanded(
+                        child: Text(
+                          'As a Politically Exposed Person, please provide '
+                              'details of your position and related information.',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF7A5F00),
+                              height: 1.4),
+                        )),
+                  ]),
+            ),
+            const SizedBox(height: 12),
+            _fieldContainer(TextField(
+              controller: _pepDetailsCtrl,
+              maxLines: 3,
+              style: TextStyle(fontSize: 15, color: _dark),
+              decoration: InputDecoration(
+                  labelText: 'PEP Details',
+                  alignLabelWithHint: true,
+                  labelStyle: TextStyle(color: _muted, fontSize: 14),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(bottom: 40),
+                    child: Icon(Icons.info_outline_rounded,
+                        color: _g, size: 20),
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 4, vertical: 16),
+                  floatingLabelBehavior:
+                  FloatingLabelBehavior.auto),
+            )),
+          ])
+              : const SizedBox.shrink(),
         ),
       ]),
       const SizedBox(height: 16),
@@ -1570,8 +2036,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           controller: _confirmPassCtrl,
           label: 'Confirm Password',
           isVisible: _confirmVisible,
-          onToggle: () =>
-              setState(() => _confirmVisible = !_confirmVisible),
+          onToggle: () => setState(() => _confirmVisible = !_confirmVisible),
         ),
         const SizedBox(height: 6),
         Padding(
@@ -1671,8 +2136,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             labelText: label,
             labelStyle: TextStyle(color: _muted, fontSize: 14),
             prefixIcon: Icon(icon, color: _g, size: 20),
-            suffixIcon:
-            Icon(Icons.edit_outlined, color: _muted, size: 16),
+            suffixIcon: Icon(Icons.edit_outlined, color: _muted, size: 16),
             border: InputBorder.none,
             contentPadding:
             const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
@@ -1747,18 +2211,26 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             labelText: label,
             labelStyle: TextStyle(color: _muted, fontSize: 14),
             prefixIcon: Icon(icon, color: _g, size: 20),
-            suffixIcon: Icon(Icons.calendar_today_outlined,
-                color: _muted, size: 18),
+            suffixIcon:
+            Icon(Icons.calendar_today_outlined, color: _muted, size: 18),
             border: InputBorder.none,
             contentPadding:
             const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
             floatingLabelBehavior: FloatingLabelBehavior.auto),
         onTap: () async {
+          DateTime initial;
+          if (controller.text.isNotEmpty) {
+            initial = DateTime.tryParse(controller.text) ?? lastDate;
+          } else {
+            initial = lastDate;
+          }
+          // clamp initial within bounds
+          if (initial.isBefore(firstDate)) initial = firstDate;
+          if (initial.isAfter(lastDate)) initial = lastDate;
+
           final picked = await showDatePicker(
             context: context,
-            initialDate: controller.text.isNotEmpty
-                ? DateTime.tryParse(controller.text) ?? lastDate
-                : lastDate,
+            initialDate: initial,
             firstDate: firstDate,
             lastDate: lastDate,
             builder: (ctx, child) => Theme(
@@ -1802,13 +2274,15 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
               width: 22,
               child: CircularProgressIndicator(
                   color: Colors.white, strokeWidth: 2.5))
-              : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(width: 8),
-            Icon(icon, size: 18),
-          ]),
+              : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(width: 8),
+                Icon(icon, size: 18),
+              ]),
         ),
       );
 }
