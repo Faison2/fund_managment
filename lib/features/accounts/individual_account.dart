@@ -234,7 +234,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     'German', 'French', 'Chinese', 'Indian', 'Other',
   ];
   static const List<String> _tzIssuingAuthorities = [
-    'NIDA', 'TRA', 'NEC', 'ZCSRA',
+    'TRA', 'NEC', 'ZCSRA',
   ];
   static const List<String> _tanzaniaRegions = [
     'Arusha', 'Dar es Salaam', 'Dodoma', 'Geita', 'Iringa', 'Kagera',
@@ -2600,7 +2600,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       case 3:
         return _buildBankInformationStep();
       case 4:
-        return _buildInvestmentMandateStep();
+       // return _buildInvestmentMandateStep();
       case 5:
         return _buildFinalDetailsStep();
       default:
@@ -3336,151 +3336,151 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   }
 
   // ── Step 4: Investment ─────────────────────────────────────────────────────
-  Widget _buildInvestmentMandateStep() {
-    return _buildStepCard(children: [
-      _buildSectionLabel('Initial Investment'),
-      _buildInputFieldFormatted(
-          controller: _initialAmountController,
-          label: 'Initial Amount',
-          icon: Icons.attach_money_rounded,
-          formatter: _ThousandsInputFormatter(),
-          errorText: _errors['initialAmount'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('initialAmount'))),
-      const SizedBox(height: 14),
-      _buildDropdownTile(
-          label: 'Currency',
-          value: _selectedAmountCurrency,
-          onTap: () => _showDropdownPicker(
-              'Select Currency',
-              _currencies,
-              _selectedAmountCurrency,
-                  (v) =>
-                  setState(() => _selectedAmountCurrency = v))),
-      const SizedBox(height: 20),
-      _buildSectionLabel('Account Type'),
-      ..._accountTypes.map((type) {
-        final sel = _selectedAccountType == type;
-        return GestureDetector(
-          onTap: () =>
-              setState(() => _selectedAccountType = type),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: sel ? _softMint : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: sel
-                      ? _primaryGreen
-                      : Colors.grey.withOpacity(0.2),
-                  width: sel ? 1.5 : 1),
-              boxShadow: sel
-                  ? [
-                BoxShadow(
-                    color: _primaryGreen.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
-              ]
-                  : [],
-            ),
-            child: Row(children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: sel
-                        ? _primaryGreen
-                        : Colors.transparent,
-                    border: Border.all(
-                        color: sel
-                            ? _primaryGreen
-                            : Colors.grey[400]!,
-                        width: 2)),
-                child: sel
-                    ? const Icon(Icons.check_rounded,
-                    size: 14, color: Colors.white)
-                    : null,
-              ),
-              const SizedBox(width: 14),
-              Text(type,
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: sel
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                      color: sel ? _primaryGreen : _textDark)),
-            ]),
-          ),
-        );
-      }),
-      const SizedBox(height: 20),
-      _buildSectionLabel('Payment Method'),
-      ..._paymentMethods.map((method) {
-        final sel = _selectedPaymentMethod == method;
-        return GestureDetector(
-          onTap: () =>
-              setState(() => _selectedPaymentMethod = method),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: sel ? _softMint : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: sel
-                      ? _primaryGreen
-                      : Colors.grey.withOpacity(0.2),
-                  width: sel ? 1.5 : 1),
-              boxShadow: sel
-                  ? [
-                BoxShadow(
-                    color: _primaryGreen.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
-              ]
-                  : [],
-            ),
-            child: Row(children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: sel
-                        ? _primaryGreen
-                        : Colors.transparent,
-                    border: Border.all(
-                        color: sel
-                            ? _primaryGreen
-                            : Colors.grey[400]!,
-                        width: 2)),
-                child: sel
-                    ? const Icon(Icons.check_rounded,
-                    size: 14, color: Colors.white)
-                    : null,
-              ),
-              const SizedBox(width: 14),
-              Text(method,
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: sel
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                      color: sel ? _primaryGreen : _textDark)),
-            ]),
-          ),
-        );
-      }),
-    ]);
-  }
+  // Widget _buildInvestmentMandateStep() {
+  //   return _buildStepCard(children: [
+  //     _buildSectionLabel('Initial Investment'),
+  //     _buildInputFieldFormatted(
+  //         controller: _initialAmountController,
+  //         label: 'Initial Amount',
+  //         icon: Icons.attach_money_rounded,
+  //         formatter: _ThousandsInputFormatter(),
+  //         errorText: _errors['initialAmount'],
+  //         onChanged: (_) =>
+  //             setState(() => _errors.remove('initialAmount'))),
+  //     const SizedBox(height: 14),
+  //     _buildDropdownTile(
+  //         label: 'Currency',
+  //         value: _selectedAmountCurrency,
+  //         onTap: () => _showDropdownPicker(
+  //             'Select Currency',
+  //             _currencies,
+  //             _selectedAmountCurrency,
+  //                 (v) =>
+  //                 setState(() => _selectedAmountCurrency = v))),
+  //     const SizedBox(height: 20),
+  //     _buildSectionLabel('Account Type'),
+  //     ..._accountTypes.map((type) {
+  //       final sel = _selectedAccountType == type;
+  //       return GestureDetector(
+  //         onTap: () =>
+  //             setState(() => _selectedAccountType = type),
+  //         child: AnimatedContainer(
+  //           duration: const Duration(milliseconds: 200),
+  //           margin: const EdgeInsets.only(bottom: 10),
+  //           padding: const EdgeInsets.symmetric(
+  //               horizontal: 16, vertical: 14),
+  //           decoration: BoxDecoration(
+  //             color: sel ? _softMint : Colors.white,
+  //             borderRadius: BorderRadius.circular(14),
+  //             border: Border.all(
+  //                 color: sel
+  //                     ? _primaryGreen
+  //                     : Colors.grey.withOpacity(0.2),
+  //                 width: sel ? 1.5 : 1),
+  //             boxShadow: sel
+  //                 ? [
+  //               BoxShadow(
+  //                   color: _primaryGreen.withOpacity(0.1),
+  //                   blurRadius: 8,
+  //                   offset: const Offset(0, 2))
+  //             ]
+  //                 : [],
+  //           ),
+  //           child: Row(children: [
+  //             AnimatedContainer(
+  //               duration: const Duration(milliseconds: 200),
+  //               width: 22,
+  //               height: 22,
+  //               decoration: BoxDecoration(
+  //                   shape: BoxShape.circle,
+  //                   color: sel
+  //                       ? _primaryGreen
+  //                       : Colors.transparent,
+  //                   border: Border.all(
+  //                       color: sel
+  //                           ? _primaryGreen
+  //                           : Colors.grey[400]!,
+  //                       width: 2)),
+  //               child: sel
+  //                   ? const Icon(Icons.check_rounded,
+  //                   size: 14, color: Colors.white)
+  //                   : null,
+  //             ),
+  //             const SizedBox(width: 14),
+  //             Text(type,
+  //                 style: TextStyle(
+  //                     fontSize: 15,
+  //                     fontWeight: sel
+  //                         ? FontWeight.w600
+  //                         : FontWeight.normal,
+  //                     color: sel ? _primaryGreen : _textDark)),
+  //           ]),
+  //         ),
+  //       );
+  //     }),
+  //     const SizedBox(height: 20),
+  //     _buildSectionLabel('Payment Method'),
+  //     ..._paymentMethods.map((method) {
+  //       final sel = _selectedPaymentMethod == method;
+  //       return GestureDetector(
+  //         onTap: () =>
+  //             setState(() => _selectedPaymentMethod = method),
+  //         child: AnimatedContainer(
+  //           duration: const Duration(milliseconds: 200),
+  //           margin: const EdgeInsets.only(bottom: 10),
+  //           padding: const EdgeInsets.symmetric(
+  //               horizontal: 16, vertical: 14),
+  //           decoration: BoxDecoration(
+  //             color: sel ? _softMint : Colors.white,
+  //             borderRadius: BorderRadius.circular(14),
+  //             border: Border.all(
+  //                 color: sel
+  //                     ? _primaryGreen
+  //                     : Colors.grey.withOpacity(0.2),
+  //                 width: sel ? 1.5 : 1),
+  //             boxShadow: sel
+  //                 ? [
+  //               BoxShadow(
+  //                   color: _primaryGreen.withOpacity(0.1),
+  //                   blurRadius: 8,
+  //                   offset: const Offset(0, 2))
+  //             ]
+  //                 : [],
+  //           ),
+  //           child: Row(children: [
+  //             AnimatedContainer(
+  //               duration: const Duration(milliseconds: 200),
+  //               width: 22,
+  //               height: 22,
+  //               decoration: BoxDecoration(
+  //                   shape: BoxShape.circle,
+  //                   color: sel
+  //                       ? _primaryGreen
+  //                       : Colors.transparent,
+  //                   border: Border.all(
+  //                       color: sel
+  //                           ? _primaryGreen
+  //                           : Colors.grey[400]!,
+  //                       width: 2)),
+  //               child: sel
+  //                   ? const Icon(Icons.check_rounded,
+  //                   size: 14, color: Colors.white)
+  //                   : null,
+  //             ),
+  //             const SizedBox(width: 14),
+  //             Text(method,
+  //                 style: TextStyle(
+  //                     fontSize: 15,
+  //                     fontWeight: sel
+  //                         ? FontWeight.w600
+  //                         : FontWeight.normal,
+  //                     color: sel ? _primaryGreen : _textDark)),
+  //           ]),
+  //         ),
+  //       );
+  //     }),
+  //   ]);
+  // }
 
   // ── Step 5: Final Details ──────────────────────────────────────────────────
   Widget _buildFinalDetailsStep() {

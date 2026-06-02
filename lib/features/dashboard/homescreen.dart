@@ -9,6 +9,8 @@ import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../deposits/view/deposits.dart';
+import '../funds/repository/repository.dart';
+import '../funds/model/sub_account.dart';
 import '../funds/view/fund.dart';
 import '../sma/sma.dart';
 import '../statement /client_statement.dart';
@@ -155,6 +157,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String? _fundsError;
   String  _cdsNumber = '';
 
+  // ── Subscribe state ────────────────────────────────────────────────────────
+  String? _subscribingFundCode;
+
   // ── SMA ────────────────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _smaPortfolios   = [];
   List<Map<String, dynamic>> _smaInvestments  = [];
@@ -244,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ).timeout(const Duration(seconds: 15));
       final json = jsonDecode(response.body);
       if (response.statusCode == 200 && json['status'] == 'success') {
-        final data         = json['data'];
+        final data              = json['data'];
         final List<dynamic> fundsRaw = data['funds'] ?? [];
         setState(() {
           _funds          = fundsRaw.map((f) => Map<String, dynamic>.from(f)).toList();
@@ -303,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ..sort((a, b) =>
               (a['date'] as DateTime).compareTo(b['date'] as DateTime));
         setState(() {
-          _fundTransactions = parsed;
+          _fundTransactions  = parsed;
           _isLoadingFundTxns = false;
         });
         if (!_onSMASlide) _chartFadeCtrl..reset()..forward();
@@ -412,6 +417,148 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
+  // ── Subscribe to fund ──────────────────────────────────────────────────────
+  Future<void> _subscribeToFund(Map<String, dynamic> fund) async {
+    final fundCode = fund['fundCode'] as String;
+    final fundName = fund['fundName'] as String;
+    final dark     = _dark;
+    final Color cardBg = dark ? const Color(0xFF132013) : Colors.white;
+    final Color txtP   = dark ? const Color(0xFFE8F5E9) : const Color(0xFF1A2E1A);
+    final Color txtS   = dark ? const Color(0xFF81A884)  : const Color(0xFF5A7A5C);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => Dialog(
+        backgroundColor: cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF22C55E).withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.account_balance_wallet_rounded,
+                  size: 36, color: Color(0xFF22C55E)),
+            ),
+            const SizedBox(height: 16),
+            Text('Subscribe to Fund',
+                style: TextStyle(fontSize: 18,
+                    fontWeight: FontWeight.w800, color: txtP)),
+            const SizedBox(height: 10),
+            Text(
+              'A sub account will be created for "$fundName".',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: txtS, height: 1.5),
+            ),
+            const SizedBox(height: 24),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: txtS,
+                    side: BorderSide(color: txtS.withOpacity(0.4)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Cancel',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF22C55E),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                  ),
+                  child: const Text('Confirm',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ]),
+          ]),
+        ),
+      ),
+    ) ?? false;
+
+    if (!confirmed || !mounted) return;
+
+    setState(() => _subscribingFundCode = fundCode);
+
+    try {
+      final sub = await FundsRepository().createSubAccounts(
+        cdsNo: _cdsNumber,
+        subAccounts: [
+          SubAccountEntry(fundingCode: fundCode, fundingName: fundName),
+        ],
+      );
+
+      if (!mounted) return;
+      setState(() => _subscribingFundCode = null);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF132013),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          duration: const Duration(seconds: 4),
+          content: Row(children: [
+            const Icon(Icons.check_circle_rounded,
+                color: Color(0xFF22C55E), size: 28),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Sub Account Created',
+                    style: TextStyle(color: Colors.white,
+                        fontWeight: FontWeight.w800, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text('Account No.: ${sub.accountNumber}',
+                    style: const TextStyle(
+                        color: Color(0xFF81A884), fontSize: 12)),
+              ],
+            )),
+          ]),
+        ),
+      );
+
+      _fetchPortfolio();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _subscribingFundCode = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF2D0A0A),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          content: Row(children: [
+            const Icon(Icons.error_outline_rounded,
+                color: Colors.redAccent, size: 26),
+            const SizedBox(width: 12),
+            Expanded(child: Text(
+              'Error: ${e.toString().replaceAll("Exception: Network error: Exception: ", "")}',
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            )),
+          ]),
+        ),
+      );
+    }
+  }
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   String _fmt(double v, {int decimals = 2}) {
     final parts     = v.toStringAsFixed(decimals).split('.');
@@ -453,7 +600,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── Build line chart data points from transactions ─────────────────────────
   List<_LinePoint> _buildLinePoints() {
     if (_activeTransactions.isEmpty) return [];
     double running = 0;
@@ -507,7 +653,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 _buildPortfolioSection(dark, txtP, txtS, s),
                 const SizedBox(height: 10),
 
@@ -515,9 +660,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(totalSlides, (i) {
-                      final active    = i == _currentFundIndex;
-                      final isSmaDot  = i == _funds.length;
-                      final dotColor  = active
+                      final active   = i == _currentFundIndex;
+                      final isSmaDot = i == _funds.length;
+                      final dotColor = active
                           ? (isSmaDot ? const Color(0xFF0891B2) : green)
                           : (dark ? Colors.white24 : Colors.black26);
                       return AnimatedContainer(
@@ -532,7 +677,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
 
                 const SizedBox(height: 16),
-
                 _buildDSETradingButton(dark, txtP, txtS, border, s),
                 const SizedBox(height: 14),
 
@@ -552,7 +696,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
 
                 const SizedBox(height: 20),
-
                 _buildTransactionsSection(
                     dark, txtP, txtS, txtH, green,
                     cardBg, cardBg2, border, divider, s),
@@ -566,8 +709,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // ── DSE Trading banner ─────────────────────────────────────────────────────
   Widget _buildDSETradingButton(
-      bool dark, Color txtP, Color txtS, Color border, _HS s,
-      ) {
+      bool dark, Color txtP, Color txtS, Color border, _HS s) {
     const Color accent = Color(0xFF0891B2);
     final bg = dark
         ? const Color(0xFF0C1F2A).withOpacity(0.9)
@@ -637,11 +779,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // ── Transactions section ───────────────────────────────────────────────────
   Widget _buildTransactionsSection(
       bool dark, Color txtP, Color txtS, Color txtH, Color green,
-      Color cardBg, Color cardBg2, Color border, Color divider, _HS s,
-      ) {
+      Color cardBg, Color cardBg2, Color border, Color divider, _HS s) {
     const Color smaAccent = Color(0xFF0891B2);
-    final sectionLabel =
-    _onSMASlide ? s.smaTransactions : s.recentTransactions;
+    final sectionLabel = _onSMASlide ? s.smaTransactions : s.recentTransactions;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -657,8 +797,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 if (_onSMASlide) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
                       color: smaAccent.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
@@ -677,14 +816,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ? const SMAPage()
                             : const ClientStatementPage())),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
                     color: _onSMASlide ? smaAccent : green,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [BoxShadow(
-                        color: (_onSMASlide ? smaAccent : green)
-                            .withOpacity(0.3),
+                        color: (_onSMASlide ? smaAccent : green).withOpacity(0.3),
                         blurRadius: 8, offset: const Offset(0, 3))],
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -700,19 +837,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
         ),
-
         const SizedBox(height: 14),
-
         if (!_isLoadingActiveTxns && _activeTransactions.isNotEmpty) ...[
           _buildSummaryPills(dark, s),
           const SizedBox(height: 14),
         ],
-
         if (_onSMASlide)
           _buildSMAInvestmentsPreview(dark, txtP, txtS, txtH, border, s)
         else
           _buildLineChartCard(dark, txtP, txtS, green, cardBg, border, s),
-
         const SizedBox(height: 16),
         _buildRecentList(dark, txtP, txtS, cardBg, divider, s),
       ],
@@ -723,8 +856,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildSummaryPills(bool dark, _HS s) {
     final net        = _totalDeposits - _totalWithdrawals;
     final isPositive = net >= 0;
-    final depFg = _onSMASlide
-        ? const Color(0xFF0891B2) : const Color(0xFF2E7D32);
+    final depFg = _onSMASlide ? const Color(0xFF0891B2) : const Color(0xFF2E7D32);
     final depBg = dark ? const Color(0xFF1A2E1A) : const Color(0xFFE8F5E9);
     final witBg = dark ? const Color(0xFF2A1010) : const Color(0xFFFFEBEE);
     final netBg = isPositive
@@ -778,11 +910,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // ── SMA investment preview ─────────────────────────────────────────────────
   Widget _buildSMAInvestmentsPreview(
-      bool dark, Color txtP, Color txtS, Color txtH, Color border, _HS s,
-      ) {
+      bool dark, Color txtP, Color txtS, Color txtH, Color border, _HS s) {
     const Color accent = Color(0xFF0891B2);
-    final cardBg = dark
-        ? const Color(0xFF132013) : Colors.white.withOpacity(0.62);
+    final cardBg = dark ? const Color(0xFF132013) : Colors.white.withOpacity(0.62);
 
     if (_isLoadingSMA) {
       return Container(
@@ -917,11 +1047,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Beautiful Line Chart Card ──────────────────────────────────────────────
+  // ── Line Chart Card ────────────────────────────────────────────────────────
   Widget _buildLineChartCard(
       bool dark, Color txtP, Color txtS, Color green,
-      Color cardBg, Color border, _HS s,
-      ) {
+      Color cardBg, Color border, _HS s) {
     final points     = _buildLinePoints();
     final labelColor = dark ? const Color(0xFF81A884) : Colors.black38;
     final gridColor  = dark
@@ -978,38 +1107,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   size: 12, color: lineColor,
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  'TZS ${_shortAmt(lastVal.abs())}',
-                  style: TextStyle(
-                      fontSize: 10, color: lineColor,
-                      fontWeight: FontWeight.w800),
-                ),
+                Text('TZS ${_shortAmt(lastVal.abs())}',
+                    style: TextStyle(fontSize: 10, color: lineColor,
+                        fontWeight: FontWeight.w800)),
               ]),
             ),
         ]),
-
         const SizedBox(height: 16),
-
         SizedBox(
           height: 200,
           child: _isLoadingFundTxns
               ? Center(child: Column(
               mainAxisAlignment: MainAxisAlignment.center, children: [
             SizedBox(width: 22, height: 22,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: green)),
+                child: CircularProgressIndicator(strokeWidth: 2, color: green)),
             const SizedBox(height: 10),
-            Text(s.loadingChart,
-                style: TextStyle(fontSize: 12, color: txtS)),
+            Text(s.loadingChart, style: TextStyle(fontSize: 12, color: txtS)),
           ]))
               : points.isEmpty
               ? Center(child: Column(
               mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(Icons.show_chart_rounded,
-                size: 40, color: txtS.withOpacity(0.4)),
+            Icon(Icons.show_chart_rounded, size: 40, color: txtS.withOpacity(0.4)),
             const SizedBox(height: 10),
-            Text(s.noTransactions,
-                style: TextStyle(fontSize: 13, color: txtS)),
+            Text(s.noTransactions, style: TextStyle(fontSize: 13, color: txtS)),
           ]))
               : FadeTransition(
             opacity: _chartFadeAnim,
@@ -1027,16 +1147,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Recent transactions list ───────────────────────────────────────────────
+  // ── Recent list ────────────────────────────────────────────────────────────
   Widget _buildRecentList(
-      bool dark, Color txtP, Color txtS, Color cardBg, Color divider, _HS s,
-      ) {
+      bool dark, Color txtP, Color txtS, Color cardBg, Color divider, _HS s) {
     if (_isLoadingActiveTxns || _activeTransactions.isEmpty) {
       return const SizedBox.shrink();
     }
-    const Color smaAccent = Color(0xFF0891B2);
-    final depositColor =
-    _onSMASlide ? smaAccent : const Color(0xFF2E7D32);
+    const Color smaAccent  = Color(0xFF0891B2);
+    final depositColor = _onSMASlide ? smaAccent : const Color(0xFF2E7D32);
     final recent = _activeTransactions.reversed.take(5).toList();
 
     return Column(
@@ -1067,8 +1185,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             itemCount: recent.length,
             separatorBuilder: (_, __) =>
                 Divider(height: 1, color: divider, indent: 66),
-            itemBuilder: (_, i) => _buildTxnRow(
-                recent[i], dark, txtP, txtS, depositColor),
+            itemBuilder: (_, i) =>
+                _buildTxnRow(recent[i], dark, txtP, txtS, depositColor),
           ),
         ),
       ],
@@ -1077,18 +1195,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildTxnRow(
       Map<String, dynamic> txn, bool dark, Color txtP, Color txtS,
-      Color depositColor,
-      ) {
+      Color depositColor) {
     final isDeposit = txn['type'] == 'Deposit';
     final color   = isDeposit ? depositColor : const Color(0xFFC62828);
     final bgColor = isDeposit
         ? (dark ? const Color(0xFF1A2E1A) : const Color(0xFFE8F5E9))
         : (dark ? const Color(0xFF2A1010) : const Color(0xFFFFEBEE));
-    final icon    = isDeposit
+    final icon   = isDeposit
         ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded;
-    final amount  = txn['amount'] as double;
-    final date    = txn['date']   as DateTime;
-    final label   = txn['label']  as String;
+    final amount = txn['amount'] as double;
+    final date   = txn['date']   as DateTime;
+    final label  = txn['label']  as String;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
@@ -1109,8 +1226,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text('${isDeposit ? '+' : '-'} TZS',
               style: TextStyle(fontSize: 9,
-                  color: color.withOpacity(0.6),
-                  fontWeight: FontWeight.w600)),
+                  color: color.withOpacity(0.6), fontWeight: FontWeight.w600)),
           Text(_fmt(amount), style: TextStyle(
               fontSize: 14, fontWeight: FontWeight.w900, color: color)),
         ]),
@@ -1120,14 +1236,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // ── Portfolio section ──────────────────────────────────────────────────────
   Widget _buildPortfolioSection(
-      bool dark, Color txtP, Color txtS, _HS s,
-      ) {
+      bool dark, Color txtP, Color txtS, _HS s) {
     if (_isLoadingFunds) {
-      return _blankCard(height: 175, color: const Color(0xFF1B5E20),
+      return _blankCard(height: 200, color: const Color(0xFF1B5E20),
         child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center, children: [
-          const CircularProgressIndicator(
-              color: Colors.white54, strokeWidth: 2),
+          const CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
           const SizedBox(height: 12),
           Text(s.loadingPortfolio,
               style: const TextStyle(color: Colors.white54, fontSize: 13)),
@@ -1135,7 +1249,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
     if (_fundsError != null) {
-      return _blankCard(height: 175, color: const Color(0xFF1B5E20),
+      return _blankCard(height: 200, color: const Color(0xFF1B5E20),
         child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center, children: [
           const Icon(Icons.cloud_off_outlined, color: Colors.white54, size: 28),
@@ -1159,30 +1273,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    final int totalSlides = _funds.length + 1;
-
-    return SizedBox(
-      height: 175,
-      child: PageView.builder(
-        controller: _fundPageController,
-        itemCount: totalSlides,
-        onPageChanged: (i) {
-          setState(() => _currentFundIndex = i);
-          if (i < _funds.length) {
-            _fetchFundTransactions(_funds[i]['fundName'] as String);
-          } else {
-            if (_smaCashTxns.isNotEmpty) {
-              _chartFadeCtrl..reset()..forward();
-            }
-          }
-        },
-        itemBuilder: (_, i) {
-          if (i == _funds.length) {
-            return _buildSMASlideCard(dark, txtP, txtS, s);
-          }
-          return _buildFundCard(_funds[i], i, dark, txtP, txtS, s);
-        },
-      ),
+    // ── KEY FIX: wrap PageView in _TapIsolatedPageView ─────────────────────
+    return _TapIsolatedPageView(
+      height: 200,
+      controller: _fundPageController,
+      itemCount: _funds.length + 1,
+      onPageChanged: (i) {
+        setState(() => _currentFundIndex = i);
+        if (i < _funds.length) {
+          _fetchFundTransactions(_funds[i]['fundName'] as String);
+        } else {
+          if (_smaCashTxns.isNotEmpty) _chartFadeCtrl..reset()..forward();
+        }
+      },
+      itemBuilder: (_, i) {
+        if (i == _funds.length) return _buildSMASlideCard(dark, txtP, txtS, s);
+        return _buildFundCard(_funds[i], i, dark, txtP, txtS, s);
+      },
     );
   }
 
@@ -1195,8 +1302,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         pageBuilder: (_, a, __) => const SMAPage(),
         transitionsBuilder: (_, a, __, child) {
           final c = CurvedAnimation(parent: a, curve: Curves.easeInOut);
-          return FadeTransition(
-            opacity: c,
+          return FadeTransition(opacity: c,
             child: SlideTransition(
               position: Tween<Offset>(
                   begin: const Offset(0.04, 0), end: Offset.zero).animate(c),
@@ -1217,8 +1323,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               blurRadius: 16, offset: const Offset(0, 6))],
         ),
         child: Stack(children: [
-          Positioned(right: -20, top: -20, child: _circle(110, 0.07)),
-          Positioned(right: 40, bottom: -25, child: _circle(70, 0.05)),
+          Positioned(right: -20, top: -20,
+              child: IgnorePointer(child: _circle(110, 0.07))),
+          Positioned(right: 40, bottom: -25,
+              child: IgnorePointer(child: _circle(70, 0.05))),
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
             child: Column(
@@ -1320,32 +1428,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _blankCard({required Widget child, required Color color,
-    double height = 175}) =>
-      Container(
-        height: height,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-              colors: [color, color.withOpacity(0.75)],
-              begin: Alignment.topLeft, end: Alignment.bottomRight),
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [BoxShadow(color: color.withOpacity(0.3),
-              blurRadius: 14, offset: const Offset(0, 6))],
-        ),
-        child: child,
-      );
-
+  // ── Fund card ──────────────────────────────────────────────────────────────
   Widget _buildFundCard(Map<String, dynamic> fund, int index,
-      bool dark, Color txtP, Color txtS, _HS s,
-      ) {
+      bool dark, Color txtP, Color txtS, _HS s) {
     final baseColor     = _cardColor(index);
     final portfolioVal  = (fund['portfolioValue'] as num).toDouble();
     final units         = (fund['investorUnits']  as num).toDouble();
     final nav           = (fund['nav']            as num).toDouble();
     final status        = fund['status'] as String;
     final subAccount    = fund['SubAccount'] as String? ?? '';
+    final fundCode      = fund['fundCode'] as String;
+    final fundName      = fund['fundName'] as String;
     final hasInvestment = portfolioVal > 0;
+    final isSubscribing = _subscribingFundCode == fundCode;
+    final showSubscribe = subAccount.isEmpty;
 
     Color statusColor; IconData statusIcon;
     switch (status.toLowerCase()) {
@@ -1371,13 +1467,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             blurRadius: 16, offset: const Offset(0, 6))],
       ),
       child: Stack(children: [
-        Positioned(right: -20, top: -20, child: _circle(110, 0.05)),
-        Positioned(right: 40, bottom: -25, child: _circle(70, 0.04)),
+        Positioned(right: -20, top: -20,
+            child: IgnorePointer(child: _circle(110, 0.05))),
+        Positioned(right: 40, bottom: -25,
+            child: IgnorePointer(child: _circle(70, 0.04))),
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // ── Card header row ──
+
+            // ── Header row ─────────────────────────────────────────────────
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1385,30 +1484,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     color: Colors.white.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.white24, width: 1)),
-                child: Text(fund['fundCode'] as String,
+                child: Text(fundCode,
                     style: const TextStyle(fontSize: 10,
                         fontWeight: FontWeight.w800, color: Colors.white70,
                         letterSpacing: 0.5)),
               ),
               const SizedBox(width: 8),
-              // ── Fund name + description + SubAccount ──
               Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(fund['fundName'] as String,
+                Text(fundName,
                     style: const TextStyle(fontSize: 14,
                         fontWeight: FontWeight.w800, color: Colors.white,
                         letterSpacing: 0.1),
                     overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 3),
                 Row(children: [
-                  Text(fund['description'] as String,
+                  Text(fund['description'] as String? ?? '',
                       style: TextStyle(fontSize: 10,
                           color: Colors.white.withOpacity(0.55))),
                   if (subAccount.isNotEmpty) ...[
                     Text('  ·  ', style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.white.withOpacity(0.3))),
-                    // ── Sub Account badge ──
+                        fontSize: 10, color: Colors.white.withOpacity(0.3))),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
@@ -1416,28 +1512,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         color: Colors.white.withOpacity(0.10),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
-                            width: 0.8),
+                            color: Colors.white.withOpacity(0.2), width: 0.8),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         const Text('Sub A/C  ',
-                            style: TextStyle(
-                                fontSize: 9,
+                            style: TextStyle(fontSize: 9,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.white54,
-                                letterSpacing: 0.3)),
+                                color: Colors.white54, letterSpacing: 0.3)),
                         Text(subAccount,
-                            style: const TextStyle(
-                                fontSize: 9,
+                            style: const TextStyle(fontSize: 9,
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white70,
-                                letterSpacing: 0.4)),
+                                color: Colors.white70, letterSpacing: 0.4)),
                       ]),
                     ),
                   ],
                 ]),
               ])),
-              // ── Status badge ──
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -1463,8 +1553,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     color: Colors.white38, size: 17),
               ),
             ]),
+
             const Spacer(),
-            // ── Portfolio value row ──
+
+            // ── Portfolio value row ─────────────────────────────────────────
             Row(children: [
               Expanded(flex: 5, child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1505,11 +1597,84 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     fontWeight: FontWeight.w700, color: Colors.white)),
               ])),
             ]),
+
+            // ── Subscribe button ────────────────────────────────────────────
+            if (showSubscribe) ...[
+              const SizedBox(height: 12),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: isSubscribing
+                    ? Container(
+                  key: const ValueKey('loading'),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(width: 14, height: 14,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2)),
+                      SizedBox(width: 8),
+                      Text('Subscribing…', style: TextStyle(
+                          color: Colors.white, fontSize: 12,
+                          fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                )
+                // ── ElevatedButton properly claims the pointer event,
+                //    preventing PageView from stealing the tap ──────────────
+                    : SizedBox(
+                  key: const ValueKey('button'),
+                  width: double.infinity,
+                  height: 38,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _subscribeToFund(fund),
+                    icon: const Icon(Icons.account_balance_wallet_rounded,
+                        size: 14, color: Colors.white),
+                    label: const Text('Subscribe', style: TextStyle(
+                        color: Colors.white, fontSize: 12,
+                        fontWeight: FontWeight.w800, letterSpacing: 0.2)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.18),
+                      foregroundColor: Colors.white,
+                      shadowColor: Colors.transparent,
+                      elevation: 0,
+                      side: BorderSide(
+                          color: Colors.white.withOpacity(0.35), width: 1),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ]),
         ),
       ]),
     );
   }
+
+  Widget _blankCard({required Widget child, required Color color,
+    double height = 200}) =>
+      Container(
+        height: height,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+              colors: [color, color.withOpacity(0.75)],
+              begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [BoxShadow(color: color.withOpacity(0.3),
+              blurRadius: 14, offset: const Offset(0, 6))],
+        ),
+        child: child,
+      );
 
   Widget _circle(double size, double opacity) => Container(
       width: size, height: size,
@@ -1554,6 +1719,77 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               style: TextStyle(fontSize: 10, color: txtP,
                   fontWeight: FontWeight.w600, height: 1.2)),
         ]),
+      ),
+    );
+  }
+}
+
+// ── TapIsolatedPageView ───────────────────────────────────────────────────────
+// Detects whether the finger is tapping (not swiping) and temporarily
+// disables the PageView scroll so the tap lands on the button inside.
+class _TapIsolatedPageView extends StatefulWidget {
+  final double height;
+  final PageController controller;
+  final int itemCount;
+  final ValueChanged<int> onPageChanged;
+  final NullableIndexedWidgetBuilder itemBuilder;
+
+  const _TapIsolatedPageView({
+    required this.height,
+    required this.controller,
+    required this.itemCount,
+    required this.onPageChanged,
+    required this.itemBuilder,
+  });
+
+  @override
+  State<_TapIsolatedPageView> createState() => _TapIsolatedPageViewState();
+}
+
+class _TapIsolatedPageViewState extends State<_TapIsolatedPageView> {
+  bool _pagingLocked = false;
+  Offset? _pointerDown;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: widget.height,
+      child: Listener(
+        onPointerDown: (e) {
+          _pointerDown = e.localPosition;
+          // Do not lock yet — wait to see if it's a tap or swipe
+        },
+        onPointerMove: (e) {
+          if (_pointerDown == null) return;
+          final delta = e.localPosition - _pointerDown!;
+          // If vertical movement is dominant → it's a tap/scroll attempt on
+          // the button area, lock horizontal paging
+          if (delta.dy.abs() > delta.dx.abs() && !_pagingLocked) {
+            setState(() => _pagingLocked = true);
+          }
+          // If horizontal movement is dominant → it's a swipe, unlock
+          if (delta.dx.abs() > delta.dy.abs() + 4 && _pagingLocked) {
+            setState(() => _pagingLocked = false);
+          }
+        },
+        onPointerUp: (_) {
+          _pointerDown = null;
+          if (_pagingLocked) setState(() => _pagingLocked = false);
+        },
+        onPointerCancel: (_) {
+          _pointerDown = null;
+          if (_pagingLocked) setState(() => _pagingLocked = false);
+        },
+        child: PageView.builder(
+          controller: widget.controller,
+          // Lock paging when the pointer is moving vertically (tapping a button)
+          physics: _pagingLocked
+              ? const NeverScrollableScrollPhysics()
+              : const PageScrollPhysics(),
+          itemCount: widget.itemCount,
+          onPageChanged: widget.onPageChanged,
+          itemBuilder: widget.itemBuilder,
+        ),
       ),
     );
   }
@@ -1618,12 +1854,12 @@ class _LineChartState extends State<_LineChart>
       final double chartW  = w - yLabelW - 8;
       final double chartH  = h - xLabelH;
 
-      final values  = widget.points.map((p) => p.value).toList();
-      final dataMax = values.reduce(max);
-      final dataMin = values.reduce(min);
-      final range   = (dataMax - dataMin) == 0 ? 1.0 : (dataMax - dataMin);
-      final visMax  = dataMax + range * 0.15;
-      final visMin  = dataMin - range * 0.15;
+      final values   = widget.points.map((p) => p.value).toList();
+      final dataMax  = values.reduce(max);
+      final dataMin  = values.reduce(min);
+      final range    = (dataMax - dataMin) == 0 ? 1.0 : (dataMax - dataMin);
+      final visMax   = dataMax + range * 0.15;
+      final visMin   = dataMin - range * 0.15;
       final visRange = visMax - visMin;
 
       double toY(double v) => chartH - ((v - visMin) / visRange) * chartH;
@@ -1651,8 +1887,8 @@ class _LineChartState extends State<_LineChart>
           animation: _lineAnim,
           builder: (_, __) {
             return Stack(children: [
-
-              Positioned(left: yLabelW, top: 0, width: chartW + 8, height: chartH,
+              Positioned(left: yLabelW, top: 0,
+                width: chartW + 8, height: chartH,
                 child: CustomPaint(
                   painter: _LinePainter(
                     points:       widget.points,
@@ -1668,7 +1904,6 @@ class _LineChartState extends State<_LineChart>
                   ),
                 ),
               ),
-
               ...List.generate(5, (i) {
                 final v = visMin + visRange * i / 4;
                 final y = toY(v);
@@ -1676,11 +1911,9 @@ class _LineChartState extends State<_LineChart>
                   left: 0, top: y - 7, width: yLabelW - 4,
                   child: Text(widget.shortAmt(v),
                       textAlign: TextAlign.right,
-                      style: TextStyle(
-                          fontSize: 9, color: widget.labelColor)),
+                      style: TextStyle(fontSize: 9, color: widget.labelColor)),
                 );
               }),
-
               ...List.generate(n, (i) {
                 if (i % labelStep != 0 && i != n - 1) return const SizedBox.shrink();
                 final cx = toX(i);
@@ -1693,15 +1926,14 @@ class _LineChartState extends State<_LineChart>
                   ),
                 );
               }),
-
               if (_hoveredIndex != null && _lineAnim.value == 1.0)
                 Builder(builder: (_) {
-                  final idx = _hoveredIndex!;
-                  final pt  = widget.points[idx];
-                  final cx  = toX(idx);
-                  final cy  = toY(pt.value);
-                  const double ttW = 110.0;
-                  double ttLeft    = cx + 10;
+                  final idx    = _hoveredIndex!;
+                  final pt     = widget.points[idx];
+                  final cx     = toX(idx);
+                  final cy     = toY(pt.value);
+                  const ttW    = 110.0;
+                  double ttLeft = cx + 10;
                   if (ttLeft + ttW > w) ttLeft = cx - ttW - 10;
                   final ttTop = max(0.0, cy - 70.0);
                   return Positioned(
@@ -1729,8 +1961,7 @@ class _LineChartState extends State<_LineChart>
                                     fontWeight: FontWeight.w600)),
                             const SizedBox(height: 4),
                             Row(children: [
-                              Container(
-                                width: 6, height: 6,
+                              Container(width: 6, height: 6,
                                 decoration: BoxDecoration(
                                     color: pt.type == 'Deposit'
                                         ? const Color(0xFF69F0AE)
@@ -1738,18 +1969,15 @@ class _LineChartState extends State<_LineChart>
                                     shape: BoxShape.circle),
                               ),
                               const SizedBox(width: 5),
-                              Text(pt.type,
-                                  style: TextStyle(
-                                      fontSize: 9,
-                                      color: pt.type == 'Deposit'
-                                          ? const Color(0xFF69F0AE)
-                                          : Colors.red.shade300,
-                                      fontWeight: FontWeight.w700)),
+                              Text(pt.type, style: TextStyle(fontSize: 9,
+                                  color: pt.type == 'Deposit'
+                                      ? const Color(0xFF69F0AE)
+                                      : Colors.red.shade300,
+                                  fontWeight: FontWeight.w700)),
                             ]),
                             const SizedBox(height: 3),
                             Text('TZS ${widget.shortAmt(pt.value)}',
-                                style: const TextStyle(
-                                    fontSize: 13,
+                                style: const TextStyle(fontSize: 13,
                                     color: Colors.white,
                                     fontWeight: FontWeight.w900)),
                           ]),
@@ -1773,16 +2001,11 @@ class _LinePainter extends CustomPainter {
   final bool dark;
 
   _LinePainter({
-    required this.points,
-    required this.lineColor,
-    required this.gridColor,
-    required this.hoveredIndex,
-    required this.visMin,
-    required this.visRange,
-    required this.chartH,
-    required this.chartW,
-    required this.progress,
-    required this.dark,
+    required this.points,    required this.lineColor,
+    required this.gridColor, required this.hoveredIndex,
+    required this.visMin,    required this.visRange,
+    required this.chartH,    required this.chartW,
+    required this.progress,  required this.dark,
   });
 
   double _toY(double v) => chartH - ((v - visMin) / visRange) * chartH;
@@ -1798,9 +2021,9 @@ class _LinePainter extends CustomPainter {
       ..strokeWidth = 1
       ..style       = PaintingStyle.stroke;
     for (int i = 0; i <= 4; i++) {
-      final y = chartH * i / 4;
+      final y    = chartH * i / 4;
       final path = Path();
-      double x = 0;
+      double x   = 0;
       while (x < size.width) {
         path.moveTo(x, y);
         path.lineTo(x + 4, y);
@@ -1809,68 +2032,57 @@ class _LinePainter extends CustomPainter {
       canvas.drawPath(path, gridPaint);
     }
 
-    final allOffsets = List.generate(n, (i) {
-      return Offset(_toX(i), _toY(points[i].value));
-    });
+    final allOffsets = List.generate(n,
+            (i) => Offset(_toX(i), _toY(points[i].value)));
 
     canvas.save();
     canvas.clipRect(Rect.fromLTWH(0, 0, chartW * progress, chartH));
 
-    final fillPath = Path();
-    fillPath.moveTo(allOffsets.first.dx, chartH);
-    fillPath.lineTo(allOffsets.first.dx, allOffsets.first.dy);
-
+    final fillPath = Path()
+      ..moveTo(allOffsets.first.dx, chartH)
+      ..lineTo(allOffsets.first.dx, allOffsets.first.dy);
     for (int i = 0; i < n - 1; i++) {
-      final p0 = allOffsets[i];
-      final p1 = allOffsets[i + 1];
+      final p0  = allOffsets[i];
+      final p1  = allOffsets[i + 1];
       final cpX = (p0.dx + p1.dx) / 2;
       fillPath.cubicTo(cpX, p0.dy, cpX, p1.dy, p1.dx, p1.dy);
     }
-
     fillPath.lineTo(allOffsets.last.dx, chartH);
     fillPath.close();
 
-    final fillPaint = Paint()
+    canvas.drawPath(fillPath, Paint()
       ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
         colors: [
           lineColor.withOpacity(dark ? 0.35 : 0.20),
           lineColor.withOpacity(0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, chartW, chartH))
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(fillPath, fillPaint);
+      ..style = PaintingStyle.fill);
 
-    final linePath = Path();
-    linePath.moveTo(allOffsets.first.dx, allOffsets.first.dy);
+    final linePath = Path()
+      ..moveTo(allOffsets.first.dx, allOffsets.first.dy);
     for (int i = 0; i < n - 1; i++) {
-      final p0 = allOffsets[i];
-      final p1 = allOffsets[i + 1];
+      final p0  = allOffsets[i];
+      final p1  = allOffsets[i + 1];
       final cpX = (p0.dx + p1.dx) / 2;
       linePath.cubicTo(cpX, p0.dy, cpX, p1.dy, p1.dx, p1.dy);
     }
 
-    canvas.drawPath(
-      linePath,
-      Paint()
-        ..color       = lineColor.withOpacity(0.25)
-        ..strokeWidth = 6
-        ..style       = PaintingStyle.stroke
-        ..strokeCap   = StrokeCap.round
-        ..strokeJoin  = StrokeJoin.round
-        ..maskFilter  = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
+    canvas.drawPath(linePath, Paint()
+      ..color       = lineColor.withOpacity(0.25)
+      ..strokeWidth = 6
+      ..style       = PaintingStyle.stroke
+      ..strokeCap   = StrokeCap.round
+      ..strokeJoin  = StrokeJoin.round
+      ..maskFilter  = const MaskFilter.blur(BlurStyle.normal, 4));
 
-    canvas.drawPath(
-      linePath,
-      Paint()
-        ..color       = lineColor
-        ..strokeWidth = 2.5
-        ..style       = PaintingStyle.stroke
-        ..strokeCap   = StrokeCap.round
-        ..strokeJoin  = StrokeJoin.round,
-    );
+    canvas.drawPath(linePath, Paint()
+      ..color       = lineColor
+      ..strokeWidth = 2.5
+      ..style       = PaintingStyle.stroke
+      ..strokeCap   = StrokeCap.round
+      ..strokeJoin  = StrokeJoin.round);
 
     canvas.restore();
 
@@ -1883,23 +2095,21 @@ class _LinePainter extends CustomPainter {
         final r         = isHovered ? 6.0 : 3.5;
 
         if (isHovered) {
-          canvas.drawLine(
-            Offset(o.dx, 0), Offset(o.dx, chartH),
-            Paint()
-              ..color       = lineColor.withOpacity(0.25)
-              ..strokeWidth = 1
-              ..style       = PaintingStyle.stroke,
-          );
+          canvas.drawLine(Offset(o.dx, 0), Offset(o.dx, chartH),
+              Paint()
+                ..color       = lineColor.withOpacity(0.25)
+                ..strokeWidth = 1
+                ..style       = PaintingStyle.stroke);
           canvas.drawCircle(o, 10,
               Paint()..color = lineColor.withOpacity(0.15));
         }
 
-        canvas.drawCircle(o, r + 1.5,
-            Paint()..color = (dark ? Colors.black : Colors.white)
-              ..style = PaintingStyle.fill);
-
-        canvas.drawCircle(o, r,
-            Paint()..color = lineColor ..style = PaintingStyle.fill);
+        canvas.drawCircle(o, r + 1.5, Paint()
+          ..color = (dark ? Colors.black : Colors.white)
+          ..style = PaintingStyle.fill);
+        canvas.drawCircle(o, r, Paint()
+          ..color = lineColor
+          ..style = PaintingStyle.fill);
       }
     }
   }
