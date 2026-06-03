@@ -162,7 +162,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     setState(() => _loadingDetails = true);
     try {
       final response = await http.post(
-        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetFundsDetailed'),
+        Uri.parse('$cSharpApi/GetFundsDetailed'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'APIUsername': 'User2',
