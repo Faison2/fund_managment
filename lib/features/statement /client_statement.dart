@@ -43,6 +43,28 @@ class _Txn {
   }
 }
 
+// ─── Fund Detail Model (SubAccount + NAV) ────────────────────────────────────
+class _FundDetail {
+  final String fundCode;
+  final String subAccount;
+  final double nav;
+  final double investorUnits;
+  _FundDetail({
+    required this.fundCode,
+    required this.subAccount,
+    required this.nav,
+    required this.investorUnits,
+  });
+  factory _FundDetail.fromJson(Map<String, dynamic> j) {
+    return _FundDetail(
+      fundCode:      j['fundCode']?.toString() ?? '',
+      subAccount:    j['SubAccount']?.toString() ?? '',
+      nav:           double.tryParse(j['nav']?.toString() ?? '0') ?? 0,
+      investorUnits: double.tryParse(j['investorUnits']?.toString() ?? '0') ?? 0,
+    );
+  }
+}
+
 enum _Filter { both, deposits, withdrawals }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -64,6 +86,10 @@ class _ClientStatementPageState extends State<ClientStatementPage>
   String? _txnsError;
   bool _hasFetched = false;
   _Filter _filter = _Filter.both;
+
+  // ── Fund Details (SubAccount + NAV) ───────────────────────────────────────
+  Map<String, _FundDetail> _fundDetails = {}; // keyed by fundCode
+  bool _loadingDetails = false;
 
   late AnimationController _listCtrl;
   late AnimationController _headerCtrl;
@@ -114,6 +140,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
       _userName  = p.getString('user_fullname') ?? 'Investor';
     });
     _loadFunds();
+    _loadFundDetails();
   }
 
   Future<void> _loadFunds() async {
@@ -128,6 +155,46 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     } catch (_) {
       setState(() { _fundsError = _s.failedFunds; _loadingFunds = false; });
     }
+  }
+
+  /// Fetches detailed fund info including SubAccount and NAV
+  Future<void> _loadFundDetails() async {
+    if (_cdsNumber.isEmpty) return;
+    setState(() => _loadingDetails = true);
+    try {
+      final response = await http.post(
+        Uri.parse('https://portaluat.tsl.co.tz/FMSAPI/home/GetFundsDetailed'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'APIUsername': 'User2',
+          'APIPassword': 'CBZ1234#2',
+          'cdsNumber': _cdsNumber,
+        }),
+      ).timeout(const Duration(seconds: 15));
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        final fundsJson = (data['data']['funds'] as List<dynamic>?) ?? [];
+        final Map<String, _FundDetail> details = {};
+        for (final j in fundsJson) {
+          final d = _FundDetail.fromJson(j as Map<String, dynamic>);
+          details[d.fundCode] = d;
+        }
+        setState(() {
+          _fundDetails    = details;
+          _loadingDetails = false;
+        });
+      } else {
+        setState(() => _loadingDetails = false);
+      }
+    } catch (_) {
+      setState(() => _loadingDetails = false);
+    }
+  }
+
+  String get _selectedSubAccount {
+    if (_selectedFund == null) return _cdsNumber;
+    final code = _selectedFund!.fundingCode ?? '';
+    return _fundDetails[code]?.subAccount ?? _cdsNumber;
   }
 
   Future<void> _fetchTransactions() async {
@@ -181,6 +248,9 @@ class _ClientStatementPageState extends State<ClientStatementPage>
   double get _totalWithdrawals => _allTxns.where((t) => !t.isDeposit).fold(0.0, (s,t) => s+t.amount);
   double get _netFlow          => _totalDeposits - _totalWithdrawals;
 
+  // ── Total units across filtered transactions ──────────────────────────────
+  double get _totalUnits => _filtered.fold(0.0, (s, t) => s + (t.isDeposit ? t.units : -t.units));
+
   String _fmt(double v) {
     final s = v.toStringAsFixed(2).split('.');
     return '${s[0].replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}\.${s[1]}';
@@ -190,34 +260,51 @@ class _ClientStatementPageState extends State<ClientStatementPage>
   Future<void> _downloadPDF() async {
     final pdf  = pw.Document();
     final txns = _filtered;
-    final fundName = _selectedFund?.fundingName ?? 'Fund';
+    final fundName  = _selectedFund?.fundingName ?? 'Fund';
+    final subAcct   = _selectedSubAccount;
     final now = DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now());
+
+    // Load logo from assets
+    final logoImage = await imageFromAssetBundle('assets/logo.png');
+
     pdf.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(32),
       build: (ctx) => [
+        // ── Header: logo left, meta right ─────────────────────────────────
         pw.Container(
           padding: const pw.EdgeInsets.all(20),
           decoration: pw.BoxDecoration(
             color: PdfColor.fromHex('#1B5E20'),
             borderRadius: pw.BorderRadius.circular(12),
           ),
-          child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            pw.Text('TSL Investment',
-                style: pw.TextStyle(color: PdfColors.white, fontSize: 22, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 4),
-            pw.Text(_s.clientStatement,
-                style: pw.TextStyle(color: PdfColors.white, fontSize: 13)),
-          ]),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Image(logoImage, width: 100, height: 40, fit: pw.BoxFit.contain),
+              pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
+                pw.Text('Client Statement',
+                    style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Text(fundName,
+                    style:  pw.TextStyle(color: PdfColors.white, fontSize: 11)),
+              ]),
+            ],
+          ),
         ),
         pw.SizedBox(height: 20),
+
+        // ── Meta row ──────────────────────────────────────────────────────
         pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
           pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            _pdfLbl('${_s.cdsNumber}:', _cdsNumber),
+            _pdfLbl('Sub-Account:', subAcct),
             pw.SizedBox(height: 6),
-            _pdfLbl('${_s.fund}:', fundName),
+            _pdfLbl('Fund:', fundName),
             pw.SizedBox(height: 6),
-            _pdfLbl('${_s.generated}:', now),
+            _pdfLbl('Generated:', now),
           ]),
           pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
             _pdfLbl('${_s.totalDeposits}:', 'TZS ${_fmt(_totalDeposits)}'),
@@ -225,20 +312,24 @@ class _ClientStatementPageState extends State<ClientStatementPage>
             _pdfLbl('${_s.totalWithdrawals}:', 'TZS ${_fmt(_totalWithdrawals)}'),
             pw.SizedBox(height: 6),
             _pdfLbl('${_s.netFlow}:', 'TZS ${_fmt(_netFlow)}'),
+            pw.SizedBox(height: 6),
+            _pdfLbl('Total Units:', _fmt(_totalUnits)),
           ]),
         ]),
         pw.SizedBox(height: 24),
+
+        // ── Transactions table: Date | Amount | NAV | Units ───────────────
         pw.Table(
           columnWidths: {
-            0: const pw.FlexColumnWidth(3),
-            1: const pw.FlexColumnWidth(1.5),
-            2: const pw.FlexColumnWidth(2),
-            3: const pw.FlexColumnWidth(2),
+            0: const pw.FlexColumnWidth(2.2), // Date
+            1: const pw.FlexColumnWidth(2.5), // Amount
+            2: const pw.FlexColumnWidth(2),   // NAV
+            3: const pw.FlexColumnWidth(1.5), // Units
           },
           children: [
             pw.TableRow(
               decoration: pw.BoxDecoration(color: PdfColor.fromHex('#E8F5E9')),
-              children: [_s.description, _s.units, _s.date, _s.amountTZS]
+              children: [_s.date, _s.amountTZS, 'NAV', _s.units]
                   .map((h) => pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: pw.Text(h, style: pw.TextStyle(
@@ -249,12 +340,14 @@ class _ClientStatementPageState extends State<ClientStatementPage>
             ),
             ...txns.asMap().entries.map((e) {
               final t = e.value; final odd = e.key.isOdd;
+              final amountStr = '${t.isDeposit ? '+' : '-'} ${_fmt(t.amount)}';
               return pw.TableRow(
                 decoration: pw.BoxDecoration(color: odd ? PdfColors.grey100 : PdfColors.white),
                 children: [
-                  t.description, _fmt(t.units),
                   DateFormat('dd MMM yy').format(t.date),
-                  '${t.isDeposit ? '+' : '-'} ${_fmt(t.amount)}',
+                  amountStr,
+                  _fmt(t.price),    // NAV / price per unit
+                  _fmt(t.units),
                 ].map((cell) => pw.Padding(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   child: pw.Text(cell, style: pw.TextStyle(
@@ -265,13 +358,24 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                 )).toList(),
               );
             }).toList(),
+
+            // ── Totals footer row ─────────────────────────────────────────
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: PdfColor.fromHex('#E8F5E9')),
+              children: [
+                'Total',
+                'TZS ${_fmt(_netFlow)}',
+                '',
+                _fmt(_totalUnits),
+              ].map((cell) => pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: pw.Text(cell, style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold, fontSize: 10,
+                    color: PdfColor.fromHex('#1B5E20'))),
+              )).toList(),
+            ),
           ],
         ),
-        pw.SizedBox(height: 20),
-        pw.Divider(),
-        pw.SizedBox(height: 8),
-        pw.Text(_s.pdfFooter,
-            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
       ],
     ));
     await Printing.layoutPdf(
@@ -325,7 +429,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
           bottom: false,
           child: Stack(
             children: [
-              // Decorative circle top-right
+              // Decorative circles
               Positioned(
                 top: -30, right: -30,
                 child: Container(
@@ -360,17 +464,30 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                       _pdfButton(),
                   ]),
                   const SizedBox(height: 22),
-                  // Title block
+
+                  // ── CHANGE 1: TSL logo instead of text label ─────────────
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    // Logo box
                     Container(
-                      padding: const EdgeInsets.all(11),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: Colors.white.withOpacity(0.2)),
                       ),
-                      child: const Icon(Icons.receipt_long_rounded,
-                          color: Colors.white, size: 22),
+                      child: Image.asset(
+                        'assets/logo.png',
+                        height: 28,
+                        fit: BoxFit.contain,
+                        // Tint white so it shows nicely on dark gradient
+                        color: Colors.white,
+                        colorBlendMode: BlendMode.srcIn,
+                        // Fallback: if logo has its own colour, remove the two lines above
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.account_balance_rounded,
+                          color: Colors.white, size: 22,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -387,6 +504,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                               fontSize: 12)),
                     ]),
                   ]),
+
                   // Summary strip — only when data loaded
                   if (_hasFetched && _txnsError == null) ...[
                     const SizedBox(height: 22),
@@ -499,6 +617,10 @@ class _ClientStatementPageState extends State<ClientStatementPage>
               _sectionLabel('SELECT FUND', Icons.account_balance_outlined),
               const SizedBox(height: 10),
               _buildFundPicker(),
+              const SizedBox(height: 12),
+
+              // ── CHANGE 2: Sub-account chip ─────────────────────────────
+              _buildSubAccountChip(),
               const SizedBox(height: 22),
 
               // ── Filter chips ───────────────────────────────────────────
@@ -525,6 +647,35 @@ class _ClientStatementPageState extends State<ClientStatementPage>
           ),
         ),
       ),
+    );
+  }
+
+  // ─── CHANGE 2: Sub-account display chip ──────────────────────────────────
+  Widget _buildSubAccountChip() {
+    if (_loadingDetails) {
+      return _shimmerBox(180, 36);
+    }
+    final subAcct = _selectedSubAccount;
+    if (subAcct.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: _accent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _accent.withOpacity(0.20)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.credit_card_rounded, size: 14, color: _accent),
+        const SizedBox(width: 8),
+        Text('Sub-Account: ',
+            style: TextStyle(
+                fontSize: 12, color: _txtS, fontWeight: FontWeight.w500)),
+        Text(subAcct,
+            style: TextStyle(
+                fontSize: 12, color: _txtP, fontWeight: FontWeight.w800,
+                letterSpacing: 0.5)),
+      ]),
     );
   }
 
@@ -728,19 +879,76 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     final depCount = txns.where((t) =>  t.isDeposit).length;
     final wdCount  = txns.where((t) => !t.isDeposit).length;
 
-    return Row(children: [
-      Expanded(child: _summaryCard(
-        label: _s.deposits, value: _fmt(deps),
-        icon: Icons.arrow_downward_rounded,
-        color: _depositColor, bgColor: _greenSoft, count: depCount,
-      )),
-      const SizedBox(width: 12),
-      Expanded(child: _summaryCard(
-        label: _s.withdrawals, value: _fmt(wds),
-        icon: Icons.arrow_upward_rounded,
-        color: _withdrawColor, bgColor: _redSoft, count: wdCount,
-      )),
+    return Column(children: [
+      Row(children: [
+        Expanded(child: _summaryCard(
+          label: _s.deposits, value: _fmt(deps),
+          icon: Icons.arrow_downward_rounded,
+          color: _depositColor, bgColor: _greenSoft, count: depCount,
+        )),
+        const SizedBox(width: 12),
+        Expanded(child: _summaryCard(
+          label: _s.withdrawals, value: _fmt(wds),
+          icon: Icons.arrow_upward_rounded,
+          color: _withdrawColor, bgColor: _redSoft, count: wdCount,
+        )),
+      ]),
+      // ── CHANGE 4: Total Units card ────────────────────────────────────
+      const SizedBox(height: 12),
+      _totalUnitsCard(),
     ]);
+  }
+
+  // ─── CHANGE 4: Total Units card ───────────────────────────────────────────
+  Widget _totalUnitsCard() {
+    final units = _totalUnits;
+    final isPositive = units >= 0;
+    final color = isPositive ? _teal : _withdrawColor;
+    final bgColor = isPositive
+        ? (_dark ? const Color(0xFF0A1E2A) : const Color(0xFFE3F4FA))
+        : _redSoft;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border, width: 1.5),
+        boxShadow: [
+          BoxShadow(color: color.withOpacity(_dark ? 0.12 : 0.08),
+              blurRadius: 18, offset: const Offset(0, 6)),
+        ],
+      ),
+      child: Row(children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+              color: bgColor, borderRadius: BorderRadius.circular(13)),
+          child: Icon(Icons.pie_chart_outline_rounded, color: color, size: 20),
+        ),
+        const SizedBox(width: 16),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Total Units',
+              style: TextStyle(fontSize: 11, color: _txtS,
+                  fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+          const SizedBox(height: 4),
+          Text(_fmt(units.abs()),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900,
+                  color: color, letterSpacing: -0.5)),
+        ]),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: bgColor, borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '${_filtered.length} ${_s.txns}',
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+          ),
+        ),
+      ]),
+    );
   }
 
   Widget _summaryCard({
@@ -846,6 +1054,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     );
   }
 
+  // ─── CHANGE 3: Timeline card columns — Date | Amount | NAV | Units ────────
   Widget _buildTimelineItem(_Txn t, int index, int total) {
     final isLast   = index == total - 1;
     final color    = t.isDeposit ? _depositColor : _withdrawColor;
@@ -878,8 +1087,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
               ),
               if (!isLast)
                 Expanded(child: Center(
-                  child: Container(width: 2,
-                      color: _border),
+                  child: Container(width: 2, color: _border),
                 )),
             ]),
           ),
@@ -901,16 +1109,27 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                 ],
               ),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                // Top row: description + amount
+                // ── Row 1: Date (left) + Amount (right) ──────────────────
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(
-                    child: Text(t.description,
-                        overflow: TextOverflow.ellipsis, maxLines: 2,
+                  // Date block
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('DATE',
+                        style: TextStyle(fontSize: 9, color: _txtS,
+                            fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+                    const SizedBox(height: 2),
+                    Text(DateFormat('dd MMM yyyy').format(t.date),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                            color: _txtP, height: 1.4)),
-                  ),
-                  const SizedBox(width: 8),
+                            color: _txtP)),
+                    Text(DateFormat('HH:mm').format(t.date),
+                        style: TextStyle(fontSize: 10, color: _txtS)),
+                  ]),
+                  const Spacer(),
+                  // Amount block
                   Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Text('AMOUNT',
+                        style: TextStyle(fontSize: 9, color: _txtS,
+                            fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+                    const SizedBox(height: 2),
                     Text('${t.isDeposit ? '+' : '-'} TZS',
                         style: TextStyle(fontSize: 10,
                             color: color.withOpacity(0.7),
@@ -921,32 +1140,49 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                             letterSpacing: -0.3)),
                   ]),
                 ]),
+
+                const SizedBox(height: 12),
+                Divider(color: _border, height: 1),
                 const SizedBox(height: 10),
-                // Bottom row: date + pills
-                Wrap(spacing: 6, runSpacing: 4, children: [
-                  _pill(
-                    icon: Icons.access_time_rounded,
-                    label: DateFormat('dd MMM yyyy • HH:mm').format(t.date),
-                    bg: _card, fg: _txtS,
-                  ),
-                  _pill(
-                    icon: Icons.tag_rounded,
-                    label: t.id,
-                    bg: _accent.withOpacity(0.08), fg: _accent,
-                  ),
-                  _pill(
-                    icon: Icons.stacked_line_chart_rounded,
-                    label: '${_fmt(t.units)} ${_s.units}',
-                    bg: bgColor, fg: color,
-                  ),
+
+                // ── Row 2: NAV (left) + Units (right) ────────────────────
+                Row(children: [
+                  // NAV block
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('NAV',
+                          style: TextStyle(fontSize: 9, color: _txtS,
+                              fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+                      const SizedBox(height: 3),
+                      Text('TZS ${_fmt(t.price)}',
+                          style: TextStyle(fontSize: 12,
+                              fontWeight: FontWeight.w700, color: _txtP)),
+                    ],
+                  )),
+                  Container(width: 1, height: 32, color: _border),
+                  // Units block
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('UNITS',
+                          style: TextStyle(fontSize: 9, color: _txtS,
+                              fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+                      const SizedBox(height: 3),
+                      Text(_fmt(t.units),
+                          style: TextStyle(fontSize: 12,
+                              fontWeight: FontWeight.w700, color: _teal)),
+                    ],
+                  )),
                 ]),
-                // Price per unit
-                if (t.price > 0) ...[
-                  const SizedBox(height: 6),
-                  Text('@TZS ${_fmt(t.price)} / unit',
-                      style: TextStyle(fontSize: 10, color: _txtS,
-                          fontStyle: FontStyle.italic)),
-                ],
+
+                const SizedBox(height: 10),
+                // ID pill
+                _pill(
+                  icon: Icons.tag_rounded,
+                  label: t.id,
+                  bg: _accent.withOpacity(0.08), fg: _accent,
+                ),
               ]),
             ),
           ),
@@ -1036,7 +1272,7 @@ class _CS {
       failedFunds, all, deposits, withdrawals, loadTransactions, loading,
       noTxns, tryFilter, txns, units, totalDeposits, totalWithdrawals,
       netFlow, cdsNumber, fund, generated, description, date, amountTZS,
-      pdfFooter, retry, tryAgain, connError, failedTxns;
+      retry, tryAgain, connError, failedTxns;
   final String Function(int) transactionCount;
   const _CS({
     required this.clientStatement,  required this.statementSubtitle,
@@ -1050,7 +1286,7 @@ class _CS {
     required this.netFlow,          required this.cdsNumber,
     required this.fund,             required this.generated,
     required this.description,      required this.date,
-    required this.amountTZS,        required this.pdfFooter,
+    required this.amountTZS,
     required this.retry,            required this.tryAgain,
     required this.connError,        required this.failedTxns,
     required this.transactionCount,
@@ -1071,7 +1307,7 @@ const _en = _CS(
   noTxns: 'No transactions found',
   tryFilter: 'Try changing the filter above',
   txns: 'txns',
-  units: 'units',
+  units: 'Units',
   totalDeposits: 'Total Deposits',
   totalWithdrawals: 'Total Withdrawals',
   netFlow: 'Net Flow',
@@ -1081,7 +1317,6 @@ const _en = _CS(
   description: 'Description',
   date: 'Date',
   amountTZS: 'Amount (TZS)',
-  pdfFooter: 'This statement is generated electronically and is valid without a signature.',
   retry: 'Retry',
   tryAgain: 'Try Again',
   connError: 'Connection error. Please try again.',
@@ -1104,7 +1339,7 @@ const _sw = _CS(
   noTxns: 'Hakuna miamala iliyopatikana',
   tryFilter: 'Jaribu kubadilisha kichujio hapo juu',
   txns: 'miamala',
-  units: 'vitengo',
+  units: 'Vitengo',
   totalDeposits: 'Jumla ya Amana',
   totalWithdrawals: 'Jumla ya Malipo',
   netFlow: 'Mtiririko Halisi',
@@ -1114,7 +1349,6 @@ const _sw = _CS(
   description: 'Maelezo',
   date: 'Tarehe',
   amountTZS: 'Kiasi (TZS)',
-  pdfFooter: 'Taarifa hii imetolewa kwa njia ya kielektroniki na ni halali bila sahihi.',
   retry: 'Jaribu Tena',
   tryAgain: 'Jaribu Tena',
   connError: 'Hitilafu ya mtandao. Tafadhali jaribu tena.',
