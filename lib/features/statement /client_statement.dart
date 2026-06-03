@@ -76,7 +76,7 @@ class ClientStatementPage extends StatefulWidget {
 class _ClientStatementPageState extends State<ClientStatementPage>
     with TickerProviderStateMixin {
 
-  String _cdsNumber = '', _userName = '';
+  String _cdsNumber = '';
   List<Fund> _funds = [];
   Fund? _selectedFund;
   bool _loadingFunds = true;
@@ -136,8 +136,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
   Future<void> _init() async {
     final p = await SharedPreferences.getInstance();
     setState(() {
-      _cdsNumber = p.getString('cdsNumber')     ?? '';
-      _userName  = p.getString('user_fullname') ?? 'Investor';
+      _cdsNumber = p.getString('cdsNumber') ?? '';
     });
     _loadFunds();
     _loadFundDetails();
@@ -271,12 +270,16 @@ class _ClientStatementPageState extends State<ClientStatementPage>
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(32),
       build: (ctx) => [
-        // ── Header: logo left, meta right ─────────────────────────────────
+        // ── Header: white background, text in black ────────────────────
         pw.Container(
           padding: const pw.EdgeInsets.all(20),
           decoration: pw.BoxDecoration(
-            color: PdfColor.fromHex('#1B5E20'),
+            color: PdfColors.white,
             borderRadius: pw.BorderRadius.circular(12),
+            border: pw.Border.all(
+              color: PdfColor.fromHex('#E0E0E0'),
+              width: 1,
+            ),
           ),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -285,12 +288,13 @@ class _ClientStatementPageState extends State<ClientStatementPage>
               pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
                 pw.Text('Client Statement',
                     style: pw.TextStyle(
-                        color: PdfColors.white,
+                        color: PdfColors.black,
                         fontSize: 18,
                         fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 4),
                 pw.Text(fundName,
-                    style:  pw.TextStyle(color: PdfColors.white, fontSize: 11)),
+                    style: const pw.TextStyle(
+                        color: PdfColors.grey, fontSize: 11)),
               ]),
             ],
           ),
@@ -300,7 +304,8 @@ class _ClientStatementPageState extends State<ClientStatementPage>
         // ── Meta row ──────────────────────────────────────────────────────
         pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
           pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            _pdfLbl('Sub-Account:', subAcct),
+            // Account number first, then label
+            _pdfLbl('Account Number:', subAcct),
             pw.SizedBox(height: 6),
             _pdfLbl('Fund:', fundName),
             pw.SizedBox(height: 6),
@@ -429,14 +434,14 @@ class _ClientStatementPageState extends State<ClientStatementPage>
           bottom: false,
           child: Stack(
             children: [
-              // Decorative circles
+               // Decorative circles
               Positioned(
                 top: -30, right: -30,
                 child: Container(
                   width: 140, height: 140,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -446,7 +451,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                   width: 70, height: 70,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.06),
+                    color: Colors.white.withValues(alpha: 0.06),
                   ),
                 ),
               ),
@@ -465,24 +470,21 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                   ]),
                   const SizedBox(height: 22),
 
-                  // ── CHANGE 1: TSL logo instead of text label ─────────────
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     // Logo box
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                       ),
                       child: Image.asset(
                         'assets/logo.png',
                         height: 28,
                         fit: BoxFit.contain,
-                        // Tint white so it shows nicely on dark gradient
                         color: Colors.white,
                         colorBlendMode: BlendMode.srcIn,
-                        // Fallback: if logo has its own colour, remove the two lines above
                         errorBuilder: (_, __, ___) => const Icon(
                           Icons.account_balance_rounded,
                           color: Colors.white, size: 22,
@@ -498,10 +500,10 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                               fontWeight: FontWeight.w900,
                               letterSpacing: -0.5)),
                       const SizedBox(height: 4),
-                      Text(_s.statementSubtitle,
-                          style: TextStyle(
-                              color: Colors.white.withOpacity(0.68),
-                              fontSize: 12)),
+                       Text(_s.statementSubtitle,
+                           style: TextStyle(
+                               color: Colors.white.withValues(alpha: 0.68),
+                               fontSize: 12)),
                     ]),
                   ]),
 
@@ -525,9 +527,9 @@ class _ClientStatementPageState extends State<ClientStatementPage>
       child: Container(
         padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.14),
+          color: Colors.white.withValues(alpha: 0.14),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.22)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
         ),
         child: Icon(icon, color: Colors.white, size: 17),
       ),
@@ -540,9 +542,9 @@ class _ClientStatementPageState extends State<ClientStatementPage>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.16),
+          color: Colors.white.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withOpacity(0.3)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 15),
@@ -562,9 +564,9 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.10),
+        color: Colors.white.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.15)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
       child: Row(children: [
         _heroMetric(_s.deposits,     _fmt(_totalDeposits),    const Color(0xFF81C784)),
@@ -579,7 +581,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
   Widget _heroMetric(String label, String value, Color color) {
     return Expanded(child: Column(children: [
       Text(label,
-          style: TextStyle(color: Colors.white.withOpacity(0.62),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.62),
               fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
       const SizedBox(height: 5),
       Text(value,
@@ -591,7 +593,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
 
   Widget _heroDivider() {
     return Container(width: 1, height: 32,
-        color: Colors.white.withOpacity(0.18),
+        color: Colors.white.withValues(alpha: 0.18),
         margin: const EdgeInsets.symmetric(horizontal: 6));
   }
 
@@ -619,7 +621,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
               _buildFundPicker(),
               const SizedBox(height: 12),
 
-              // ── CHANGE 2: Sub-account chip ─────────────────────────────
+              // ── Account Number chip ────────────────────────────────────
               _buildSubAccountChip(),
               const SizedBox(height: 22),
 
@@ -650,7 +652,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     );
   }
 
-  // ─── CHANGE 2: Sub-account display chip ──────────────────────────────────
+  // ─── Account Number chip: number first, label after ───────────────────────
   Widget _buildSubAccountChip() {
     if (_loadingDetails) {
       return _shimmerBox(180, 36);
@@ -661,20 +663,23 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: _accent.withOpacity(0.08),
+        color: _accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _accent.withOpacity(0.20)),
+        border: Border.all(color: _accent.withValues(alpha: 0.20)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.credit_card_rounded, size: 14, color: _accent),
         const SizedBox(width: 8),
-        Text('Sub-Account: ',
-            style: TextStyle(
-                fontSize: 12, color: _txtS, fontWeight: FontWeight.w500)),
+        // Number comes first
         Text(subAcct,
             style: TextStyle(
                 fontSize: 12, color: _txtP, fontWeight: FontWeight.w800,
                 letterSpacing: 0.5)),
+        const SizedBox(width: 6),
+        // Label after
+        Text('Account Number',
+            style: TextStyle(
+                fontSize: 12, color: _txtS, fontWeight: FontWeight.w500)),
       ]),
     );
   }
@@ -685,7 +690,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
       Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: _accent.withOpacity(0.10),
+          color: _accent.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 14, color: _accent),
@@ -709,7 +714,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: _redSoft, borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.red.withOpacity(0.25)),
+            border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
           ),
           child: Row(children: [
             const Icon(Icons.error_outline_rounded, color: Colors.red, size: 18),
@@ -729,7 +734,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _border, width: 1.5),
         boxShadow: [
-          BoxShadow(color: _accent.withOpacity(_dark ? 0.1 : 0.06),
+          BoxShadow(color: _accent.withValues(alpha: _dark ? 0.1 : 0.06),
               blurRadius: 14, offset: const Offset(0, 5)),
         ],
       ),
@@ -813,7 +818,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
             color: active ? tabColor : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             boxShadow: active ? [
-              BoxShadow(color: tabColor.withOpacity(0.30),
+              BoxShadow(color: tabColor.withValues(alpha: 0.30),
                   blurRadius: 10, offset: const Offset(0, 4)),
             ] : [],
           ),
@@ -850,7 +855,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                   : [const Color(0xFF2E7D32), const Color(0xFF1B5E20)]),
           color: loading ? _border : null,
           boxShadow: loading ? [] : [
-            BoxShadow(color: _accent.withOpacity(0.35),
+            BoxShadow(color: _accent.withValues(alpha: 0.35),
                 blurRadius: 18, offset: const Offset(0, 8)),
           ],
         ),
@@ -893,13 +898,12 @@ class _ClientStatementPageState extends State<ClientStatementPage>
           color: _withdrawColor, bgColor: _redSoft, count: wdCount,
         )),
       ]),
-      // ── CHANGE 4: Total Units card ────────────────────────────────────
       const SizedBox(height: 12),
       _totalUnitsCard(),
     ]);
   }
 
-  // ─── CHANGE 4: Total Units card ───────────────────────────────────────────
+  // ─── Total Units card ─────────────────────────────────────────────────────
   Widget _totalUnitsCard() {
     final units = _totalUnits;
     final isPositive = units >= 0;
@@ -915,7 +919,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _border, width: 1.5),
         boxShadow: [
-          BoxShadow(color: color.withOpacity(_dark ? 0.12 : 0.08),
+          BoxShadow(color: color.withValues(alpha: _dark ? 0.12 : 0.08),
               blurRadius: 18, offset: const Offset(0, 6)),
         ],
       ),
@@ -963,7 +967,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _border, width: 1.5),
         boxShadow: [
-          BoxShadow(color: color.withOpacity(_dark ? 0.12 : 0.08),
+          BoxShadow(color: color.withValues(alpha: _dark ? 0.12 : 0.08),
               blurRadius: 18, offset: const Offset(0, 6)),
         ],
       ),
@@ -1054,7 +1058,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
     );
   }
 
-  // ─── CHANGE 3: Timeline card columns — Date | Amount | NAV | Units ────────
+  // ─── Timeline card: Date | Amount | NAV | Units ───────────────────────────
   Widget _buildTimelineItem(_Txn t, int index, int total) {
     final isLast   = index == total - 1;
     final color    = t.isDeposit ? _depositColor : _withdrawColor;
