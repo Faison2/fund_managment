@@ -1939,22 +1939,22 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           items: ['Salary', 'Business', 'Investments', 'Inheritance', 'Other'],
           onChanged: (v) => setState(() => _incomeSource = v!),
         ),
-        const SizedBox(height: 14),
-        _dropdownField(
-          label: 'Risk Tolerance',
-          icon: Icons.speed_rounded,
-          value: _riskTolerance,
-          items: ['Low', 'Medium', 'High'],
-          onChanged: (v) => setState(() => _riskTolerance = v!),
-        ),
-        const SizedBox(height: 14),
-        _dropdownField(
-          label: 'Investment Period',
-          icon: Icons.timelapse_rounded,
-          value: _investmentPeriod,
-          items: ['Short Term', 'Medium Term', 'Long Term'],
-          onChanged: (v) => setState(() => _investmentPeriod = v!),
-        ),
+        //const SizedBox(height: 14),
+        // _dropdownField(
+        //   label: 'Risk Tolerance',
+        //   icon: Icons.speed_rounded,
+        //   value: _riskTolerance,
+        //   items: ['Low', 'Medium', 'High'],
+        //   onChanged: (v) => setState(() => _riskTolerance = v!),
+        // ),
+       // const SizedBox(height: 14),
+        // _dropdownField(
+        //   label: 'Investment Period',
+        //   icon: Icons.timelapse_rounded,
+        //   value: _investmentPeriod,
+        //   items: ['Short Term', 'Medium Term', 'Long Term'],
+        //   onChanged: (v) => setState(() => _investmentPeriod = v!),
+        // ),
         const SizedBox(height: 14),
 
         // PEP Disclosure — reveals detail field when "Yes"

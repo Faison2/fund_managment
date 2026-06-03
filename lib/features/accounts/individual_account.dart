@@ -62,7 +62,7 @@ extension _IdentityTypeExt on _IdentityType {
   String get label {
     switch (this) {
       case _IdentityType.nida:
-      //  return 'NIDA';
+        return 'NIDA';
       case _IdentityType.drivingLicense:
         return 'Driving License';
       case _IdentityType.voterId:
@@ -101,12 +101,12 @@ extension _IdentityTypeExt on _IdentityType {
 
 // ─── Screen phase enum ────────────────────────────────────────────────────────
 enum _Phase {
-  identitySelection, // NEW — user picks ID type
-  ninEntry,          // user types NIN (only for NIDA)
-  loadingQuestion,   // fetching first question
-  answerQuestion,    // user answers a question
-  submitting,        // verifying the answer
-  form,              // verification done — show the 6-step form
+  identitySelection,
+  ninEntry,
+  loadingQuestion,
+  answerQuestion,
+  submitting,
+  form,
 }
 
 // ─── Widget ───────────────────────────────────────────────────────────────────
@@ -124,8 +124,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   final BankController _bankController = BankController();
   final String _apiUrl = "$cSharpApi/CreateAccount";
   final String _getBanksUrl = "$cSharpApi/GetBanks";
-  final String _getFundsUrl =
-      "$cSharpApi/GetFunds";
+  final String _getFundsUrl = "$cSharpApi/GetFunds";
+  final String _createSubAccountsUrl =
+      "https://portaluat.tsl.co.tz/FMSAPI/Home/CreateSubAccounts";
   final String _nidaBase = "https://portalprod.tsl.co.tz/NIDAAPI/";
   final String _apiUsername = "User2";
   final String _apiPassword = "CBZ1234#2";
@@ -147,10 +148,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   String _nidaQuestionEn = '';
   String _nidaQuestionSw = '';
   int _questionNumber = 1;
-  // Free-text answer controller (replaces hardcoded options)
   final TextEditingController _nidaAnswerCtrl = TextEditingController();
   String? _nidaAnswerError;
-  String? _nidaErrorMsg; // shown on failure banner
+  String? _nidaErrorMsg;
 
   // ── Form controllers ───────────────────────────────────────────────────────
   final TextEditingController _titleController =
@@ -220,143 +220,318 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   String? _idFileName;
   String? _idFileExtension;
 
-  // ─── Static data ────────────────────────────────────────────────────────────
+  // ─── Static data ─────────────────────────────────────────────────────────
   static const List<String> _countries = [
-    'Tanzania', 'Kenya', 'Uganda', 'Rwanda', 'Burundi', 'South Africa',
-    'Zimbabwe', 'Zambia', 'Malawi', 'Mozambique', 'Ethiopia', 'Nigeria',
-    'Ghana', 'Egypt', 'United Kingdom', 'United States', 'Germany',
-    'France', 'China', 'India', 'Other',
+    'Tanzania',
+    'Kenya',
+    'Uganda',
+    'Rwanda',
+    'Burundi',
+    'South Africa',
+    'Zimbabwe',
+    'Zambia',
+    'Malawi',
+    'Mozambique',
+    'Ethiopia',
+    'Nigeria',
+    'Ghana',
+    'Egypt',
+    'United Kingdom',
+    'United States',
+    'Germany',
+    'France',
+    'China',
+    'India',
+    'Other',
   ];
   static const List<String> _nationalities = [
-    'Tanzanian', 'Kenyan', 'Ugandan', 'Rwandan', 'Burundian',
-    'South African', 'Zimbabwean', 'Zambian', 'Malawian', 'Mozambican',
-    'Ethiopian', 'Nigerian', 'Ghanaian', 'Egyptian', 'British', 'American',
-    'German', 'French', 'Chinese', 'Indian', 'Other',
+    'Tanzanian',
+    'Kenyan',
+    'Ugandan',
+    'Rwandan',
+    'Burundian',
+    'South African',
+    'Zimbabwean',
+    'Zambian',
+    'Malawian',
+    'Mozambican',
+    'Ethiopian',
+    'Nigerian',
+    'Ghanaian',
+    'Egyptian',
+    'British',
+    'American',
+    'German',
+    'French',
+    'Chinese',
+    'Indian',
+    'Other',
   ];
   static const List<String> _tzIssuingAuthorities = [
-    'TRA', 'NEC', 'ZCSRA',
+    'TRA',
+    'NEC',
+    'ZCSRA',
   ];
   static const List<String> _tanzaniaRegions = [
-    'Arusha', 'Dar es Salaam', 'Dodoma', 'Geita', 'Iringa', 'Kagera',
-    'Katavi', 'Kigoma', 'Kilimanjaro', 'Lindi', 'Manyara', 'Mara', 'Mbeya',
-    'Morogoro', 'Mtwara', 'Mwanza', 'Njombe', 'Pemba North', 'Pemba South',
-    'Pwani', 'Rukwa', 'Ruvuma', 'Shinyanga', 'Simiyu', 'Singida', 'Songwe',
-    'Tabora', 'Tanga', 'Zanzibar North', 'Zanzibar South', 'Zanzibar West',
+    'Arusha',
+    'Dar es Salaam',
+    'Dodoma',
+    'Geita',
+    'Iringa',
+    'Kagera',
+    'Katavi',
+    'Kigoma',
+    'Kilimanjaro',
+    'Lindi',
+    'Manyara',
+    'Mara',
+    'Mbeya',
+    'Morogoro',
+    'Mtwara',
+    'Mwanza',
+    'Njombe',
+    'Pemba North',
+    'Pemba South',
+    'Pwani',
+    'Rukwa',
+    'Ruvuma',
+    'Shinyanga',
+    'Simiyu',
+    'Singida',
+    'Songwe',
+    'Tabora',
+    'Tanga',
+    'Zanzibar North',
+    'Zanzibar South',
+    'Zanzibar West',
   ];
   static const Map<String, List<String>> _tanzaniaDistricts = {
     'Arusha': [
-      'Arusha City', 'Arusha DC', 'Karatu', 'Longido', 'Monduli',
+      'Arusha City',
+      'Arusha DC',
+      'Karatu',
+      'Longido',
+      'Monduli',
       'Ngorongoro'
     ],
-    'Dar es Salaam': [
-      'Ilala', 'Kinondoni', 'Temeke', 'Ubungo', 'Kigamboni'
-    ],
+    'Dar es Salaam': ['Ilala', 'Kinondoni', 'Temeke', 'Ubungo', 'Kigamboni'],
     'Dodoma': [
-      'Dodoma City', 'Bahi', 'Chamwino', 'Chemba', 'Kondoa', 'Kongwa',
+      'Dodoma City',
+      'Bahi',
+      'Chamwino',
+      'Chemba',
+      'Kondoa',
+      'Kongwa',
       'Mpwapwa'
     ],
     'Geita': [
-      'Geita DC', 'Geita Town', 'Bukombe', 'Chato', 'Mbogwe',
+      'Geita DC',
+      'Geita Town',
+      'Bukombe',
+      'Chato',
+      'Mbogwe',
       "Nyang'hwale"
     ],
-    'Iringa': [
-      'Iringa DC', 'Iringa Municipal', 'Kilolo', 'Mafinga Town'
-    ],
+    'Iringa': ['Iringa DC', 'Iringa Municipal', 'Kilolo', 'Mafinga Town'],
     'Kagera': [
-      'Bukoba DC', 'Bukoba Municipal', 'Biharamulo', 'Karagwe', 'Kyerwa',
-      'Missenyi', 'Muleba', 'Ngara'
+      'Bukoba DC',
+      'Bukoba Municipal',
+      'Biharamulo',
+      'Karagwe',
+      'Kyerwa',
+      'Missenyi',
+      'Muleba',
+      'Ngara'
     ],
     'Katavi': ['Mlele', 'Mpanda DC', 'Mpanda Town'],
     'Kigoma': [
-      'Kigoma DC', 'Kigoma-Ujiji Municipal', 'Buhigwe', 'Kakonko',
-      'Kasulu DC', 'Kasulu Town', 'Kibondo', 'Uvinza'
+      'Kigoma DC',
+      'Kigoma-Ujiji Municipal',
+      'Buhigwe',
+      'Kakonko',
+      'Kasulu DC',
+      'Kasulu Town',
+      'Kibondo',
+      'Uvinza'
     ],
     'Kilimanjaro': [
-      'Moshi DC', 'Moshi Municipal', 'Hai', 'Mwanga', 'Rombo', 'Same', 'Siha'
+      'Moshi DC',
+      'Moshi Municipal',
+      'Hai',
+      'Mwanga',
+      'Rombo',
+      'Same',
+      'Siha'
     ],
     'Lindi': [
-      'Lindi DC', 'Lindi Municipal', 'Kilwa', 'Liwale', 'Nachingwea',
+      'Lindi DC',
+      'Lindi Municipal',
+      'Kilwa',
+      'Liwale',
+      'Nachingwea',
       'Ruangwa'
     ],
     'Manyara': [
-      'Babati DC', 'Babati Town', 'Hanang', 'Kiteto', 'Mbulu', 'Simanjiro'
+      'Babati DC',
+      'Babati Town',
+      'Hanang',
+      'Kiteto',
+      'Mbulu',
+      'Simanjiro'
     ],
     'Mara': [
-      'Musoma DC', 'Musoma Municipal', 'Bunda', 'Butiama', 'Rorya',
-      'Serengeti', 'Tarime DC', 'Tarime Town'
+      'Musoma DC',
+      'Musoma Municipal',
+      'Bunda',
+      'Butiama',
+      'Rorya',
+      'Serengeti',
+      'Tarime DC',
+      'Tarime Town'
     ],
     'Mbeya': [
-      'Mbeya City', 'Mbeya DC', 'Busokelo', 'Chunya', 'Kyela', 'Rungwe'
+      'Mbeya City',
+      'Mbeya DC',
+      'Busokelo',
+      'Chunya',
+      'Kyela',
+      'Rungwe'
     ],
     'Morogoro': [
-      'Morogoro DC', 'Morogoro Municipal', 'Gairo', 'Ifakara Town',
-      'Kilombero', 'Kilosa', 'Malinyi', 'Mvomero', 'Ulanga'
+      'Morogoro DC',
+      'Morogoro Municipal',
+      'Gairo',
+      'Ifakara Town',
+      'Kilombero',
+      'Kilosa',
+      'Malinyi',
+      'Mvomero',
+      'Ulanga'
     ],
     'Mtwara': [
-      'Mtwara DC', 'Mtwara Municipal', 'Masasi DC', 'Masasi Town',
-      'Nanyumbu', 'Newala', 'Tandahimba'
+      'Mtwara DC',
+      'Mtwara Municipal',
+      'Masasi DC',
+      'Masasi Town',
+      'Nanyumbu',
+      'Newala',
+      'Tandahimba'
     ],
     'Mwanza': [
-      'Mwanza City', 'Ilemela', 'Kwimba', 'Magu', 'Misungwi', 'Nyamagana',
-      'Sengerema', 'Ukerewe'
+      'Mwanza City',
+      'Ilemela',
+      'Kwimba',
+      'Magu',
+      'Misungwi',
+      'Nyamagana',
+      'Sengerema',
+      'Ukerewe'
     ],
     'Njombe': [
-      'Njombe DC', 'Njombe Town', 'Ludewa', 'Makete', "Wanging'ombe"
+      'Njombe DC',
+      'Njombe Town',
+      'Ludewa',
+      'Makete',
+      "Wanging'ombe"
     ],
     'Pemba North': ['Micheweni', 'Wete'],
     'Pemba South': ['Chake Chake', 'Mkoani'],
     'Pwani': [
-      'Kibaha DC', 'Kibaha Town', 'Bagamoyo', 'Mafia', 'Mkuranga', 'Rufiji'
+      'Kibaha DC',
+      'Kibaha Town',
+      'Bagamoyo',
+      'Mafia',
+      'Mkuranga',
+      'Rufiji'
     ],
-    'Rukwa': [
-      'Sumbawanga DC', 'Sumbawanga Municipal', 'Kalambo', 'Nkasi'
-    ],
+    'Rukwa': ['Sumbawanga DC', 'Sumbawanga Municipal', 'Kalambo', 'Nkasi'],
     'Ruvuma': [
-      'Songea DC', 'Songea Municipal', 'Mbinga DC', 'Mbinga Town',
-      'Namtumbo', 'Nyasa', 'Tunduru'
+      'Songea DC',
+      'Songea Municipal',
+      'Mbinga DC',
+      'Mbinga Town',
+      'Namtumbo',
+      'Nyasa',
+      'Tunduru'
     ],
     'Shinyanga': [
-      'Shinyanga DC', 'Shinyanga Municipal', 'Kahama DC', 'Kahama Town',
+      'Shinyanga DC',
+      'Shinyanga Municipal',
+      'Kahama DC',
+      'Kahama Town',
       'Kishapu'
     ],
     'Simiyu': [
-      'Bariadi DC', 'Bariadi Town', 'Busega', 'Itilima', 'Maswa', 'Meatu'
+      'Bariadi DC',
+      'Bariadi Town',
+      'Busega',
+      'Itilima',
+      'Maswa',
+      'Meatu'
     ],
     'Singida': [
-      'Singida DC', 'Singida Municipal', 'Ikungi', 'Iramba', 'Manyoni',
+      'Singida DC',
+      'Singida Municipal',
+      'Ikungi',
+      'Iramba',
+      'Manyoni',
       'Mkalama'
     ],
     'Songwe': ['Mbozi', 'Momba', 'Songwe DC', 'Tunduma Town'],
     'Tabora': [
-      'Tabora Municipal', 'Igunga', 'Kaliua', 'Nzega DC', 'Nzega Town',
-      'Sikonge', 'Urambo', 'Uyui'
+      'Tabora Municipal',
+      'Igunga',
+      'Kaliua',
+      'Nzega DC',
+      'Nzega Town',
+      'Sikonge',
+      'Urambo',
+      'Uyui'
     ],
     'Tanga': [
-      'Tanga City', 'Handeni DC', 'Handeni Town', 'Kilindi', 'Korogwe DC',
-      'Korogwe Town', 'Lushoto', 'Mkinga', 'Muheza', 'Pangani'
+      'Tanga City',
+      'Handeni DC',
+      'Handeni Town',
+      'Kilindi',
+      'Korogwe DC',
+      'Korogwe Town',
+      'Lushoto',
+      'Mkinga',
+      'Muheza',
+      'Pangani'
     ],
     'Zanzibar North': ['Kaskazini A', 'Kaskazini B'],
     'Zanzibar South': ['Kati', 'Kusini'],
     'Zanzibar West': ['Magharibi', 'Mjini'],
   };
   static const List<String> _sourcesOfFunds = [
-    'Employment / Salary', 'Business Income', 'Investments / Dividends',
-    'Inheritance', 'Property Sale', 'Savings', 'Pension / Retirement',
-    'Gift / Donation', 'Loan', 'Other',
+    'Employment / Salary',
+    'Business Income',
+    'Investments / Dividends',
+    'Inheritance',
+    'Property Sale',
+    'Savings',
+    'Pension / Retirement',
+    'Gift / Donation',
+    'Loan',
+    'Other',
   ];
 
   final List<String> _accountTypes = ['Individual', 'Minor'];
   final List<String> _identificationTypes = [
-    'National ID', "Passport", "Driver's License", "Voter's ID",
+    'National ID',
+    "Passport",
+    "Driver's License",
+    "Voter's ID",
   ];
   final List<String> _genders = ['Male', 'Female'];
   final List<String> _titles = ['Mr', 'Mrs', 'Miss', 'Dr', 'Prof'];
   final List<String> _paymentMethods = [
-    'Cash', 'Cheque', 'Direct Fund Transfer'
+    'Cash',
+    'Cheque',
+    'Direct Fund Transfer'
   ];
-  final List<String> _bankTypes = [
-    'Local', 'Savings', 'Current', 'Corporate'
-  ];
+  final List<String> _bankTypes = ['Local', 'Savings', 'Current', 'Corporate'];
   final List<String> _currencies = ['TZS', 'USD', 'ZWL', 'EUR', 'GBP'];
 
   final List<Map<String, dynamic>> _steps = [
@@ -368,7 +543,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     {'title': 'Final Details', 'icon': Icons.checklist_rounded},
   ];
 
-  // ─── Theme ─────────────────────────────────────────────────────────────────
+  // ─── Theme ────────────────────────────────────────────────────────────────
   static const Color _primaryGreen = Color(0xFF2DC98E);
   static const Color _deepGreen = Color(0xFF1A9B6C);
   static const Color _softMint = Color(0xFFE8FBF4);
@@ -508,11 +683,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         final statusCode = body['StatusCode']?.toString() ?? '';
 
         if (statusCode == '00') {
-          // ── Full success — auto-fill and open form ─────────────────────
           _autofillFromNida(body['Data'] as Map<String, dynamic>? ?? {});
           _transition(_Phase.form);
         } else if (statusCode == '123') {
-          // ── Correct — another question ─────────────────────────────────
           final d = body['Data'] as Map<String, dynamic>;
           setState(() {
             _nidaQuestionCode = d['QuestionCode'] as String? ?? '';
@@ -524,8 +697,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           });
           _transition(_Phase.answerQuestion);
         } else {
-          _showNidaError(body['Message'] as String? ??
-              'Wrong answer. Please try again.');
+          _showNidaError(
+              body['Message'] as String? ?? 'Wrong answer. Please try again.');
         }
       } else {
         _showNidaError('Server error: ${res.statusCode}');
@@ -562,17 +735,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     final ward = d['ResidentWard'] as String? ?? '';
     final street = d['ResidentStreet'] as String? ?? '';
 
-    if (firstName.isNotEmpty)
-      _firstNameController.text = _toTitleCase(firstName);
-    if (middleName.isNotEmpty)
-      _middleNameController.text = _toTitleCase(middleName);
+    if (firstName.isNotEmpty) _firstNameController.text = _toTitleCase(firstName);
+    if (middleName.isNotEmpty) _middleNameController.text = _toTitleCase(middleName);
     if (lastName.isNotEmpty) _lastNameController.text = _toTitleCase(lastName);
     if (dob.isNotEmpty) _dateOfBirthController.text = dob;
     if (phone.isNotEmpty) _phoneController.text = phone;
-    if (occupation.isNotEmpty)
-      _occupationController.text = _toTitleCase(occupation);
+    if (occupation.isNotEmpty) _occupationController.text = _toTitleCase(occupation);
 
-    // Gender + title
     if (sex == 'MALE') {
       _selectedGender = 'Male';
       _titleController.text = 'Mr';
@@ -581,16 +750,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _titleController.text = 'Mrs';
     }
 
-    // Nationality
     final matchedNationality = _matchInList(_nationalities, nationality);
     if (matchedNationality != null) _selectedNationality = matchedNationality;
 
-    // ID details — pre-fill with the NIN the user already entered
     _identificationNumberController.text = _ninCtrl.text.trim();
     _selectedIdType = 'National ID';
     _selectedIssuingAuthority = 'NIDA';
 
-    // Address — NIDA is always Tanzania
     if (region.isNotEmpty) {
       _selectedCountry = 'Tanzania';
       final matchedRegion = _matchInList(_tanzaniaRegions, region);
@@ -626,9 +792,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     if (s.isEmpty) return s;
     return s
         .split(' ')
-        .map((w) => w.isEmpty
-        ? w
-        : w[0].toUpperCase() + w.substring(1).toLowerCase())
+        .map((w) =>
+    w.isEmpty ? w : w[0].toUpperCase() + w.substring(1).toLowerCase())
         .join(' ');
   }
 
@@ -821,12 +986,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           e['occupation'] = 'Occupation is required';
         break;
       case 1:
+      // ── Expiry date is now OPTIONAL — no validation ──────────────────
         if (_selectedNationality.isEmpty)
           e['nationality'] = 'Please select your nationality';
         if (_identificationNumberController.text.trim().isEmpty)
           e['idNumber'] = 'ID number is required';
-        if (_validityDateController.text.isEmpty)
-          e['validityDate'] = 'Expiry / validity date is required';
         if (_selectedNationality == 'Tanzanian' &&
             _selectedIssuingAuthority.isEmpty)
           e['issuingAuthority'] = 'Please select an issuing authority';
@@ -834,8 +998,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             _selectedNationality.isNotEmpty &&
             _issuingAuthorityController.text.trim().isEmpty)
           e['issuingAuthority'] = 'Issuing authority is required';
-        if (_idFile == null)
-          e['idFile'] = 'Please upload your ID document';
+        if (_idFile == null) e['idFile'] = 'Please upload your ID document';
         break;
       case 2:
         if (_selectedCountry.isEmpty)
@@ -884,8 +1047,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           e['investmentPurpose'] = 'Investment purpose is required';
         if (_selectedSourceOfFunds.isEmpty)
           e['sourceOfFunds'] = 'Please select a source of funds';
-        if (_isPoliticallyExposed &&
-            _positionController.text.trim().isEmpty)
+        if (_isPoliticallyExposed && _positionController.text.trim().isEmpty)
           e['position'] = 'Please specify the position held';
         break;
     }
@@ -915,6 +1077,74 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     return _physicalAddressController.text;
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  //  HELPER — content type from file extension
+  // ════════════════════════════════════════════════════════════════════════════
+
+  String _contentTypeFromExtension(String? ext) {
+    switch (ext?.toLowerCase()) {
+      case 'pdf':
+        return 'application/pdf';
+      case 'png':
+        return 'image/png';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  FUND SUBSCRIPTION — called after successful account creation
+  // ════════════════════════════════════════════════════════════════════════════
+
+  Future<void> _subscribeToFunds(String cdsNo) async {
+    if (_selectedFund == null) return;
+
+    try {
+      final subBody = {
+        'APIUsername': _apiUsername,
+        'APIPassword': _apiPassword,
+        'cdsNo': cdsNo,
+        'SubAccountsList': [
+          {
+            'Funding_Code': _selectedFund!.fundingCode,
+            'Funding_Name': _selectedFund!.fundingName,
+          }
+        ],
+      };
+
+      final res = await http.post(
+        Uri.parse(_createSubAccountsUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(subBody),
+      );
+
+      if (res.statusCode == 200) {
+        final rd = json.decode(res.body);
+        final status = rd['status']?.toString().toLowerCase() ?? '';
+        if (status == 'success') {
+          debugPrint(
+              'Fund subscription successful — CDS: $cdsNo, Fund: ${_selectedFund!.fundingName}');
+        } else {
+          // Non-critical: account was already created successfully
+          debugPrint(
+              'Fund subscription note [${rd['status']}]: ${rd['statusDesc']}');
+        }
+      } else {
+        debugPrint('Fund subscription HTTP error: ${res.statusCode}');
+      }
+    } catch (e) {
+      // Non-critical — account is created, subscription can be retried later
+      debugPrint('Fund subscription error (non-critical): $e');
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  SUBMIT APPLICATION
+  // ════════════════════════════════════════════════════════════════════════════
+
   Future<void> _submitApplication() async {
     setState(() => _isLoading = true);
     try {
@@ -922,6 +1152,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       final issuingAuthority = _selectedNationality == 'Tanzanian'
           ? _selectedIssuingAuthority
           : _issuingAuthorityController.text;
+
+      // ── Encode the uploaded ID document as base64 ──────────────────────
+      String idDocumentBase64 = '';
+      String idContentType = '';
+      if (_idFile != null) {
+        final bytes = await _idFile!.readAsBytes();
+        idDocumentBase64 = base64Encode(bytes);
+        idContentType = _contentTypeFromExtension(_idFileExtension);
+      }
 
       final body = {
         'APIUsername': _apiUsername,
@@ -939,6 +1178,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         'Nationality': _selectedNationality,
         'IdentificatinType': _selectedIdType,
         'ID': _identificationNumberController.text,
+        // Optional — sent as empty string if the user left it blank
         'IdentificationExpiryDate': _validityDateController.text,
         'IssuingAuthority': issuingAuthority,
         'City': _selectedCountry == 'Tanzania'
@@ -953,9 +1193,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         'InvestmentAccountType': _selectedAccountType,
         'InvestorType': 'Individual',
         'Disclosure': _isPoliticallyExposed ? 'Yes' : 'No',
-        'PositionHeld': _isPoliticallyExposed
-            ? _positionController.text.trim()
-            : 'None',
+        'PositionHeld':
+        _isPoliticallyExposed ? _positionController.text.trim() : 'None',
         'BankType': _selectedBankType,
         'BankAccountNumber': _accountNumberController.text,
         'BankAccountName': _accountHolderNameController.text,
@@ -971,6 +1210,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         'Charge': '0',
         'FundCode': _selectedFund?.fundingCode ?? '',
         'FundName': _selectedFund?.fundingName ?? '',
+        // ── ID document — base64 encoded with content type ─────────────
+        'IDDocument': idDocumentBase64,
+        'Content_Type': idContentType,
       };
 
       final res = await http.post(
@@ -982,8 +1224,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       if (res.statusCode == 200) {
         final rd = json.decode(res.body);
         if (rd['status'] == 200) {
-          final cds = rd['data']?['CDSNumber'];
-          if (cds != null) await _saveCDSNumber(cds);
+          final cds = rd['data']?['CDSNumber'] as String?;
+          if (cds != null) {
+            await _saveCDSNumber(cds);
+            // ── Subscribe the investor to the selected fund using the new CDS
+            await _subscribeToFunds(cds);
+          }
           _showSuccessDialog();
         } else {
           _showSnackBar('Error: ${rd['statusDesc']}');
@@ -1003,8 +1249,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       context: context,
       barrierDismissible: false,
       builder: (_) => Dialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
@@ -1012,8 +1257,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                  color: _softMint, shape: BoxShape.circle),
+              decoration:
+              const BoxDecoration(color: _softMint, shape: BoxShape.circle),
               child: const Icon(Icons.check_rounded,
                   color: _primaryGreen, size: 48),
             ),
@@ -1043,14 +1288,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     elevation: 0),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const LoginScreen()));
+                  Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()));
                 },
                 child: const Text('Continue to Login',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600)),
+                    style:
+                    TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
           ]),
@@ -1113,10 +1356,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     }),
                     decoration: InputDecoration(
                       hintText: 'Search...',
-                      hintStyle: TextStyle(
-                          color: Colors.grey[400], fontSize: 14),
-                      prefixIcon: Icon(Icons.search,
-                          color: Colors.grey[400], size: 20),
+                      hintStyle:
+                      TextStyle(color: Colors.grey[400], fontSize: 14),
+                      prefixIcon:
+                      Icon(Icons.search, color: Colors.grey[400], size: 20),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 4, vertical: 14),
@@ -1146,9 +1389,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           color: sel ? _softMint : Colors.grey[50],
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: sel
-                                  ? _primaryGreen
-                                  : Colors.transparent,
+                              color: sel ? _primaryGreen : Colors.transparent,
                               width: 1.5),
                         ),
                         child: Row(children: [
@@ -1159,9 +1400,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                                       fontWeight: sel
                                           ? FontWeight.w600
                                           : FontWeight.normal,
-                                      color: sel
-                                          ? _primaryGreen
-                                          : _textDark))),
+                                      color:
+                                      sel ? _primaryGreen : _textDark))),
                           if (sel)
                             const Icon(Icons.check_circle_rounded,
                                 color: _primaryGreen, size: 20),
@@ -1190,163 +1430,143 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         builder: (_, scrollCtrl) => Container(
           decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius:
-              BorderRadius.vertical(top: Radius.circular(24))),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                    child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2)))),
-                const Text('Select Fund',
-                    style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: _textDark)),
-                const SizedBox(height: 4),
-                Text('Choose the fund you wish to invest in',
-                    style: TextStyle(fontSize: 13, color: _textMuted)),
-                const SizedBox(height: 16),
-                if (_isLoadingFunds)
-                  const Center(
-                      child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator(
-                              color: _primaryGreen)))
-                else if (_funds.isEmpty)
-                  Center(
-                      child: Column(children: [
-                        const SizedBox(height: 24),
-                        Icon(Icons.inbox_outlined,
-                            size: 48, color: Colors.grey[300]),
-                        const SizedBox(height: 12),
-                        Text('No funds available',
-                            style: TextStyle(color: _textMuted)),
-                        const SizedBox(height: 12),
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _loadFunds();
-                          },
-                          icon: const Icon(Icons.refresh_rounded),
-                          label: const Text('Retry'),
-                          style: TextButton.styleFrom(
-                              foregroundColor: _primaryGreen),
-                        ),
-                      ]))
-                else
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollCtrl,
-                      itemCount: _funds.length,
-                      itemBuilder: (_, i) {
-                        final fund = _funds[i];
-                        final sel =
-                            _selectedFund?.fundingCode == fund.fundingCode;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedFund = fund;
-                              _errors.remove('fund');
-                            });
-                            Navigator.pop(context);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: sel ? _softMint : Colors.grey[50],
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: sel
-                                      ? _primaryGreen
-                                      : Colors.transparent,
-                                  width: 1.5),
-                            ),
-                            child: Row(
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: sel
-                                          ? _primaryGreen.withOpacity(0.15)
-                                          : Colors.grey[200],
-                                      borderRadius:
-                                      BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                        Icons
-                                            .account_balance_wallet_outlined,
-                                        color: sel
-                                            ? _primaryGreen
-                                            : _textMuted,
-                                        size: 20),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                      child: Column(
-                                          crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                          children: [
-                                            Text(fund.fundingName,
-                                                style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: sel
-                                                        ? _primaryGreen
-                                                        : _textDark)),
-                                            const SizedBox(height: 4),
-                                            Text(fund.description,
-                                                style: TextStyle(
-                                                    fontSize: 13,
-                                                    color: _textMuted)),
-                                            const SizedBox(height: 6),
-                                            Container(
-                                              padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: fund.status == 'Accepted'
-                                                    ? Colors.green
-                                                    .withOpacity(0.1)
-                                                    : Colors.orange
-                                                    .withOpacity(0.1),
-                                                borderRadius:
-                                                BorderRadius.circular(6),
-                                              ),
-                                              child: Text(fund.status,
-                                                  style: TextStyle(
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                      FontWeight.w600,
-                                                      color:
-                                                      fund.status ==
-                                                          'Accepted'
-                                                          ? Colors.green[700]
-                                                          : Colors
-                                                          .orange[700])),
-                                            ),
-                                          ])),
-                                  if (sel)
-                                    const Icon(Icons.check_circle_rounded,
-                                        color: _primaryGreen, size: 22),
-                                ]),
-                          ),
-                        );
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(
+                child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2)))),
+            const Text('Select Fund',
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: _textDark)),
+            const SizedBox(height: 4),
+            Text('Choose the fund you wish to invest in',
+                style: TextStyle(fontSize: 13, color: _textMuted)),
+            const SizedBox(height: 16),
+            if (_isLoadingFunds)
+              const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: CircularProgressIndicator(color: _primaryGreen)))
+            else if (_funds.isEmpty)
+              Center(
+                  child: Column(children: [
+                    const SizedBox(height: 24),
+                    Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
+                    const SizedBox(height: 12),
+                    Text('No funds available',
+                        style: TextStyle(color: _textMuted)),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _loadFunds();
                       },
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry'),
+                      style:
+                      TextButton.styleFrom(foregroundColor: _primaryGreen),
                     ),
-                  ),
-              ]),
+                  ]))
+            else
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollCtrl,
+                  itemCount: _funds.length,
+                  itemBuilder: (_, i) {
+                    final fund = _funds[i];
+                    final sel =
+                        _selectedFund?.fundingCode == fund.fundingCode;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedFund = fund;
+                          _errors.remove('fund');
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: sel ? _softMint : Colors.grey[50],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color:
+                              sel ? _primaryGreen : Colors.transparent,
+                              width: 1.5),
+                        ),
+                        child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: sel
+                                      ? _primaryGreen.withOpacity(0.15)
+                                      : Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                    color: sel ? _primaryGreen : _textMuted,
+                                    size: 20),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                  child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        Text(fund.fundingName,
+                                            style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                                color: sel
+                                                    ? _primaryGreen
+                                                    : _textDark)),
+                                        const SizedBox(height: 4),
+                                        Text(fund.description,
+                                            style: TextStyle(
+                                                fontSize: 13, color: _textMuted)),
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: fund.status == 'Accepted'
+                                                ? Colors.green.withOpacity(0.1)
+                                                : Colors.orange.withOpacity(0.1),
+                                            borderRadius:
+                                            BorderRadius.circular(6),
+                                          ),
+                                          child: Text(fund.status,
+                                              style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: fund.status == 'Accepted'
+                                                      ? Colors.green[700]
+                                                      : Colors.orange[700])),
+                                        ),
+                                      ])),
+                              if (sel)
+                                const Icon(Icons.check_circle_rounded,
+                                    color: _primaryGreen, size: 22),
+                            ]),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ]),
         ),
       ),
     );
@@ -1402,8 +1622,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     hintText: 'Search bank...',
                     hintStyle:
                     TextStyle(color: Colors.grey[400], fontSize: 14),
-                    prefixIcon: Icon(Icons.search,
-                        color: Colors.grey[400], size: 20),
+                    prefixIcon:
+                    Icon(Icons.search, color: Colors.grey[400], size: 20),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 4, vertical: 14),
@@ -1442,8 +1662,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
                         decoration: BoxDecoration(
-                          color:
-                          sel ? _softMint : Colors.grey[50],
+                          color: sel ? _softMint : Colors.grey[50],
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                               color: sel
@@ -1495,7 +1714,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             colors: [
               Color(0xFF7FFFD4),
               Color(0xFF98FB98),
-              Color(0xFFAFEEEE)
+              Color(0xFFAFEEEE),
             ],
           ),
         ),
@@ -1509,7 +1728,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  //  VERIFICATION PHASE — identity selection → NIN entry → questions → form
+  //  VERIFICATION PHASE
   // ════════════════════════════════════════════════════════════════════════════
 
   Widget _buildVerificationPhase() {
@@ -1597,16 +1816,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 style: TextStyle(fontSize: 13, color: Colors.grey[600])),
           ]),
         ),
-        // Show phase step indicator
         Container(
-          padding:
-          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.4),
               borderRadius: BorderRadius.circular(20)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.verified_user_rounded,
-                color: _deepGreen, size: 14),
+            Icon(Icons.verified_user_rounded, color: _deepGreen, size: 14),
             const SizedBox(width: 5),
             Text(
               _phase == _Phase.identitySelection
@@ -1628,7 +1844,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  //  STEP 1 — Identity type selection
+  //  IDENTITY SELECTION
   // ════════════════════════════════════════════════════════════════════════════
 
   Widget _buildIdentitySelection() {
@@ -1637,7 +1853,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Hero icon
         Center(
           child: Container(
             width: 96,
@@ -1657,7 +1872,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           ),
         ),
         const SizedBox(height: 24),
-
         const Text('Select ID Type',
             style: TextStyle(
                 fontSize: 22,
@@ -1669,8 +1883,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           style: TextStyle(fontSize: 14, color: _textMuted, height: 1.55),
         ),
         const SizedBox(height: 28),
-
-        // Identity type cards
         ...identityTypes.map((type) {
           final isSelected = _selectedIdentityType == type;
           final isNida = type == _IdentityType.nida;
@@ -1705,7 +1917,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 ],
               ),
               child: Row(children: [
-                // Icon container
                 Container(
                   width: 52,
                   height: 52,
@@ -1720,19 +1931,17 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       size: 26),
                 ),
                 const SizedBox(width: 16),
-                // Labels
                 Expanded(
-                    child:
-                    Column(crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(children: [
                             Text(type.label,
                                 style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
-                                    color: isSelected
-                                        ? _primaryGreen
-                                        : _textDark)),
+                                    color:
+                                    isSelected ? _primaryGreen : _textDark)),
                             if (isNida) ...[
                               const SizedBox(width: 8),
                               Container(
@@ -1753,11 +1962,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                           const SizedBox(height: 4),
                           Text(type.description,
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: _textMuted,
-                                  height: 1.4)),
+                                  fontSize: 12, color: _textMuted, height: 1.4)),
                         ])),
-                // Radio indicator
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: 24,
@@ -1766,9 +1972,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     shape: BoxShape.circle,
                     color: isSelected ? _primaryGreen : Colors.transparent,
                     border: Border.all(
-                        color: isSelected
-                            ? _primaryGreen
-                            : Colors.grey[400]!,
+                        color:
+                        isSelected ? _primaryGreen : Colors.grey[400]!,
                         width: 2),
                   ),
                   child: isSelected
@@ -1780,9 +1985,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             ),
           );
         }),
-
         const SizedBox(height: 32),
-
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -1790,11 +1993,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 ? null
                 : () {
               if (_selectedIdentityType == _IdentityType.nida) {
-                // NIDA requires verification
                 _transition(_Phase.ninEntry);
               } else {
-                // Other IDs skip verification, go straight to form
-                // Pre-set the ID type in the form
                 setState(() {
                   switch (_selectedIdentityType!) {
                     case _IdentityType.drivingLicense:
@@ -1823,7 +2023,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   borderRadius: BorderRadius.circular(16)),
               elevation: 0,
             ),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            child:
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(
                 _selectedIdentityType == _IdentityType.nida
                     ? Icons.verified_user_outlined
@@ -1843,8 +2044,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             ]),
           ),
         ),
-
-        // Info note
         if (_selectedIdentityType != null &&
             _selectedIdentityType != _IdentityType.nida) ...[
           const SizedBox(height: 16),
@@ -1855,15 +2054,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: Colors.orange.withOpacity(0.3)),
             ),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Icon(Icons.info_outline_rounded,
                   color: Colors.orange[600], size: 18),
               const SizedBox(width: 10),
               Expanded(
                   child: Text(
                     'You will need to fill in your personal details manually and upload a copy of your ${_selectedIdentityType!.label}.',
-                    style: TextStyle(
-                        fontSize: 13, color: _textDark, height: 1.5),
+                    style:
+                    TextStyle(fontSize: 13, color: _textDark, height: 1.5),
                   )),
             ]),
           ),
@@ -1873,15 +2073,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  //  STEP 2 — NIN entry (NIDA only)
+  //  NIN ENTRY
   // ════════════════════════════════════════════════════════════════════════════
 
   Widget _buildNinEntry() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-      child:
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Hero
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Center(
           child: Container(
             width: 96,
@@ -1901,7 +2099,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           ),
         ),
         const SizedBox(height: 24),
-
         const Text('Enter Your NIN',
             style: TextStyle(
                 fontSize: 22,
@@ -1913,8 +2110,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           style: TextStyle(fontSize: 14, color: _textMuted, height: 1.55),
         ),
         const SizedBox(height: 24),
-
-        // Error banner
         if (_nidaErrorMsg != null)
           Container(
             margin: const EdgeInsets.only(bottom: 16),
@@ -1922,26 +2117,21 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             decoration: BoxDecoration(
               color: _errorRed.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12),
-              border:
-              Border.all(color: _errorRed.withOpacity(0.3)),
+              border: Border.all(color: _errorRed.withOpacity(0.3)),
             ),
             child: Row(children: [
-              Icon(Icons.error_outline_rounded,
-                  color: _errorRed, size: 18),
+              Icon(Icons.error_outline_rounded, color: _errorRed, size: 18),
               const SizedBox(width: 10),
               Expanded(
                   child: Text(_nidaErrorMsg!,
-                      style:
-                      TextStyle(fontSize: 13, color: _errorRed))),
+                      style: TextStyle(fontSize: 13, color: _errorRed))),
               GestureDetector(
                 onTap: () => setState(() => _nidaErrorMsg = null),
-                child: Icon(Icons.close_rounded,
-                    color: _errorRed, size: 18),
+                child:
+                Icon(Icons.close_rounded, color: _errorRed, size: 18),
               ),
             ]),
           ),
-
-        // NIN input
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
@@ -1974,37 +2164,28 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             decoration: InputDecoration(
               labelText: 'National ID Number (NIN) *',
               labelStyle: TextStyle(
-                  color:
-                  _ninError != null ? _errorRed : _textMuted,
+                  color: _ninError != null ? _errorRed : _textMuted,
                   fontSize: 13),
               prefixIcon: Icon(Icons.badge_outlined,
-                  color: _ninError != null
-                      ? _errorRed
-                      : _primaryGreen,
+                  color: _ninError != null ? _errorRed : _primaryGreen,
                   size: 22),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 4, vertical: 18),
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 18),
             ),
           ),
         ),
-
         if (_ninError != null)
           Padding(
             padding: const EdgeInsets.only(top: 6, left: 4),
             child: Row(children: [
-              const Icon(Icons.error_outline,
-                  size: 13, color: _errorRed),
+              const Icon(Icons.error_outline, size: 13, color: _errorRed),
               const SizedBox(width: 4),
               Text(_ninError!,
-                  style: const TextStyle(
-                      fontSize: 12, color: _errorRed)),
+                  style: const TextStyle(fontSize: 12, color: _errorRed)),
             ]),
           ),
-
         const SizedBox(height: 10),
-
-        // Character counter
         AnimatedBuilder(
           animation: _ninCtrl,
           builder: (_, __) {
@@ -2012,8 +2193,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             return Align(
               alignment: Alignment.centerRight,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: n == 20
                       ? _primaryGreen.withOpacity(0.12)
@@ -2024,43 +2205,31 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color:
-                        n == 20 ? _primaryGreen : _textMuted)),
+                        color: n == 20 ? _primaryGreen : _textMuted)),
               ),
             );
           },
         ),
-
         const SizedBox(height: 20),
-
-        // Info card
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.5),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: _primaryGreen.withOpacity(0.25)),
+            border: Border.all(color: _primaryGreen.withOpacity(0.25)),
           ),
-          child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.info_outline_rounded,
-                    color: _primaryGreen, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: Text(
-                      'Your NIN is printed on your National ID card. Verification is required by DSE regulations for all new account applications.',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: _textDark,
-                          height: 1.5),
-                    )),
-              ]),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.info_outline_rounded, color: _primaryGreen, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Text(
+                  'Your NIN is printed on your National ID card. Verification is required by DSE regulations for all new account applications.',
+                  style:
+                  TextStyle(fontSize: 13, color: _textDark, height: 1.5),
+                )),
+          ]),
         ),
-
         const SizedBox(height: 32),
-
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -2080,8 +2249,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   SizedBox(width: 10),
                   Text('Verify with NIDA',
                       style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700)),
+                          fontSize: 16, fontWeight: FontWeight.w700)),
                 ]),
           ),
         ),
@@ -2092,44 +2260,37 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   // ── Loading ────────────────────────────────────────────────────────────────
   Widget _buildNidaLoading() {
     return Center(
-      child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
-                  shape: BoxShape.circle),
-              child: const CircularProgressIndicator(
-                  color: _primaryGreen, strokeWidth: 3),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              _phase == _Phase.submitting
-                  ? 'Verifying your answer...'
-                  : 'Connecting to NIDA...',
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: _textDark),
-            ),
-            const SizedBox(height: 8),
-            Text('Please wait a moment',
-                style: TextStyle(fontSize: 14, color: _textMuted)),
-          ]),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.5), shape: BoxShape.circle),
+          child: const CircularProgressIndicator(
+              color: _primaryGreen, strokeWidth: 3),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          _phase == _Phase.submitting
+              ? 'Verifying your answer...'
+              : 'Connecting to NIDA...',
+          style: const TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w600, color: _textDark),
+        ),
+        const SizedBox(height: 8),
+        Text('Please wait a moment',
+            style: TextStyle(fontSize: 14, color: _textMuted)),
+      ]),
     );
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  //  STEP 3 — Security question with FREE-TEXT answer input
+  //  SECURITY QUESTION
   // ════════════════════════════════════════════════════════════════════════════
 
   Widget _buildNidaQuestion() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-      child:
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Progress bar (assumes ~3 questions)
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(
             children: List.generate(
                 3,
@@ -2149,8 +2310,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         Text('Question $_questionNumber',
             style: TextStyle(fontSize: 12, color: _textMuted)),
         const SizedBox(height: 20),
-
-        // Question card
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
@@ -2164,75 +2323,65 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   offset: const Offset(0, 4))
             ],
           ),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                        color: _softMint,
-                        borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.quiz_outlined,
-                        color: _primaryGreen, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Security Question',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: _textMuted,
-                                fontWeight: FontWeight.w500)),
-                        Text('Code: $_nidaQuestionCode',
-                            style: TextStyle(
-                                fontSize: 11, color: _textMuted)),
-                      ]),
-                ]),
-                const SizedBox(height: 16),
-                Divider(height: 1, color: Colors.grey[100]),
-                const SizedBox(height: 16),
-                // English
-                Text(_nidaQuestionEn,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: _textDark,
-                        height: 1.45)),
-                // Swahili
-                if (_nidaQuestionSw.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('SW  ',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: _primaryGreen)),
-                          Expanded(
-                              child: Text(_nidaQuestionSw,
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: _textMuted,
-                                      fontStyle: FontStyle.italic,
-                                      height: 1.4))),
-                        ]),
-                  ),
-                ],
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: _softMint,
+                    borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.quiz_outlined,
+                    color: _primaryGreen, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Security Question',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: _textMuted,
+                        fontWeight: FontWeight.w500)),
+                Text('Code: $_nidaQuestionCode',
+                    style: TextStyle(fontSize: 11, color: _textMuted)),
               ]),
+            ]),
+            const SizedBox(height: 16),
+            Divider(height: 1, color: Colors.grey[100]),
+            const SizedBox(height: 16),
+            Text(_nidaQuestionEn,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _textDark,
+                    height: 1.45)),
+            if (_nidaQuestionSw.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8)),
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('SW  ',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: _primaryGreen)),
+                      Expanded(
+                          child: Text(_nidaQuestionSw,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: _textMuted,
+                                  fontStyle: FontStyle.italic,
+                                  height: 1.4))),
+                    ]),
+              ),
+            ],
+          ]),
         ),
-
         const SizedBox(height: 24),
-
-        // Answer label
         Row(children: [
           Container(
               width: 3,
@@ -2248,8 +2397,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   color: _textDark)),
         ]),
         const SizedBox(height: 12),
-
-        // ── Free-text answer input ─────────────────────────────────────────
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
@@ -2274,20 +2421,16 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 fontWeight: FontWeight.w700,
                 color: _textDark,
                 letterSpacing: 1),
-            onChanged: (_) =>
-                setState(() => _nidaAnswerError = null),
+            onChanged: (_) => setState(() => _nidaAnswerError = null),
             onSubmitted: (_) => _nidaSubmitAnswer(),
             decoration: InputDecoration(
               labelText: 'Type your answer *',
               labelStyle: TextStyle(
-                  color: _nidaAnswerError != null
-                      ? _errorRed
-                      : _textMuted,
+                  color:
+                  _nidaAnswerError != null ? _errorRed : _textMuted,
                   fontSize: 14),
               prefixIcon: Icon(Icons.edit_outlined,
-                  color: _nidaAnswerError != null
-                      ? _errorRed
-                      : _primaryGreen,
+                  color: _nidaAnswerError != null ? _errorRed : _primaryGreen,
                   size: 22),
               suffixIcon: _nidaAnswerCtrl.text.isNotEmpty
                   ? GestureDetector(
@@ -2300,54 +2443,41 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               )
                   : null,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 4, vertical: 18),
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 18),
             ),
           ),
         ),
-
         if (_nidaAnswerError != null)
           Padding(
             padding: const EdgeInsets.only(top: 6, left: 4),
             child: Row(children: [
-              const Icon(Icons.error_outline,
-                  size: 13, color: _errorRed),
+              const Icon(Icons.error_outline, size: 13, color: _errorRed),
               const SizedBox(width: 4),
               Text(_nidaAnswerError!,
-                  style: const TextStyle(
-                      fontSize: 12, color: _errorRed)),
+                  style: const TextStyle(fontSize: 12, color: _errorRed)),
             ]),
           ),
-
-        // Hint note
         const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.5),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: _primaryGreen.withOpacity(0.2)),
+            border: Border.all(color: _primaryGreen.withOpacity(0.2)),
           ),
-          child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.lightbulb_outline_rounded,
-                    color: Colors.amber[600], size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: Text(
-                      'Type your answer exactly as registered with NIDA. The answer is case-insensitive.',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: _textMuted,
-                          height: 1.45),
-                    )),
-              ]),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.lightbulb_outline_rounded,
+                color: Colors.amber[600], size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text(
+                  'Type your answer exactly as registered with NIDA. The answer is case-insensitive.',
+                  style: TextStyle(fontSize: 12, color: _textMuted, height: 1.45),
+                )),
+          ]),
         ),
-
         const SizedBox(height: 32),
-
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -2365,8 +2495,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 children: [
                   Text('Submit Answer',
                       style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700)),
+                          fontSize: 16, fontWeight: FontWeight.w700)),
                   SizedBox(width: 8),
                   Icon(Icons.arrow_forward_rounded, size: 18),
                 ]),
@@ -2377,15 +2506,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  //  FORM PHASE — 6-step account creation
+  //  FORM PHASE
   // ════════════════════════════════════════════════════════════════════════════
 
   Widget _buildFormPhase() {
-    // Determine if NIDA was used (for the verified badge)
     final nidaVerified = _selectedIdentityType == _IdentityType.nida;
 
     return Column(children: [
-      // ── Header ──────────────────────────────────────────────────────────────
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
         child: Row(children: [
@@ -2393,8 +2520,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             onTap: () {
               if (_currentStep == 0) {
                 Navigator.pushReplacement(context,
-                    MaterialPageRoute(
-                        builder: (_) => const LoginScreen()));
+                    MaterialPageRoute(builder: (_) => const LoginScreen()));
               } else {
                 _previousStep();
               }
@@ -2420,7 +2546,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                             fontWeight: FontWeight.bold,
                             color: _textDark)),
                     const SizedBox(width: 8),
-                    // Verified badge (only for NIDA)
                     if (nidaVerified)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -2463,13 +2588,12 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       ),
                   ]),
                   Text(_steps[_currentStep]['title'] as String,
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600])),
                 ]),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 6),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(20)),
@@ -2481,8 +2605,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           ),
         ]),
       ),
-
-      // ── Progress bar ────────────────────────────────────────────────────────
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: ClipRRect(
@@ -2490,8 +2612,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           child: LinearProgressIndicator(
             value: (_currentStep + 1) / _steps.length,
             backgroundColor: Colors.white.withOpacity(0.3),
-            valueColor:
-            const AlwaysStoppedAnimation<Color>(_deepGreen),
+            valueColor: const AlwaysStoppedAnimation<Color>(_deepGreen),
             minHeight: 5,
           ),
         ),
@@ -2499,8 +2620,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       const SizedBox(height: 12),
       _buildStepIndicator(),
       const SizedBox(height: 4),
-
-      // ── Form content ────────────────────────────────────────────────────────
       Expanded(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -2508,8 +2627,6 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               opacity: _fadeAnim, child: _buildCurrentStep()),
         ),
       ),
-
-      // ── Navigation buttons ─────────────────────────────────────────────────
       Container(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         decoration: BoxDecoration(
@@ -2524,12 +2641,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
               child: OutlinedButton(
                 onPressed: _previousStep,
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(
-                      color: _primaryGreen, width: 1.5),
+                  side:
+                  const BorderSide(color: _primaryGreen, width: 1.5),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
-                  padding:
-                  const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: Colors.white.withOpacity(0.5),
                 ),
                 child: const Text('Back',
@@ -2550,8 +2666,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
-                padding:
-                const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 0,
               ),
               child: _isLoading
@@ -2561,8 +2676,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   child: CircularProgressIndicator(
                       color: Colors.white, strokeWidth: 2.5))
                   : Row(
-                  mainAxisAlignment:
-                  MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                         _currentStep == _steps.length - 1
@@ -2573,8 +2687,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                             fontWeight: FontWeight.w700)),
                     if (_currentStep < _steps.length - 1) ...[
                       const SizedBox(width: 6),
-                      const Icon(
-                          Icons.arrow_forward_rounded,
+                      const Icon(Icons.arrow_forward_rounded,
                           size: 18),
                     ],
                   ]),
@@ -2586,7 +2699,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  //  FORM STEPS
+  //  FORM STEPS ROUTER
   // ════════════════════════════════════════════════════════════════════════════
 
   Widget _buildCurrentStep() {
@@ -2600,7 +2713,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       case 3:
         return _buildBankInformationStep();
       case 4:
-       // return _buildInvestmentMandateStep();
+        return _buildInvestmentMandateStep();
       case 5:
         return _buildFinalDetailsStep();
       default:
@@ -2610,8 +2723,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   // ── Shared NIDA auto-filled banner ─────────────────────────────────────────
   Widget _buildNidaFilledBanner() {
-    final isNida = _selectedIdentityType == _IdentityType.nida;
-    if (!isNida) return const SizedBox.shrink();
+    if (_selectedIdentityType != _IdentityType.nida) return const SizedBox.shrink();
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
@@ -2621,12 +2733,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         border: Border.all(color: _primaryGreen.withOpacity(0.4)),
       ),
       child: Row(children: [
-        const Icon(Icons.verified_rounded,
-            color: _primaryGreen, size: 16),
+        const Icon(Icons.verified_rounded, color: _primaryGreen, size: 16),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-              'Auto-filled from NIDA — review and edit if needed.',
+          child: Text('Auto-filled from NIDA — review and edit if needed.',
               style: TextStyle(
                   fontSize: 12,
                   color: _deepGreen,
@@ -2652,18 +2762,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: _primaryGreen)),
+                            strokeWidth: 2, color: _primaryGreen)),
                     SizedBox(width: 12),
                     Text('Loading available funds...',
-                        style: TextStyle(
-                            color: _textMuted, fontSize: 14)),
+                        style: TextStyle(color: _textMuted, fontSize: 14)),
                   ])))
           : _selectedFund == null
           ? _buildFundEmptyState()
           : _buildSelectedFundCard(),
-      if (_errors['fund'] != null)
-        _buildInlineError(_errors['fund']!),
+      if (_errors['fund'] != null) _buildInlineError(_errors['fund']!),
       const SizedBox(height: 24),
       _buildSectionLabel('Title & Name'),
       Row(children: [
@@ -2671,23 +2778,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             child: _buildDropdownTile(
                 label: 'Title',
                 value: _titleController.text,
-                onTap: () => _showDropdownPicker(
-                    'Select Title',
-                    _titles,
-                    _titleController.text,
-                        (v) => setState(
-                            () => _titleController.text = v)))),
+                onTap: () => _showDropdownPicker('Select Title', _titles,
+                    _titleController.text, (v) => setState(() => _titleController.text = v)))),
         const SizedBox(width: 12),
         Expanded(
             child: _buildDropdownTile(
                 label: 'Gender',
                 value: _selectedGender,
-                onTap: () => _showDropdownPicker(
-                    'Select Gender',
-                    _genders,
-                    _selectedGender,
-                        (v) =>
-                        setState(() => _selectedGender = v)))),
+                onTap: () => _showDropdownPicker('Select Gender', _genders,
+                    _selectedGender, (v) => setState(() => _selectedGender = v)))),
       ]),
       const SizedBox(height: 14),
       _buildInputField(
@@ -2696,8 +2795,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.person_outline_rounded,
           required: true,
           errorText: _errors['firstName'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('firstName'))),
+          onChanged: (_) => setState(() => _errors.remove('firstName'))),
       const SizedBox(height: 14),
       _buildInputField(
           controller: _middleNameController,
@@ -2705,8 +2803,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.person_outline_rounded,
           required: true,
           errorText: _errors['middleName'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('middleName'))),
+          onChanged: (_) => setState(() => _errors.remove('middleName'))),
       const SizedBox(height: 14),
       _buildInputField(
           controller: _lastNameController,
@@ -2714,8 +2811,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.person_outline_rounded,
           required: true,
           errorText: _errors['lastName'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('lastName'))),
+          onChanged: (_) => setState(() => _errors.remove('lastName'))),
       const SizedBox(height: 20),
       _buildSectionLabel('Personal Details'),
       _buildDateField(
@@ -2732,8 +2828,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.location_city_rounded,
           required: true,
           errorText: _errors['placeOfBirth'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('placeOfBirth'))),
+          onChanged: (_) => setState(() => _errors.remove('placeOfBirth'))),
       const SizedBox(height: 14),
       _buildInputField(
           controller: _occupationController,
@@ -2741,8 +2836,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.work_outline_rounded,
           required: true,
           errorText: _errors['occupation'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('occupation'))),
+          onChanged: (_) => setState(() => _errors.remove('occupation'))),
     ]);
   }
 
@@ -2750,8 +2844,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     onTap: _showFundPicker,
     child: Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-          vertical: 20, horizontal: 16),
+      padding:
+      const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
         color: _softMint,
         borderRadius: BorderRadius.circular(16),
@@ -2767,10 +2861,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             decoration: BoxDecoration(
                 color: _primaryGreen.withOpacity(0.15),
                 shape: BoxShape.circle),
-            child: const Icon(
-                Icons.account_balance_wallet_outlined,
-                size: 22,
-                color: _primaryGreen)),
+            child: const Icon(Icons.account_balance_wallet_outlined,
+                size: 22, color: _primaryGreen)),
         const SizedBox(width: 14),
         Expanded(
             child: Column(
@@ -2786,11 +2878,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                       _funds.isEmpty
                           ? 'Tap to load and select a fund'
                           : 'Tap to browse ${_funds.length} available fund${_funds.length != 1 ? 's' : ''}',
-                      style:
-                      TextStyle(fontSize: 13, color: _textMuted)),
+                      style: TextStyle(fontSize: 13, color: _textMuted)),
                 ])),
-        const Icon(Icons.chevron_right_rounded,
-            color: _primaryGreen),
+        const Icon(Icons.chevron_right_rounded, color: _primaryGreen),
       ]),
     ),
   );
@@ -2804,8 +2894,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         decoration: BoxDecoration(
           color: _softMint,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: _primaryGreen.withOpacity(0.5), width: 1.5),
+          border:
+          Border.all(color: _primaryGreen.withOpacity(0.5), width: 1.5),
           boxShadow: [
             BoxShadow(
                 color: _primaryGreen.withOpacity(0.08),
@@ -2813,67 +2903,62 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 offset: const Offset(0, 4))
           ],
         ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                      color: _primaryGreen.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(
-                      Icons.account_balance_wallet_rounded,
-                      size: 22,
-                      color: _primaryGreen)),
-              const SizedBox(width: 14),
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(fund.fundingName,
-                            style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: _primaryGreen)),
-                        const SizedBox(height: 4),
-                        Text(fund.description,
-                            style:
-                            TextStyle(fontSize: 13, color: _textMuted)),
-                        const SizedBox(height: 8),
-                        Row(children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: fund.status == 'Accepted'
-                                  ? Colors.green.withOpacity(0.12)
-                                  : Colors.orange.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(fund.status,
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: fund.status == 'Accepted'
-                                        ? Colors.green[700]
-                                        : Colors.orange[700])),
-                          ),
-                          const SizedBox(width: 8),
-                          Text('Code: ${fund.fundingCode}',
-                              style:
-                              TextStyle(fontSize: 11, color: _textMuted)),
-                        ]),
-                      ])),
-              Column(children: [
-                const Icon(Icons.check_circle_rounded,
-                    color: _primaryGreen, size: 22),
-                const SizedBox(height: 6),
-                Text('Change',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: _primaryGreen,
-                        fontWeight: FontWeight.w600)),
-              ]),
-            ]),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: _primaryGreen.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.account_balance_wallet_rounded,
+                  size: 22, color: _primaryGreen)),
+          const SizedBox(width: 14),
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(fund.fundingName,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: _primaryGreen)),
+                    const SizedBox(height: 4),
+                    Text(fund.description,
+                        style: TextStyle(fontSize: 13, color: _textMuted)),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: fund.status == 'Accepted'
+                              ? Colors.green.withOpacity(0.12)
+                              : Colors.orange.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(fund.status,
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: fund.status == 'Accepted'
+                                    ? Colors.green[700]
+                                    : Colors.orange[700])),
+                      ),
+                      const SizedBox(width: 8),
+                      Text('Code: ${fund.fundingCode}',
+                          style: TextStyle(fontSize: 11, color: _textMuted)),
+                    ]),
+                  ])),
+          Column(children: [
+            const Icon(Icons.check_circle_rounded,
+                color: _primaryGreen, size: 22),
+            const SizedBox(height: 6),
+            Text('Change',
+                style: TextStyle(
+                    fontSize: 11,
+                    color: _primaryGreen,
+                    fontWeight: FontWeight.w600)),
+          ]),
+        ]),
       ),
     );
   }
@@ -2916,15 +3001,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.numbers_rounded,
           required: true,
           errorText: _errors['idNumber'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('idNumber'))),
+          onChanged: (_) => setState(() => _errors.remove('idNumber'))),
       const SizedBox(height: 14),
+      // ── Expiry date is OPTIONAL ──────────────────────────────────────────
       _buildDateField(
           controller: _validityDateController,
-          label: 'Expiry / Validity Date',
+          label: 'Expiry / Validity Date (Optional)',
           firstDate: DateTime.now(),
           lastDate: DateTime(2100),
-          required: true,
+          required: false,
           errorText: _errors['validityDate']),
       const SizedBox(height: 14),
       if (isTz)
@@ -2950,19 +3035,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             icon: Icons.verified_outlined,
             required: true,
             errorText: _errors['issuingAuthority'],
-            onChanged: (_) => setState(
-                    () => _errors.remove('issuingAuthority'))),
+            onChanged: (_) =>
+                setState(() => _errors.remove('issuingAuthority'))),
       const SizedBox(height: 20),
       _buildSectionLabel('Upload ID Document'),
-      Text(
-          'Upload a photo or PDF of your identification (required)',
+      Text('Upload a photo or PDF of your identification (required)',
           style: TextStyle(fontSize: 13, color: _textMuted)),
       const SizedBox(height: 12),
-      _idFile == null
-          ? _buildUploadButton()
-          : _buildUploadedFileCard(),
-      if (_errors['idFile'] != null)
-        _buildInlineError(_errors['idFile']!),
+      _idFile == null ? _buildUploadButton() : _buildUploadedFileCard(),
+      if (_errors['idFile'] != null) _buildInlineError(_errors['idFile']!),
     ]);
   }
 
@@ -3019,8 +3100,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: _primaryGreen.withOpacity(0.5), width: 1.5),
+        border:
+        Border.all(color: _primaryGreen.withOpacity(0.5), width: 1.5),
         boxShadow: [
           BoxShadow(
               color: _primaryGreen.withOpacity(0.08),
@@ -3038,8 +3119,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                   height: 180,
                   fit: BoxFit.cover)),
         Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 16, vertical: 12),
+          padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(children: [
             Container(
                 padding: const EdgeInsets.all(8),
@@ -3061,12 +3142,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     children: [
                       Text(_idFileName ?? 'Uploaded file',
                           style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500),
+                              fontSize: 14, fontWeight: FontWeight.w500),
                           overflow: TextOverflow.ellipsis),
                       Text('Document uploaded',
-                          style:
-                          TextStyle(fontSize: 12, color: _textMuted)),
+                          style: TextStyle(fontSize: 12, color: _textMuted)),
                     ])),
             IconButton(
                 onPressed: _removeIdFile,
@@ -3080,8 +3159,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             onPressed: _pickIdFile,
             icon: const Icon(Icons.swap_horiz_rounded, size: 18),
             label: const Text('Replace file'),
-            style:
-            TextButton.styleFrom(foregroundColor: _primaryGreen)),
+            style: TextButton.styleFrom(foregroundColor: _primaryGreen)),
       ]),
     );
   }
@@ -3094,9 +3172,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       _buildSectionLabel('Location'),
       _buildDropdownTile(
           label: 'Country *',
-          value: _selectedCountry.isEmpty
-              ? 'Select country'
-              : _selectedCountry,
+          value: _selectedCountry.isEmpty ? 'Select country' : _selectedCountry,
           onTap: () => _showDropdownPicker(
               'Select Country',
               _countries,
@@ -3114,9 +3190,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
       if (isTz) ...[
         _buildDropdownTile(
             label: 'Region *',
-            value: _selectedRegion.isEmpty
-                ? 'Select region'
-                : _selectedRegion,
+            value: _selectedRegion.isEmpty ? 'Select region' : _selectedRegion,
             onTap: () => _showDropdownPicker(
                 'Select Region',
                 _tanzaniaRegions,
@@ -3155,8 +3229,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             icon: Icons.location_on_outlined,
             required: true,
             errorText: _errors['ward'],
-            onChanged: (_) =>
-                setState(() => _errors.remove('ward'))),
+            onChanged: (_) => setState(() => _errors.remove('ward'))),
         const SizedBox(height: 14),
         _buildInputField(
             controller: _houseNumberController,
@@ -3164,8 +3237,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             icon: Icons.home_outlined,
             required: true,
             errorText: _errors['houseNumber'],
-            onChanged: (_) =>
-                setState(() => _errors.remove('houseNumber'))),
+            onChanged: (_) => setState(() => _errors.remove('houseNumber'))),
         const SizedBox(height: 14),
         _buildInputField(
             controller: _streetController,
@@ -3173,8 +3245,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             icon: Icons.alt_route_outlined,
             required: true,
             errorText: _errors['street'],
-            onChanged: (_) =>
-                setState(() => _errors.remove('street'))),
+            onChanged: (_) => setState(() => _errors.remove('street'))),
       ] else ...[
         _buildInputField(
             controller: _cityController,
@@ -3182,8 +3253,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             icon: Icons.location_city_rounded,
             required: true,
             errorText: _errors['city'],
-            onChanged: (_) =>
-                setState(() => _errors.remove('city'))),
+            onChanged: (_) => setState(() => _errors.remove('city'))),
         const SizedBox(height: 14),
         _buildInputField(
             controller: _physicalAddressController,
@@ -3192,8 +3262,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             maxLines: 2,
             required: true,
             errorText: _errors['address'],
-            onChanged: (_) =>
-                setState(() => _errors.remove('address'))),
+            onChanged: (_) => setState(() => _errors.remove('address'))),
       ],
       const SizedBox(height: 20),
       _buildSectionLabel('Contact Details'),
@@ -3204,8 +3273,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           keyboardType: TextInputType.emailAddress,
           required: true,
           errorText: _errors['email'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('email'))),
+          onChanged: (_) => setState(() => _errors.remove('email'))),
       const SizedBox(height: 14),
       _buildInputField(
           controller: _phoneController,
@@ -3214,8 +3282,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           keyboardType: TextInputType.phone,
           required: true,
           errorText: _errors['phone'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('phone'))),
+          onChanged: (_) => setState(() => _errors.remove('phone'))),
     ]);
   }
 
@@ -3238,8 +3305,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.credit_card_rounded,
           keyboardType: TextInputType.text,
           inputFormatters: [
-            FilteringTextInputFormatter.allow(
-                RegExp(r'[a-zA-Z0-9]')),
+            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
             LengthLimitingTextInputFormatter(20)
           ],
           required: true,
@@ -3258,15 +3324,15 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.person_outline_rounded,
           required: true,
           errorText: _errors['accountHolderName'],
-          onChanged: (_) => setState(
-                  () => _errors.remove('accountHolderName'))),
+          onChanged: (_) =>
+              setState(() => _errors.remove('accountHolderName'))),
       const SizedBox(height: 20),
       _buildSectionLabel('Bank Details'),
       GestureDetector(
         onTap: _showBankSearchPicker,
         child: Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 16, vertical: 16),
+          padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: _cardBg,
             borderRadius: BorderRadius.circular(14),
@@ -3289,8 +3355,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Bank Name *',
-                          style: TextStyle(
-                              fontSize: 12, color: _textMuted)),
+                          style: TextStyle(fontSize: 12, color: _textMuted)),
                       const SizedBox(height: 4),
                       Text(
                         _bankController.selectedBank ??
@@ -3302,8 +3367,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                             color: _bankController.selectedBank != null
                                 ? _textDark
                                 : _textMuted,
-                            fontWeight:
-                            _bankController.selectedBank != null
+                            fontWeight: _bankController.selectedBank != null
                                 ? FontWeight.w500
                                 : FontWeight.normal),
                       ),
@@ -3312,8 +3376,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           ]),
         ),
       ),
-      if (_errors['bankName'] != null)
-        _buildInlineError(_errors['bankName']!),
+      if (_errors['bankName'] != null) _buildInlineError(_errors['bankName']!),
       const SizedBox(height: 14),
       _buildInputField(
           controller: _branchController,
@@ -3321,8 +3384,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.business_outlined,
           required: true,
           errorText: _errors['branch'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('branch'))),
+          onChanged: (_) => setState(() => _errors.remove('branch'))),
       const SizedBox(height: 14),
       _buildInputField(
           controller: _swiftCodeController,
@@ -3330,157 +3392,139 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           icon: Icons.code_rounded,
           required: true,
           errorText: _errors['swiftCode'],
-          onChanged: (_) =>
-              setState(() => _errors.remove('swiftCode'))),
+          onChanged: (_) => setState(() => _errors.remove('swiftCode'))),
     ]);
   }
 
-  // ── Step 4: Investment ─────────────────────────────────────────────────────
-  // Widget _buildInvestmentMandateStep() {
-  //   return _buildStepCard(children: [
-  //     _buildSectionLabel('Initial Investment'),
-  //     _buildInputFieldFormatted(
-  //         controller: _initialAmountController,
-  //         label: 'Initial Amount',
-  //         icon: Icons.attach_money_rounded,
-  //         formatter: _ThousandsInputFormatter(),
-  //         errorText: _errors['initialAmount'],
-  //         onChanged: (_) =>
-  //             setState(() => _errors.remove('initialAmount'))),
-  //     const SizedBox(height: 14),
-  //     _buildDropdownTile(
-  //         label: 'Currency',
-  //         value: _selectedAmountCurrency,
-  //         onTap: () => _showDropdownPicker(
-  //             'Select Currency',
-  //             _currencies,
-  //             _selectedAmountCurrency,
-  //                 (v) =>
-  //                 setState(() => _selectedAmountCurrency = v))),
-  //     const SizedBox(height: 20),
-  //     _buildSectionLabel('Account Type'),
-  //     ..._accountTypes.map((type) {
-  //       final sel = _selectedAccountType == type;
-  //       return GestureDetector(
-  //         onTap: () =>
-  //             setState(() => _selectedAccountType = type),
-  //         child: AnimatedContainer(
-  //           duration: const Duration(milliseconds: 200),
-  //           margin: const EdgeInsets.only(bottom: 10),
-  //           padding: const EdgeInsets.symmetric(
-  //               horizontal: 16, vertical: 14),
-  //           decoration: BoxDecoration(
-  //             color: sel ? _softMint : Colors.white,
-  //             borderRadius: BorderRadius.circular(14),
-  //             border: Border.all(
-  //                 color: sel
-  //                     ? _primaryGreen
-  //                     : Colors.grey.withOpacity(0.2),
-  //                 width: sel ? 1.5 : 1),
-  //             boxShadow: sel
-  //                 ? [
-  //               BoxShadow(
-  //                   color: _primaryGreen.withOpacity(0.1),
-  //                   blurRadius: 8,
-  //                   offset: const Offset(0, 2))
-  //             ]
-  //                 : [],
-  //           ),
-  //           child: Row(children: [
-  //             AnimatedContainer(
-  //               duration: const Duration(milliseconds: 200),
-  //               width: 22,
-  //               height: 22,
-  //               decoration: BoxDecoration(
-  //                   shape: BoxShape.circle,
-  //                   color: sel
-  //                       ? _primaryGreen
-  //                       : Colors.transparent,
-  //                   border: Border.all(
-  //                       color: sel
-  //                           ? _primaryGreen
-  //                           : Colors.grey[400]!,
-  //                       width: 2)),
-  //               child: sel
-  //                   ? const Icon(Icons.check_rounded,
-  //                   size: 14, color: Colors.white)
-  //                   : null,
-  //             ),
-  //             const SizedBox(width: 14),
-  //             Text(type,
-  //                 style: TextStyle(
-  //                     fontSize: 15,
-  //                     fontWeight: sel
-  //                         ? FontWeight.w600
-  //                         : FontWeight.normal,
-  //                     color: sel ? _primaryGreen : _textDark)),
-  //           ]),
-  //         ),
-  //       );
-  //     }),
-  //     const SizedBox(height: 20),
-  //     _buildSectionLabel('Payment Method'),
-  //     ..._paymentMethods.map((method) {
-  //       final sel = _selectedPaymentMethod == method;
-  //       return GestureDetector(
-  //         onTap: () =>
-  //             setState(() => _selectedPaymentMethod = method),
-  //         child: AnimatedContainer(
-  //           duration: const Duration(milliseconds: 200),
-  //           margin: const EdgeInsets.only(bottom: 10),
-  //           padding: const EdgeInsets.symmetric(
-  //               horizontal: 16, vertical: 14),
-  //           decoration: BoxDecoration(
-  //             color: sel ? _softMint : Colors.white,
-  //             borderRadius: BorderRadius.circular(14),
-  //             border: Border.all(
-  //                 color: sel
-  //                     ? _primaryGreen
-  //                     : Colors.grey.withOpacity(0.2),
-  //                 width: sel ? 1.5 : 1),
-  //             boxShadow: sel
-  //                 ? [
-  //               BoxShadow(
-  //                   color: _primaryGreen.withOpacity(0.1),
-  //                   blurRadius: 8,
-  //                   offset: const Offset(0, 2))
-  //             ]
-  //                 : [],
-  //           ),
-  //           child: Row(children: [
-  //             AnimatedContainer(
-  //               duration: const Duration(milliseconds: 200),
-  //               width: 22,
-  //               height: 22,
-  //               decoration: BoxDecoration(
-  //                   shape: BoxShape.circle,
-  //                   color: sel
-  //                       ? _primaryGreen
-  //                       : Colors.transparent,
-  //                   border: Border.all(
-  //                       color: sel
-  //                           ? _primaryGreen
-  //                           : Colors.grey[400]!,
-  //                       width: 2)),
-  //               child: sel
-  //                   ? const Icon(Icons.check_rounded,
-  //                   size: 14, color: Colors.white)
-  //                   : null,
-  //             ),
-  //             const SizedBox(width: 14),
-  //             Text(method,
-  //                 style: TextStyle(
-  //                     fontSize: 15,
-  //                     fontWeight: sel
-  //                         ? FontWeight.w600
-  //                         : FontWeight.normal,
-  //                     color: sel ? _primaryGreen : _textDark)),
-  //           ]),
-  //         ),
-  //       );
-  //     }),
-  //   ]);
-  // }
+  // ── Step 4: Investment Mandate ─────────────────────────────────────────────
+  Widget _buildInvestmentMandateStep() {
+    return _buildStepCard(children: [
+      _buildSectionLabel('Initial Investment'),
+      _buildInputFieldFormatted(
+          controller: _initialAmountController,
+          label: 'Initial Amount',
+          icon: Icons.attach_money_rounded,
+          formatter: _ThousandsInputFormatter(),
+          errorText: _errors['initialAmount'],
+          onChanged: (_) =>
+              setState(() => _errors.remove('initialAmount'))),
+      const SizedBox(height: 14),
+      _buildDropdownTile(
+          label: 'Currency',
+          value: _selectedAmountCurrency,
+          onTap: () => _showDropdownPicker(
+              'Select Currency',
+              _currencies,
+              _selectedAmountCurrency,
+                  (v) => setState(() => _selectedAmountCurrency = v))),
+      const SizedBox(height: 20),
+      _buildSectionLabel('Account Type'),
+      ..._accountTypes.map((type) {
+        final sel = _selectedAccountType == type;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedAccountType = type),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.only(bottom: 10),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: sel ? _softMint : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: sel ? _primaryGreen : Colors.grey.withOpacity(0.2),
+                  width: sel ? 1.5 : 1),
+              boxShadow: sel
+                  ? [
+                BoxShadow(
+                    color: _primaryGreen.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ]
+                  : [],
+            ),
+            child: Row(children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: sel ? _primaryGreen : Colors.transparent,
+                    border: Border.all(
+                        color: sel ? _primaryGreen : Colors.grey[400]!,
+                        width: 2)),
+                child: sel
+                    ? const Icon(Icons.check_rounded,
+                    size: 14, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 14),
+              Text(type,
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight:
+                      sel ? FontWeight.w600 : FontWeight.normal,
+                      color: sel ? _primaryGreen : _textDark)),
+            ]),
+          ),
+        );
+      }),
+      const SizedBox(height: 20),
+      _buildSectionLabel('Payment Method'),
+      ..._paymentMethods.map((method) {
+        final sel = _selectedPaymentMethod == method;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedPaymentMethod = method),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.only(bottom: 10),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: sel ? _softMint : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: sel ? _primaryGreen : Colors.grey.withOpacity(0.2),
+                  width: sel ? 1.5 : 1),
+              boxShadow: sel
+                  ? [
+                BoxShadow(
+                    color: _primaryGreen.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ]
+                  : [],
+            ),
+            child: Row(children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: sel ? _primaryGreen : Colors.transparent,
+                    border: Border.all(
+                        color: sel ? _primaryGreen : Colors.grey[400]!,
+                        width: 2)),
+                child: sel
+                    ? const Icon(Icons.check_rounded,
+                    size: 14, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 14),
+              Text(method,
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight:
+                      sel ? FontWeight.w600 : FontWeight.normal,
+                      color: sel ? _primaryGreen : _textDark)),
+            ]),
+          ),
+        );
+      }),
+    ]);
+  }
 
   // ── Step 5: Final Details ──────────────────────────────────────────────────
   Widget _buildFinalDetailsStep() {
@@ -3520,54 +3564,48 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         decoration: BoxDecoration(
           color: Colors.orange.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: Colors.orange.withOpacity(0.2), width: 1),
+          border:
+          Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
         ),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Icon(Icons.info_outline_rounded,
-                    color: Colors.orange[600], size: 18),
-                const SizedBox(width: 8),
-                const Expanded(
-                    child: Text('Politically Exposed Person (PEP)',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14))),
-              ]),
-              const SizedBox(height: 10),
-              Text(
-                'Are you or any immediate family member related to a senior government official, military officer (general+), president of a state-owned company, head of a government agency, supreme court judge, or political party representative?',
-                style: TextStyle(
-                    fontSize: 12, color: _textMuted, height: 1.5),
-              ),
-              const SizedBox(height: 14),
-              Row(children: [
-                _buildToggleOption(
-                    label: 'Yes',
-                    selected: _isPoliticallyExposed,
-                    onTap: () =>
-                        setState(() => _isPoliticallyExposed = true)),
-                const SizedBox(width: 12),
-                _buildToggleOption(
-                    label: 'No',
-                    selected: !_isPoliticallyExposed,
-                    onTap: () =>
-                        setState(() => _isPoliticallyExposed = false)),
-              ]),
-              if (_isPoliticallyExposed) ...[
-                const SizedBox(height: 14),
-                _buildInputField(
-                    controller: _positionController,
-                    label: 'Position Held',
-                    icon: Icons.badge_outlined,
-                    required: true,
-                    errorText: _errors['position'],
-                    onChanged: (_) =>
-                        setState(() => _errors.remove('position'))),
-              ],
-            ]),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.info_outline_rounded,
+                color: Colors.orange[600], size: 18),
+            const SizedBox(width: 8),
+            const Expanded(
+                child: Text('Politically Exposed Person (PEP)',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14))),
+          ]),
+          const SizedBox(height: 10),
+          Text(
+            'Are you or any immediate family member related to a senior government official, military officer (general+), president of a state-owned company, head of a government agency, supreme court judge, or political party representative?',
+            style: TextStyle(fontSize: 12, color: _textMuted, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          Row(children: [
+            _buildToggleOption(
+                label: 'Yes',
+                selected: _isPoliticallyExposed,
+                onTap: () => setState(() => _isPoliticallyExposed = true)),
+            const SizedBox(width: 12),
+            _buildToggleOption(
+                label: 'No',
+                selected: !_isPoliticallyExposed,
+                onTap: () => setState(() => _isPoliticallyExposed = false)),
+          ]),
+          if (_isPoliticallyExposed) ...[
+            const SizedBox(height: 14),
+            _buildInputField(
+                controller: _positionController,
+                label: 'Position Held',
+                icon: Icons.badge_outlined,
+                required: true,
+                errorText: _errors['position'],
+                onChanged: (_) =>
+                    setState(() => _errors.remove('position'))),
+          ],
+        ]),
       ),
     ]);
   }
@@ -3586,15 +3624,13 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             color: selected ? _primaryGreen : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-                color: selected
-                    ? _primaryGreen
-                    : Colors.grey.withOpacity(0.3)),
+                color:
+                selected ? _primaryGreen : Colors.grey.withOpacity(0.3)),
           ),
           child: Text(label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color:
-                  selected ? Colors.white : _textMuted,
+                  color: selected ? Colors.white : _textMuted,
                   fontWeight: FontWeight.w600,
                   fontSize: 15)),
         ),
@@ -3606,13 +3642,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   //  SHARED UI HELPERS
   // ════════════════════════════════════════════════════════════════════════════
 
-  Widget _buildStepCard({required List<Widget> children}) =>
-      Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: children),
-      );
+  Widget _buildStepCard({required List<Widget> children}) => Container(
+    margin: const EdgeInsets.only(bottom: 20),
+    child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: children),
+  );
 
   Widget _buildSectionLabel(String label) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
@@ -3636,12 +3670,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   Widget _buildInlineError(String text) => Padding(
     padding: const EdgeInsets.only(top: 6, left: 4),
     child: Row(children: [
-      const Icon(Icons.error_outline,
-          size: 13, color: _errorRed),
+      const Icon(Icons.error_outline, size: 13, color: _errorRed),
       const SizedBox(width: 4),
       Text(text,
-          style: const TextStyle(
-              fontSize: 12, color: _errorRed)),
+          style: const TextStyle(fontSize: 12, color: _errorRed)),
     ]),
   );
 
@@ -3658,51 +3690,47 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     ValueChanged<String>? onChanged,
   }) {
     final hasError = errorText != null && errorText.isNotEmpty;
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: _cardBg,
-              borderRadius: BorderRadius.circular(14),
-              border: hasError
-                  ? Border.all(color: _errorRed, width: 1.5)
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
-              ],
-            ),
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              inputFormatters: inputFormatters,
-              enabled: enabled,
-              maxLines: maxLines,
-              onChanged: onChanged,
-              style: const TextStyle(fontSize: 15, color: _textDark),
-              decoration: InputDecoration(
-                labelText: required ? '$label *' : label,
-                labelStyle: TextStyle(
-                    color: hasError ? _errorRed : _textMuted,
-                    fontSize: 14),
-                prefixIcon: icon != null
-                    ? Icon(icon,
-                    color: hasError ? _errorRed : _primaryGreen,
-                    size: 20)
-                    : null,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                    horizontal: icon != null ? 4 : 18, vertical: 16),
-                floatingLabelBehavior: FloatingLabelBehavior.auto,
-              ),
-            ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: _cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: hasError
+              ? Border.all(color: _errorRed, width: 1.5)
+              : null,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2))
+          ],
+        ),
+        child: TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          enabled: enabled,
+          maxLines: maxLines,
+          onChanged: onChanged,
+          style: const TextStyle(fontSize: 15, color: _textDark),
+          decoration: InputDecoration(
+            labelText: required ? '$label *' : label,
+            labelStyle: TextStyle(
+                color: hasError ? _errorRed : _textMuted, fontSize: 14),
+            prefixIcon: icon != null
+                ? Icon(icon,
+                color: hasError ? _errorRed : _primaryGreen, size: 20)
+                : null,
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: icon != null ? 4 : 18, vertical: 16),
+            floatingLabelBehavior: FloatingLabelBehavior.auto,
           ),
-          if (hasError) _buildInlineError(errorText),
-        ]);
+        ),
+      ),
+      if (hasError) _buildInlineError(errorText),
+    ]);
   }
 
   Widget _buildInputFieldFormatted({
@@ -3714,53 +3742,48 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     ValueChanged<String>? onChanged,
   }) {
     final hasError = errorText != null && errorText.isNotEmpty;
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: _cardBg,
-              borderRadius: BorderRadius.circular(14),
-              border: hasError
-                  ? Border.all(color: _errorRed, width: 1.5)
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
-              ],
-            ),
-            child: TextField(
-              controller: controller,
-              keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(
-                    RegExp(r'[\d,.]')),
-                formatter
-              ],
-              onChanged: onChanged,
-              style: const TextStyle(fontSize: 15, color: _textDark),
-              decoration: InputDecoration(
-                labelText: '$label *',
-                labelStyle: TextStyle(
-                    color: hasError ? _errorRed : _textMuted,
-                    fontSize: 14),
-                prefixIcon: icon != null
-                    ? Icon(icon,
-                    color: hasError ? _errorRed : _primaryGreen,
-                    size: 20)
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 4, vertical: 16),
-              ),
-            ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: _cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: hasError
+              ? Border.all(color: _errorRed, width: 1.5)
+              : null,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2))
+          ],
+        ),
+        child: TextField(
+          controller: controller,
+          keyboardType:
+          const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
+            formatter
+          ],
+          onChanged: onChanged,
+          style: const TextStyle(fontSize: 15, color: _textDark),
+          decoration: InputDecoration(
+            labelText: '$label *',
+            labelStyle: TextStyle(
+                color: hasError ? _errorRed : _textMuted, fontSize: 14),
+            prefixIcon: icon != null
+                ? Icon(icon,
+                color: hasError ? _errorRed : _primaryGreen, size: 20)
+                : null,
+            border: InputBorder.none,
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
           ),
-          if (hasError) _buildInlineError(errorText),
-        ]);
+        ),
+      ),
+      if (hasError) _buildInlineError(errorText),
+    ]);
   }
 
   Widget _buildDateField({
@@ -3772,60 +3795,53 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     String? errorText,
   }) {
     final hasError = errorText != null && errorText.isNotEmpty;
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () {
-              _selectDate(controller,
-                  firstDate: firstDate, lastDate: lastDate);
-              setState(() {
-                _errors.remove('dob');
-                _errors.remove('validityDate');
-              });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: _cardBg,
-                borderRadius: BorderRadius.circular(14),
-                border: hasError
-                    ? Border.all(color: _errorRed, width: 1.5)
-                    : null,
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2))
-                ],
-              ),
-              child: TextField(
-                controller: controller,
-                enabled: false,
-                style: const TextStyle(fontSize: 15, color: _textDark),
-                decoration: InputDecoration(
-                  labelText: required ? '$label *' : label,
-                  labelStyle: TextStyle(
-                      color: hasError ? _errorRed : _textMuted,
-                      fontSize: 14),
-                  prefixIcon: Icon(Icons.calendar_today_outlined,
-                      color:
-                      hasError ? _errorRed : _primaryGreen,
-                      size: 20),
-                  suffixIcon: const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: _textMuted,
-                      size: 14),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 4, vertical: 16),
-                  disabledBorder: InputBorder.none,
-                ),
-              ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      GestureDetector(
+        onTap: () {
+          _selectDate(controller,
+              firstDate: firstDate, lastDate: lastDate);
+          setState(() {
+            _errors.remove('dob');
+            _errors.remove('validityDate');
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: _cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: hasError
+                ? Border.all(color: _errorRed, width: 1.5)
+                : null,
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2))
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            enabled: false,
+            style: const TextStyle(fontSize: 15, color: _textDark),
+            decoration: InputDecoration(
+              labelText: required ? '$label *' : label,
+              labelStyle: TextStyle(
+                  color: hasError ? _errorRed : _textMuted, fontSize: 14),
+              prefixIcon: Icon(Icons.calendar_today_outlined,
+                  color: hasError ? _errorRed : _primaryGreen, size: 20),
+              suffixIcon: const Icon(Icons.arrow_forward_ios_rounded,
+                  color: _textMuted, size: 14),
+              border: InputBorder.none,
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+              disabledBorder: InputBorder.none,
             ),
           ),
-          if (hasError) _buildInlineError(errorText),
-        ]);
+        ),
+      ),
+      if (hasError) _buildInlineError(errorText),
+    ]);
   }
 
   Widget _buildDropdownTile({
@@ -3836,60 +3852,54 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     bool highlighted = false,
   }) {
     final hasError = errorText != null && errorText.isNotEmpty;
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: onTap,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                color: highlighted ? _softMint : _cardBg,
-                borderRadius: BorderRadius.circular(14),
-                border: hasError
-                    ? Border.all(color: _errorRed, width: 1.5)
-                    : highlighted
-                    ? Border.all(
-                    color: _primaryGreen.withOpacity(0.4),
-                    width: 1)
-                    : null,
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2))
-                ],
-              ),
-              child: Row(children: [
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(label,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color:
-                                  hasError ? _errorRed : _textMuted)),
-                          const SizedBox(height: 4),
-                          Text(value,
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  color: highlighted
-                                      ? _primaryGreen
-                                      : _textDark,
-                                  fontWeight: highlighted
-                                      ? FontWeight.w600
-                                      : FontWeight.w500)),
-                        ])),
-                Icon(Icons.keyboard_arrow_down_rounded,
-                    color: hasError ? _errorRed : _textMuted),
-              ]),
-            ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: highlighted ? _softMint : _cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: hasError
+                ? Border.all(color: _errorRed, width: 1.5)
+                : highlighted
+                ? Border.all(
+                color: _primaryGreen.withOpacity(0.4), width: 1)
+                : null,
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2))
+            ],
           ),
-          if (hasError) _buildInlineError(errorText),
-        ]);
+          child: Row(children: [
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: hasError ? _errorRed : _textMuted)),
+                      const SizedBox(height: 4),
+                      Text(value,
+                          style: TextStyle(
+                              fontSize: 15,
+                              color: highlighted ? _primaryGreen : _textDark,
+                              fontWeight: highlighted
+                                  ? FontWeight.w600
+                                  : FontWeight.w500)),
+                    ])),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                color: hasError ? _errorRed : _textMuted),
+          ]),
+        ),
+      ),
+      if (hasError) _buildInlineError(errorText),
+    ]);
   }
 
   Widget _buildStepIndicator() {
@@ -3915,8 +3925,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isCompleted
                     ? _primaryGreen
@@ -3925,20 +3935,19 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     : Colors.white.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(20),
                 border: isCurrent
-                    ? Border.all(
-                    color: _primaryGreen, width: 1.5)
+                    ? Border.all(color: _primaryGreen, width: 1.5)
                     : null,
                 boxShadow: isCurrent
                     ? [
                   BoxShadow(
-                      color:
-                      _primaryGreen.withOpacity(0.2),
+                      color: _primaryGreen.withOpacity(0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2))
                 ]
                     : [],
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
+              child:
+              Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(
                     isCompleted
                         ? Icons.check_rounded
