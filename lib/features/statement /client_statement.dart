@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -270,16 +273,13 @@ class _ClientStatementPageState extends State<ClientStatementPage>
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(32),
       build: (ctx) => [
-        // ── Header: white background, text in black ────────────────────
+        // ── Header ────────────────────────────────────────────────────────
         pw.Container(
           padding: const pw.EdgeInsets.all(20),
           decoration: pw.BoxDecoration(
             color: PdfColors.white,
             borderRadius: pw.BorderRadius.circular(12),
-            border: pw.Border.all(
-              color: PdfColor.fromHex('#E0E0E0'),
-              width: 1,
-            ),
+            border: pw.Border.all(color: PdfColor.fromHex('#E0E0E0'), width: 1),
           ),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -288,13 +288,11 @@ class _ClientStatementPageState extends State<ClientStatementPage>
               pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
                 pw.Text('Client Statement',
                     style: pw.TextStyle(
-                        color: PdfColors.black,
-                        fontSize: 18,
+                        color: PdfColors.black, fontSize: 18,
                         fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 4),
                 pw.Text(fundName,
-                    style: const pw.TextStyle(
-                        color: PdfColors.grey, fontSize: 11)),
+                    style: const pw.TextStyle(color: PdfColors.grey, fontSize: 11)),
               ]),
             ],
           ),
@@ -304,7 +302,6 @@ class _ClientStatementPageState extends State<ClientStatementPage>
         // ── Meta row ──────────────────────────────────────────────────────
         pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
           pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            // Account number first, then label
             _pdfLbl('Account Number:', subAcct),
             pw.SizedBox(height: 6),
             _pdfLbl('Fund:', fundName),
@@ -323,13 +320,13 @@ class _ClientStatementPageState extends State<ClientStatementPage>
         ]),
         pw.SizedBox(height: 24),
 
-        // ── Transactions table: Date | Amount | NAV | Units ───────────────
+        // ── Table ─────────────────────────────────────────────────────────
         pw.Table(
           columnWidths: {
-            0: const pw.FlexColumnWidth(2.2), // Date
-            1: const pw.FlexColumnWidth(2.5), // Amount
-            2: const pw.FlexColumnWidth(2),   // NAV
-            3: const pw.FlexColumnWidth(1.5), // Units
+            0: const pw.FlexColumnWidth(2.2),
+            1: const pw.FlexColumnWidth(2.5),
+            2: const pw.FlexColumnWidth(2),
+            3: const pw.FlexColumnWidth(1.5),
           },
           children: [
             pw.TableRow(
@@ -340,18 +337,18 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                 child: pw.Text(h, style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold, fontSize: 10,
                     color: PdfColor.fromHex('#1B5E20'))),
-              ))
-                  .toList(),
+              )).toList(),
             ),
             ...txns.asMap().entries.map((e) {
               final t = e.value; final odd = e.key.isOdd;
               final amountStr = '${t.isDeposit ? '+' : '-'} ${_fmt(t.amount)}';
               return pw.TableRow(
-                decoration: pw.BoxDecoration(color: odd ? PdfColors.grey100 : PdfColors.white),
+                decoration: pw.BoxDecoration(
+                    color: odd ? PdfColors.grey100 : PdfColors.white),
                 children: [
                   DateFormat('dd MMM yy').format(t.date),
                   amountStr,
-                  _fmt(t.price),    // NAV / price per unit
+                  _fmt(t.price),
                   _fmt(t.units),
                 ].map((cell) => pw.Padding(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -364,15 +361,11 @@ class _ClientStatementPageState extends State<ClientStatementPage>
               );
             }).toList(),
 
-            // ── Totals footer row ─────────────────────────────────────────
+            // Totals row
             pw.TableRow(
               decoration: pw.BoxDecoration(color: PdfColor.fromHex('#E8F5E9')),
-              children: [
-                'Total',
-                'TZS ${_fmt(_netFlow)}',
-                '',
-                _fmt(_totalUnits),
-              ].map((cell) => pw.Padding(
+              children: ['Total', 'TZS ${_fmt(_netFlow)}', '', _fmt(_totalUnits)]
+                  .map((cell) => pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: pw.Text(cell, style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold, fontSize: 10,
@@ -383,10 +376,50 @@ class _ClientStatementPageState extends State<ClientStatementPage>
         ),
       ],
     ));
-    await Printing.layoutPdf(
-      onLayout: (fmt) => pdf.save(),
-      name: 'TSL_Statement_${fundName.replaceAll(' ', '_')}.pdf',
-    );
+
+    // ── Save to device and open automatically ────────────────────────────────
+    try {
+      final bytes = await pdf.save();
+      final fileName = 'TSL_Statement_${fundName.replaceAll(' ', '_')}_'
+          '${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf';
+
+      // On Android save to Downloads; on iOS use Documents
+      Directory dir;
+      if (Platform.isAndroid) {
+        dir = Directory('/storage/emulated/0/Download');
+        if (!await dir.exists()) {
+          dir = (await getExternalStorageDirectory()) ?? await getApplicationDocumentsDirectory();
+        }
+      } else {
+        dir = await getApplicationDocumentsDirectory();
+      }
+
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+
+      // Open the file immediately
+      final result = await OpenFile.open(file.path);
+
+      if (result.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Saved to ${file.path}'),
+            backgroundColor: _accent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to save PDF. Please try again.'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   pw.Widget _pdfLbl(String label, String value) => pw.RichText(

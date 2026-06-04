@@ -1,43 +1,43 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Permissions -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <!-- Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- Queries for url_launcher & external apps -->
+    <!-- Only keep these if your app actually needs file access -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <queries>
-        <!-- WhatsApp -->
         <package android:name="com.whatsapp" />
 
-        <!-- Text processing (share / process text) -->
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
         </intent>
 
-        <!-- Maps / Directions (geo: scheme) -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="geo" />
         </intent>
 
-        <!-- Phone calls -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="tel" />
         </intent>
 
-        <!-- Email -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="mailto" />
         </intent>
 
-        <!-- HTTPS links (browser / Google Maps web fallback) -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
@@ -45,8 +45,8 @@
     </queries>
 
     <application
-        android:label="Invest Mkononi"
         android:name="${applicationName}"
+        android:label="Invest Mkononi"
         android:icon="@mipmap/ic_launcher">
 
         <activity
@@ -55,9 +55,9 @@
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode">
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
@@ -67,41 +67,27 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
-        <!-- ── Firebase Messaging ──────────────────────────────────────── -->
-
-        <!-- Default notification channel for FCM (must match channel ID in Dart code) -->
+        <!-- Firebase Messaging -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="high_importance_channel" />
 
-        <!-- Default notification icon -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@mipmap/ic_launcher" />
 
-        <!-- Default notification accent color (optional) -->
+        <!-- Remove this if notification_color does not exist -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_color" />
 
-        <!-- FCM background service -->
-        <service
-            android:name="com.google.firebase.messaging.FirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-
-        <!-- ── End Firebase Messaging ──────────────────────────────────── -->
-
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
     </application>
 
 </manifest>
