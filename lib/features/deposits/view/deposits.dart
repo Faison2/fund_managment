@@ -22,21 +22,23 @@ class _TSL {
 
 // ── Tanzania network providers ────────────────────────────────────────────────
 class _NetworkProvider {
-  final String name, code;
-  final Color  color;
+  final String   name, code;
+  final Color    color;
   final IconData icon;
+  final bool     comingSoon;
   const _NetworkProvider({
     required this.name, required this.code,
     required this.color, required this.icon,
+    this.comingSoon = false,
   });
 }
 
 const _tanzaniaNetworks = [
-  _NetworkProvider(name: 'Airtel',   code: 'Airtel',   color: Color(0xFFFF6B00), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Tigo',     code: 'Tigo',     color: Color(0xFF0057A8), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Halopesa', code: 'Halopesa', color: Color(0xFF00A651), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Azampesa', code: 'Azampesa', color: Color(0xFF6A0DAD), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Mpesa',    code: 'Mpesa',    color: Color(0xFFE10000), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Airtel',      code: 'Airtel',   color: Color(0xFFE20000), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Mixx by YAS', code: 'Tigo',     color: Color(0xFF0057A8), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Halopesa',    code: 'Halopesa', color: Color(0xFFFF9500), icon: Icons.sim_card, comingSoon: true),
+  _NetworkProvider(name: 'Azampesa',    code: 'Azampesa', color: Color(0xFF6A0DAD), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Mpesa',       code: 'Mpesa',    color: Color(0xFFE10000), icon: Icons.sim_card),
 ];
 
 // ── Localised strings ─────────────────────────────────────────────────────────
@@ -48,7 +50,7 @@ class _DS {
       confirmDeposit, confirmDetails, cancel, confirm,
       depositInitiated, done, phone, amount,
       failedLoadFunds, failedLoadUser, retry, noFunds, networkError,
-      free, notSet, loadingUser, selectNetwork, walletProvider;
+      free, notSet, loadingUser, selectNetwork, walletProvider, comingSoon;
   const _DS({
     required this.depositFunds,    required this.chooseFund,
     required this.selectFund,      required this.enterAmount,
@@ -64,7 +66,7 @@ class _DS {
     required this.noFunds,         required this.networkError,
     required this.free,            required this.notSet,
     required this.loadingUser,     required this.selectNetwork,
-    required this.walletProvider,
+    required this.walletProvider,  required this.comingSoon,
   });
 }
 
@@ -98,6 +100,7 @@ const _dsEn = _DS(
   loadingUser:     'Loading account details...',
   selectNetwork:   'Select Network',
   walletProvider:  'Wallet Provider',
+  comingSoon:      'Soon',
 );
 
 const _dsSw = _DS(
@@ -130,6 +133,7 @@ const _dsSw = _DS(
   loadingUser:     'Inapakia maelezo ya akaunti...',
   selectNetwork:   'Chagua Mtandao',
   walletProvider:  'Mtoa Huduma wa Pochi',
+  comingSoon:      'Hivi Karibuni',
 );
 
 // ── DepositPage ───────────────────────────────────────────────────────────────
@@ -161,11 +165,13 @@ class _DepositPageState extends State<DepositPage> {
   bool _isSubmitting = false;
 
   final List<String> _currencies = ['TZS', 'USD'];
+
+  // ── Quick amounts updated: 1K→100K, 5K→200K ──────────────────────────────
   final List<Map<String, String>> _quickAmounts = [
-    {'amount': '1000',  'label': '1K'},
-    {'amount': '5000',  'label': '5K'},
-    {'amount': '10000', 'label': '10K'},
-    {'amount': '50000', 'label': '50K'},
+    {'amount': '100000', 'label': '100K'},
+    {'amount': '200000', 'label': '200K'},
+    {'amount': '10000',  'label': '10K'},
+    {'amount': '50000',  'label': '50K'},
   ];
 
   bool get _dark => context.watch<ThemeProvider>().isDark;
@@ -312,7 +318,6 @@ class _DepositPageState extends State<DepositPage> {
     final txtP   = dark ? _TSL.white : _TSL.black;
     final txtS   = dark ? _TSL.teal  : _TSL.grey;
     final border = dark ? _TSL.black.withOpacity(0.35) : const Color(0xFFE5E7EB);
-    // Deposit uses TSL teal as the confirm accent
     const green  = _TSL.teal;
 
     final result = await showDialog<bool>(
@@ -422,7 +427,6 @@ class _DepositPageState extends State<DepositPage> {
             borderRadius: BorderRadius.circular(24)),
         child: Padding(padding: const EdgeInsets.all(28),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            // Success icon: TSL teal → blue gradient
             Container(
                 width: 72, height: 72,
                 decoration: BoxDecoration(
@@ -497,7 +501,6 @@ class _DepositPageState extends State<DepositPage> {
     final txtP      = dark ? _TSL.white                   : _TSL.black;
     final txtS      = dark ? _TSL.teal                    : _TSL.grey;
     final txtH      = dark ? _TSL.teal.withOpacity(0.6)   : _TSL.grey.withOpacity(0.6);
-    // green = TSL teal (deposit domain accent)
     final green     = _TSL.teal;
     final inputBg   = dark ? _TSL.black                   : const Color(0xFFF9FAFB);
     final summaryBg = dark ? _TSL.black                   : const Color(0xFFF9FAFB);
@@ -513,7 +516,7 @@ class _DepositPageState extends State<DepositPage> {
       backgroundColor: bg,
       body: Column(children: [
 
-        // ── Gradient header — TSL blue → teal ──────────────────────────────
+        // ── Gradient header ────────────────────────────────────────────────
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -548,7 +551,7 @@ class _DepositPageState extends State<DepositPage> {
           )),
         ),
 
-        // ── Scrollable form ───────────────────────────────────────────────
+        // ── Scrollable form ────────────────────────────────────────────────
         Expanded(
           child: Container(
             color: sheet,
@@ -558,7 +561,7 @@ class _DepositPageState extends State<DepositPage> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    // ── Fund dropdown ───────────────────────────────────────
+                    // ── Fund dropdown ─────────────────────────────────────
                     _secLabel(s.selectFund, txtH),
                     const SizedBox(height: 10),
                     if (_isLoadingFunds)
@@ -609,7 +612,7 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Network provider ────────────────────────────────────
+                    // ── Network provider ──────────────────────────────────
                     _secLabel(s.selectNetwork, txtH),
                     const SizedBox(height: 10),
                     _networkProviderPicker(
@@ -620,7 +623,7 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Phone number ────────────────────────────────────────
+                    // ── Phone number ──────────────────────────────────────
                     _secLabel(s.phone, txtH),
                     const SizedBox(height: 10),
                     Container(
@@ -657,7 +660,7 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Amount ──────────────────────────────────────────────
+                    // ── Amount ────────────────────────────────────────────
                     _secLabel(s.enterAmount, txtH),
                     const SizedBox(height: 10),
                     Row(children: [
@@ -722,7 +725,7 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 20),
 
-                    // ── Quick amounts ───────────────────────────────────────
+                    // ── Quick amounts ─────────────────────────────────────
                     _secLabel(s.quickSelect, txtH),
                     const SizedBox(height: 10),
                     Row(
@@ -764,7 +767,7 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Summary ─────────────────────────────────────────────
+                    // ── Summary ───────────────────────────────────────────
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -798,7 +801,7 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 28),
 
-                    // ── Submit button ───────────────────────────────────────
+                    // ── Submit button ─────────────────────────────────────
                     GestureDetector(
                       onTap: canSubmit ? _processDeposit : null,
                       child: AnimatedContainer(
@@ -844,28 +847,31 @@ class _DepositPageState extends State<DepositPage> {
   }) {
     return Column(children: [
       Row(children: [
-        _networkTile(_tanzaniaNetworks[0], inputBg, border, txtS, dark),
+        _networkTile(_tanzaniaNetworks[0], inputBg, border, txtS, dark, s.comingSoon),
         const SizedBox(width: 10),
-        _networkTile(_tanzaniaNetworks[1], inputBg, border, txtS, dark),
+        _networkTile(_tanzaniaNetworks[1], inputBg, border, txtS, dark, s.comingSoon),
       ]),
       const SizedBox(height: 10),
       Row(children: [
-        _networkTile(_tanzaniaNetworks[2], inputBg, border, txtS, dark),
+        _networkTile(_tanzaniaNetworks[2], inputBg, border, txtS, dark, s.comingSoon),
         const SizedBox(width: 10),
-        _networkTile(_tanzaniaNetworks[3], inputBg, border, txtS, dark),
+        _networkTile(_tanzaniaNetworks[3], inputBg, border, txtS, dark, s.comingSoon),
       ]),
       const SizedBox(height: 10),
-      _networkTile(_tanzaniaNetworks[4], inputBg, border, txtS, dark,
+      _networkTile(_tanzaniaNetworks[4], inputBg, border, txtS, dark, s.comingSoon,
           fullWidth: true),
     ]);
   }
 
   Widget _networkTile(
       _NetworkProvider n, Color inputBg, Color border,
-      Color txtS, bool dark, {bool fullWidth = false}) {
+      Color txtS, bool dark, String comingSoonLabel,
+      {bool fullWidth = false}) {
     final selected = _selectedNetwork?.code == n.code;
+    final disabled = n.comingSoon;
+
     final tile = GestureDetector(
-      onTap: () {
+      onTap: disabled ? null : () {
         HapticFeedback.selectionClick();
         setState(() => _selectedNetwork = n);
       },
@@ -873,14 +879,18 @@ class _DepositPageState extends State<DepositPage> {
         duration: const Duration(milliseconds: 180),
         height: 50,
         decoration: BoxDecoration(
-          color: selected
+          color: disabled
+              ? inputBg.withOpacity(0.5)
+              : selected
               ? n.color.withOpacity(dark ? 0.25 : 0.12)
               : inputBg,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: selected ? n.color : border,
+              color: disabled
+                  ? border.withOpacity(0.4)
+                  : selected ? n.color : border,
               width: selected ? 2 : 1),
-          boxShadow: selected
+          boxShadow: selected && !disabled
               ? [BoxShadow(color: n.color.withOpacity(0.25),
               blurRadius: 8, offset: const Offset(0, 3))]
               : [],
@@ -888,14 +898,35 @@ class _DepositPageState extends State<DepositPage> {
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(width: 10, height: 10,
               decoration: BoxDecoration(
-                  color: n.color, shape: BoxShape.circle)),
+                  color: disabled
+                      ? n.color.withOpacity(0.35)
+                      : n.color,
+                  shape: BoxShape.circle)),
           const SizedBox(width: 6),
           Flexible(child: Text(n.name,
               style: TextStyle(fontSize: 13,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: selected ? n.color : txtS),
+                  fontWeight: selected && !disabled
+                      ? FontWeight.w800 : FontWeight.w600,
+                  color: disabled
+                      ? txtS.withOpacity(0.4)
+                      : selected ? n.color : txtS),
               overflow: TextOverflow.ellipsis)),
-          if (selected) ...[
+          if (disabled) ...[
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: n.color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: n.color.withOpacity(0.4), width: 0.5),
+              ),
+              child: Text(comingSoonLabel,
+                  style: TextStyle(fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      color: n.color.withOpacity(0.7),
+                      letterSpacing: 0.3)),
+            ),
+          ] else if (selected) ...[
             const SizedBox(width: 4),
             Icon(Icons.check_circle_rounded, color: n.color, size: 14),
           ],
