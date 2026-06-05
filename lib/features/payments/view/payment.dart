@@ -6,6 +6,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../provider/locale_provider.dart';
 import '../../../../provider/theme_provider.dart';
 
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
+class _TSL {
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
+}
+
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _BS {
   final String bankingDetails, subtitle,
@@ -69,13 +78,10 @@ const _bsSw = _BS(
 // ── BankingDetailsPage ────────────────────────────────────────────────────────
 class BankingDetailsPage extends StatefulWidget {
   const BankingDetailsPage({Key? key}) : super(key: key);
-
-  @override
-  State<BankingDetailsPage> createState() => _BankingDetailsPageState();
+  @override State<BankingDetailsPage> createState() => _BankingDetailsPageState();
 }
 
 class _BankingDetailsPageState extends State<BankingDetailsPage> {
-  // ── Data from SharedPreferences ────────────────────────────────────────────
   String _names       = '';
   String _email       = '';
   String _mobile      = '';
@@ -115,18 +121,18 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
       _bank.isNotEmpty || _accountNo.isNotEmpty ||
           _accountName.isNotEmpty || _branch.isNotEmpty;
 
-  // ── Edit bottom sheet (placeholder — API tomorrow) ─────────────────────────
+  // ── Edit bottom sheet ──────────────────────────────────────────────────────
   void _showEditSheet() {
-    final dark   = _dark; final s = _s;
-    final sheetBg = dark ? const Color(0xFF132013) : Colors.white;
-    final border  = dark ? const Color(0xFF1E3320) : const Color(0xFFE5E7EB);
-    final txtP    = dark ? const Color(0xFFE8F5E9) : Colors.black87;
-    final txtS    = dark ? const Color(0xFF81A884)  : Colors.black54;
-    final txtH    = dark ? const Color(0xFF4A7A4D)  : Colors.grey.shade400;
-    final green   = dark ? const Color(0xFF4ADE80)  : const Color(0xFF15803D);
-    final inputBg = dark ? const Color(0xFF0F1A10)  : const Color(0xFFF9FAFB);
+    final dark    = _dark; final s = _s;
+    final sheetBg = dark ? _TSL.black : _TSL.white;
+    final border  = dark ? _TSL.black.withOpacity(0.35) : const Color(0xFFE5E7EB);
+    final txtP    = dark ? _TSL.white : _TSL.black;
+    final txtS    = dark ? _TSL.teal  : _TSL.grey;
+    final txtH    = dark ? _TSL.teal.withOpacity(0.6) : _TSL.grey.withOpacity(0.6);
+    // Deposit/banking domain uses TSL teal as the action colour
+    const green   = _TSL.teal;
+    final inputBg = dark ? _TSL.black.withOpacity(0.85) : const Color(0xFFF9FAFB);
 
-    // Pre-fill controllers with current values
     final bankCtrl        = TextEditingController(text: _bank);
     final accountNoCtrl   = TextEditingController(text: _accountNo);
     final accountNameCtrl = TextEditingController(text: _accountName);
@@ -142,7 +148,8 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
         child: Container(
           decoration: BoxDecoration(
             color: sheetBg,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24)),
           ),
           child: SafeArea(
             top: false,
@@ -154,7 +161,8 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
                     // Handle bar
                     Center(child: Container(width: 40, height: 4,
                         decoration: BoxDecoration(
-                            color: border, borderRadius: BorderRadius.circular(2)))),
+                            color: border,
+                            borderRadius: BorderRadius.circular(2)))),
                     const SizedBox(height: 20),
 
                     Text(s.editDetails, style: TextStyle(fontSize: 20,
@@ -164,55 +172,62 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
                         style: TextStyle(fontSize: 13, color: txtS)),
                     const SizedBox(height: 24),
 
-                    _editField(s.bank,        bankCtrl,        Icons.account_balance_outlined,  green, txtP, txtH, inputBg, border),
+                    _editField(s.bank,        bankCtrl,
+                        Icons.account_balance_outlined, txtP, txtH, inputBg, border),
                     const SizedBox(height: 14),
-                    _editField(s.accountNo,   accountNoCtrl,   Icons.credit_card_outlined,       green, txtP, txtH, inputBg, border,
+                    _editField(s.accountNo,   accountNoCtrl,
+                        Icons.credit_card_outlined, txtP, txtH, inputBg, border,
                         keyboardType: TextInputType.number),
                     const SizedBox(height: 14),
-                    _editField(s.accountName, accountNameCtrl, Icons.badge_outlined,             green, txtP, txtH, inputBg, border),
+                    _editField(s.accountName, accountNameCtrl,
+                        Icons.badge_outlined, txtP, txtH, inputBg, border),
                     const SizedBox(height: 14),
-                    _editField(s.branch,      branchCtrl,      Icons.store_outlined,             green, txtP, txtH, inputBg, border),
+                    _editField(s.branch,      branchCtrl,
+                        Icons.store_outlined, txtP, txtH, inputBg, border),
                     const SizedBox(height: 28),
 
-                    // Buttons
                     Row(children: [
                       Expanded(child: GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: Container(height: 50,
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: border, width: 1.5)),
-                            child: Center(child: Text(s.cancel,
-                                style: TextStyle(color: txtS,
-                                    fontWeight: FontWeight.w600)))),
+                        child: Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: border, width: 1.5)),
+                          child: Center(child: Text(s.cancel,
+                              style: TextStyle(color: txtS,
+                                  fontWeight: FontWeight.w600))),
+                        ),
                       )),
                       const SizedBox(width: 14),
                       Expanded(child: GestureDetector(
-                        // TODO: wire up to API when ready
                         onTap: () {
                           HapticFeedback.lightImpact();
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(s.editComingSoon),
+                            content: Text(s.editComingSoon,
+                                style: TextStyle(color: _TSL.white)),
                             behavior: SnackBarBehavior.floating,
-                            backgroundColor: dark
-                                ? const Color(0xFF132013) : Colors.black87,
+                            backgroundColor: dark ? _TSL.black : _TSL.black,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12)),
                           ));
                         },
-                        child: Container(height: 50,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                  colors: [green, green.withOpacity(0.75)]),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [BoxShadow(
-                                  color: green.withOpacity(0.3),
-                                  blurRadius: 10, offset: const Offset(0, 4))],
-                            ),
-                            child: Center(child: Text(s.saveChanges,
-                                style: const TextStyle(color: Colors.white,
-                                    fontWeight: FontWeight.w700)))),
+                        child: Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                                colors: [_TSL.teal, _TSL.blue]),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [BoxShadow(
+                                color: _TSL.teal.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4))],
+                          ),
+                          child: Center(child: Text(s.saveChanges,
+                              style: TextStyle(color: _TSL.white,
+                                  fontWeight: FontWeight.w700))),
+                        ),
                       )),
                     ]),
                   ]),
@@ -227,7 +242,7 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
       String label,
       TextEditingController ctrl,
       IconData icon,
-      Color green, Color txtP, Color txtH, Color inputBg, Color border, {
+      Color txtP, Color txtH, Color inputBg, Color border, {
         TextInputType keyboardType = TextInputType.text,
       }) =>
       TextField(
@@ -237,7 +252,7 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(color: txtH, fontSize: 13),
-          prefixIcon: Icon(icon, color: green, size: 20),
+          prefixIcon: Icon(icon, color: _TSL.teal, size: 20),
           filled: true, fillColor: inputBg,
           border: OutlineInputBorder(
               borderSide: BorderSide(color: border),
@@ -246,83 +261,81 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
               borderSide: BorderSide(color: border),
               borderRadius: BorderRadius.circular(12)),
           focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: green, width: 2),
+              borderSide: const BorderSide(color: _TSL.teal, width: 2),
               borderRadius: BorderRadius.circular(12)),
           contentPadding: const EdgeInsets.symmetric(
               horizontal: 16, vertical: 14),
         ),
       );
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     context.watch<ThemeProvider>();
     context.watch<LocaleProvider>();
 
-    final dark    = _dark; final s = _s;
-    final bg      = dark ? const Color(0xFF0B1A0C) : const Color(0xFFB8E6D3);
-    final sheet   = dark ? const Color(0xFF111D12) : Colors.white;
-    final border  = dark ? const Color(0xFF1E3320) : const Color(0xFFE5E7EB);
-    final txtP    = dark ? const Color(0xFFE8F5E9) : Colors.black87;
-    final txtS    = dark ? const Color(0xFF81A884)  : Colors.black54;
-    final txtH    = dark ? const Color(0xFF4A7A4D)  : Colors.grey.shade400;
-    final green   = dark ? const Color(0xFF4ADE80)  : const Color(0xFF15803D);
-    final cardBg  = dark ? const Color(0xFF132013)  : const Color(0xFFF9FAFB);
-    final infoBg  = dark ? const Color(0xFF0F1A10)  : const Color(0xFFF0FDF4);
+    final dark   = _dark; final s = _s;
+    final bg     = dark ? _TSL.black                    : const Color(0xFFB8E6D3);
+    final sheet  = dark ? _TSL.black.withOpacity(0.95)  : _TSL.white;
+    final border = dark ? _TSL.black.withOpacity(0.35)  : const Color(0xFFE5E7EB);
+    final txtP   = dark ? _TSL.white                    : _TSL.black;
+    final txtS   = dark ? _TSL.teal                     : _TSL.grey;
+    final txtH   = dark ? _TSL.teal.withOpacity(0.6)    : _TSL.grey.withOpacity(0.6);
+    final green  = _TSL.teal;
+    final cardBg = dark ? _TSL.black                    : const Color(0xFFF9FAFB);
+    final infoBg = dark ? _TSL.black                    : const Color(0xFFF0FDF4);
 
     return Scaffold(
       backgroundColor: bg,
       body: Column(children: [
 
-        // ── Gradient header ──────────────────────────────────────────────────
+        // ── Gradient header — TSL blue → teal ──────────────────────────────
         Container(
           decoration: BoxDecoration(
-            gradient: dark
-                ? const LinearGradient(begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF0B1A0C), Color(0xFF132013), Color(0xFF09100A)])
-                : const LinearGradient(begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [_TSL.blue, _TSL.teal],
+            ),
           ),
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Row(children: [
               GestureDetector(
                 onTap: () => Navigator.pop(context),
-                child: Container(padding: const EdgeInsets.all(8),
+                child: Container(
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: _TSL.white.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 18)),
+                    child: Icon(Icons.arrow_back_ios_new,
+                        color: _TSL.white, size: 18)),
               ),
               const SizedBox(width: 16),
               Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(s.bankingDetails, style: const TextStyle(
-                    color: Colors.white, fontSize: 22,
+                Text(s.bankingDetails, style: TextStyle(
+                    color: _TSL.white, fontSize: 22,
                     fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                 const SizedBox(height: 2),
                 Text(s.subtitle, style: TextStyle(
-                    color: Colors.white.withOpacity(0.65), fontSize: 12)),
+                    color: _TSL.white.withOpacity(0.65), fontSize: 12)),
               ])),
-              // Edit button in header
               GestureDetector(
                 onTap: _showEditSheet,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
+                      color: _TSL.white.withOpacity(0.18),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.25))),
+                          color: _TSL.white.withOpacity(0.25))),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.edit_outlined,
-                        color: Colors.white, size: 15),
+                    Icon(Icons.edit_outlined,
+                        color: _TSL.white, size: 15),
                     const SizedBox(width: 6),
-                    Text(s.editDetails, style: const TextStyle(
-                        color: Colors.white, fontSize: 12,
+                    Text(s.editDetails, style: TextStyle(
+                        color: _TSL.white, fontSize: 12,
                         fontWeight: FontWeight.w600)),
                   ]),
                 ),
@@ -331,9 +344,10 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
           )),
         ),
 
-        // ── Body ─────────────────────────────────────────────────────────────
+        // ── Body ─────────────────────────────────────────────────────────
         Expanded(
-          child: Container(color: sheet,
+          child: Container(
+            color: sheet,
             child: _loading
                 ? Center(child: CircularProgressIndicator(
                 color: green, strokeWidth: 2.5))
@@ -344,7 +358,7 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    // ── No data state ───────────────────────────────────────
+                    // ── No data state ─────────────────────────────────────
                     if (!_hasAnyData)
                       Container(
                         width: double.infinity,
@@ -369,7 +383,7 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
                         ]),
                       ),
 
-                    // ── Banking section ─────────────────────────────────────
+                    // ── Banking section ───────────────────────────────────
                     if (_hasAnyData) ...[
                       _sectionLabel('Banking Information', txtH),
                       const SizedBox(height: 12),
@@ -385,7 +399,7 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
                       ], green, txtP, txtS, border, infoBg, dark),
                     ],
 
-                    // ── Personal section (always if any data saved) ─────────
+                    // ── Personal section ──────────────────────────────────
                     if (_names.isNotEmpty || _email.isNotEmpty ||
                         _mobile.isNotEmpty || _address.isNotEmpty) ...[
                       const SizedBox(height: 28),
@@ -399,34 +413,35 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
                         if (_mobile.isNotEmpty)
                           _DetailItem(Icons.phone_outlined, s.mobile, _mobile),
                         if (_address.isNotEmpty)
-                          _DetailItem(Icons.location_on_outlined, s.address, _address),
+                          _DetailItem(Icons.location_on_outlined,
+                              s.address, _address),
                       ], green, txtP, txtS, border, cardBg, dark),
                     ],
 
                     const SizedBox(height: 32),
 
-                    // ── Edit CTA button ─────────────────────────────────────
+                    // ── Edit CTA button ───────────────────────────────────
                     GestureDetector(
                       onTap: _showEditSheet,
                       child: Container(
                         width: double.infinity, height: 54,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                              colors: [green, green.withOpacity(0.75)]),
+                              colors: [_TSL.teal, _TSL.blue]),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [BoxShadow(
-                              color: green.withOpacity(0.3),
+                              color: _TSL.teal.withOpacity(0.3),
                               blurRadius: 14,
                               offset: const Offset(0, 6))],
                         ),
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.edit_outlined,
-                                  color: Colors.white, size: 18),
+                              Icon(Icons.edit_outlined,
+                                  color: _TSL.white, size: 18),
                               const SizedBox(width: 10),
-                              Text(s.editDetails, style: const TextStyle(
-                                  color: Colors.white, fontSize: 15,
+                              Text(s.editDetails, style: TextStyle(
+                                  color: _TSL.white, fontSize: 15,
                                   fontWeight: FontWeight.w700)),
                             ]),
                       ),
@@ -439,17 +454,14 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
     );
   }
 
-  // ── Section label ──────────────────────────────────────────────────────────
   Widget _sectionLabel(String t, Color c) => Padding(
       padding: const EdgeInsets.only(left: 2),
       child: Text(t.toUpperCase(), style: TextStyle(fontSize: 11,
           fontWeight: FontWeight.w800, color: c, letterSpacing: 1.2)));
 
-  // ── Detail card ────────────────────────────────────────────────────────────
   Widget _detailCard(
       List<_DetailItem> items,
-      Color green, Color txtP, Color txtS, Color border, Color bg, bool dark,
-      ) {
+      Color green, Color txtP, Color txtS, Color border, Color bg, bool dark) {
     return Container(
       decoration: BoxDecoration(
           color: bg,
@@ -457,11 +469,12 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
           border: Border.all(color: border)),
       child: Column(
         children: items.asMap().entries.map((e) {
-          final item  = e.value;
-          final last  = e.key == items.length - 1;
+          final item = e.value;
+          final last = e.key == items.length - 1;
           return Column(children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 14),
               child: Row(children: [
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -478,14 +491,14 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
                       fontWeight: FontWeight.w500)),
                   const SizedBox(height: 3),
                   Text(item.value, style: TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w700, color: txtP),
+                      fontSize: 15, fontWeight: FontWeight.w700,
+                      color: txtP),
                       overflow: TextOverflow.ellipsis),
                 ])),
               ]),
             ),
             if (!last)
-              Divider(height: 1,
-                  color: border, indent: 16, endIndent: 16),
+              Divider(height: 1, color: border, indent: 16, endIndent: 16),
           ]);
         }).toList(),
       ),
@@ -496,7 +509,7 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
 // ── Simple data class for detail rows ────────────────────────────────────────
 class _DetailItem {
   final IconData icon;
-  final String label;
-  final String value;
+  final String   label;
+  final String   value;
   const _DetailItem(this.icon, this.label, this.value);
 }

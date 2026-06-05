@@ -29,8 +29,8 @@ class _LoginScreenState extends State<LoginScreen>
   // ── Brand colours ──────────────────────────────────────────────────────────
   static const Color _aqua      = Color(0xFF7FFFD4);
   static const Color _teal      = Color(0xFF2E7D99);
-  static const Color _green     = Color(0xFF1B5E20);
-  static const Color _greenMid  = Color(0xFF2E7D32);
+  static const Color _green     = Color(0xFF00A79D);
+  static const Color _greenMid  = Color(0xFF329AD6);
   static const Color _greenSoft = Color(0xFFE8F5E9);
   static const Color _mintLight = Color(0xFFB8E6D3);
   // ──────────────────────────────────────────────────────────────────────────
@@ -403,7 +403,7 @@ class _LoginScreenState extends State<LoginScreen>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: loading ? null : const LinearGradient(
-            colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+            colors: [Color(0xFF00A79D), Color(0xFF00A79E)],
           ),
           color: loading ? Colors.grey.shade300 : null,
           boxShadow: loading ? [] : [

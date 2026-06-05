@@ -7,31 +7,35 @@ import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 
-// ── Reuse the same colour tokens as SettingsPage ────────────────────────────
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
 class TSLColors {
-  static const darkBg        = Color(0xFF0B1A0C);
-  static const darkCard      = Color(0xFF132013);
-  static const darkCard2     = Color(0xFF1A2B1B);
-  static const darkBorder    = Color(0xFF1E3320);
-  static const darkTextPrim  = Color(0xFFE8F5E9);
-  static const darkTextSec   = Color(0xFF81A884);
-  static const darkTextHint  = Color(0xFF4A7A4D);
-  static const darkDivider   = Color(0xFF1E3320);
+  // Core brand palette
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
 
-  static const lightBg       = Color(0xFFB8E6D3);
-  static const lightCard     = Color(0xFFFFFFFF);
-  static const lightBorder   = Color(0xFFE2ECE2);
-  static const lightTextPrim = Color(0xFF1A2E1A);
-  static const lightTextSec  = Color(0xFF5A7A5C);
-  static const lightTextHint = Color(0xFF9AAA9C);
-  static const lightDivider  = Color(0xFFEEEEEE);
+  // Semantic surface tokens — all derived from brand palette
+  static Color get darkBg        => black;
+  static Color get darkCard      => black;
+  static Color get darkCard2     => black.withOpacity(0.85);
+  static Color get darkBorder    => black.withOpacity(0.35);
+  static Color get darkTextPrim  => white;
+  static Color get darkTextSec   => teal;
+  static Color get darkTextHint  => teal.withOpacity(0.6);
+  static Color get darkDivider   => black.withOpacity(0.3);
 
-  static const green500 = Color(0xFF4ADE80);
-  static const green700 = Color(0xFF15803D);
-  static const teal     = Color(0xFF2E7D99);
+  static const Color lightBg       = Color(0xFFB8E6D3);
+  static Color get lightCard       => white;
+  static const Color lightBorder   = Color(0xFFE2ECE2);
+  static Color get lightTextPrim   => black;
+  static Color get lightTextSec    => grey;
+  static Color get lightTextHint   => grey.withOpacity(0.6);
+  static const Color lightDivider  = Color(0xFFEEEEEE);
 }
 
-// ── Localised strings for ProfileScreen ─────────────────────────────────────
+// ── Localised strings for ProfileScreen ──────────────────────────────────────
 class _PS {
   final String profile, accountInfo, actions,
       fullName, email, mobile, address,
@@ -130,9 +134,7 @@ const _psSw = _PS(
 // ── ProfileScreen ─────────────────────────────────────────────────────────────
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
-
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  @override State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen>
@@ -149,33 +151,33 @@ class _ProfileScreenState extends State<ProfileScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _pulseAnimation;
 
-  // ── Theme helpers (only call these from build()) ─────────────────────────
-  bool  get _dark  => context.watch<ThemeProvider>().isDark;
-  _PS   get _s     => context.watch<LocaleProvider>().isSwahili ? _psSw : _psEn;
-  Color get _bg    => _dark ? TSLColors.darkBg       : TSLColors.lightBg;
-  Color get _card  => _dark ? TSLColors.darkCard      : TSLColors.lightCard;
-  Color get _border=> _dark ? TSLColors.darkBorder    : TSLColors.lightBorder;
-  Color get _txtP  => _dark ? TSLColors.darkTextPrim  : TSLColors.lightTextPrim;
-  Color get _txtS  => _dark ? TSLColors.darkTextSec   : TSLColors.lightTextSec;
-  Color get _txtH  => _dark ? TSLColors.darkTextHint  : TSLColors.lightTextHint;
-  Color get _div   => _dark ? TSLColors.darkDivider   : TSLColors.lightDivider;
-  Color get _accent=> _dark ? TSLColors.green500      : TSLColors.green700;
-  Color get _teal  => TSLColors.teal;
+  // ── Theme helpers (call from build() only) ────────────────────────────────
+  bool  get _dark   => context.watch<ThemeProvider>().isDark;
+  _PS   get _s      => context.watch<LocaleProvider>().isSwahili ? _psSw : _psEn;
+  Color get _bg     => _dark ? TSLColors.darkBg      : TSLColors.lightBg;
+  Color get _card   => _dark ? TSLColors.darkCard     : TSLColors.lightCard;
+  Color get _border => _dark ? TSLColors.darkBorder   : TSLColors.lightBorder;
+  Color get _txtP   => _dark ? TSLColors.darkTextPrim : TSLColors.lightTextPrim;
+  Color get _txtS   => _dark ? TSLColors.darkTextSec  : TSLColors.lightTextSec;
+  Color get _txtH   => _dark ? TSLColors.darkTextHint : TSLColors.lightTextHint;
+  Color get _div    => _dark ? TSLColors.darkDivider  : TSLColors.lightDivider;
+  // accent = TSL teal; teal = TSL blue (used for links/stats)
+  Color get _accent => TSLColors.teal;
+  Color get _teal   => TSLColors.blue;
 
-  // ── Safe helpers for use OUTSIDE build() (event handlers, dialogs) ───────
-  bool  get _darkNow  => Provider.of<ThemeProvider>(context, listen: false).isDark;
-  _PS   get _sNow     => Provider.of<LocaleProvider>(context, listen: false).isSwahili
+  // ── Safe helpers for event handlers / dialogs ─────────────────────────────
+  bool  get _darkNow   => Provider.of<ThemeProvider>(context, listen: false).isDark;
+  _PS   get _sNow      => Provider.of<LocaleProvider>(context, listen: false).isSwahili
       ? _psSw : _psEn;
-  Color get _cardNow  => _darkNow ? TSLColors.darkCard  : TSLColors.lightCard;
-  Color get _borderNow=> _darkNow ? TSLColors.darkBorder : TSLColors.lightBorder;
-  Color get _txtPNow  => _darkNow ? TSLColors.darkTextPrim : TSLColors.lightTextPrim;
-  Color get _txtSNow  => _darkNow ? TSLColors.darkTextSec  : TSLColors.lightTextSec;
-  Color get _txtHNow  => _darkNow ? TSLColors.darkTextHint : TSLColors.lightTextHint;
+  Color get _cardNow   => _darkNow ? TSLColors.darkCard   : TSLColors.lightCard;
+  Color get _borderNow => _darkNow ? TSLColors.darkBorder : TSLColors.lightBorder;
+  Color get _txtPNow   => _darkNow ? TSLColors.darkTextPrim : TSLColors.lightTextPrim;
+  Color get _txtSNow   => _darkNow ? TSLColors.darkTextSec  : TSLColors.lightTextSec;
+  Color get _txtHNow   => _darkNow ? TSLColors.darkTextHint : TSLColors.lightTextHint;
 
   @override
   void initState() {
     super.initState();
-
     _fadeController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 800));
     _shimmerController = AnimationController(
@@ -184,13 +186,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     _pulseController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 2200))
       ..repeat(reverse: true);
-
     _fadeAnimation =
         CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
     _pulseAnimation =
         Tween<double>(begin: 0.92, end: 1.08).animate(
             CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
-
     _fetchUserProfile();
   }
 
@@ -202,19 +202,19 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
-  // ── Fetch profile ────────────────────────────────────────────────────────
+  // ── Fetch profile ─────────────────────────────────────────────────────────
   Future<void> _fetchUserProfile() async {
     try {
       setState(() { _isLoading = true; _errorMessage = ''; });
       _fadeController.reset();
 
-      final prefs        = await SharedPreferences.getInstance();
-      final cdsNumber    = prefs.getString('cdsNumber');
-      final acctStatus   = prefs.getString('accountStatus');
-      final nida         = prefs.getString('userNIDA');
+      final prefs      = await SharedPreferences.getInstance();
+      final cdsNumber  = prefs.getString('cdsNumber');
+      final acctStatus = prefs.getString('accountStatus');
+      final nida       = prefs.getString('userNIDA');
       setState(() {
         _accountStatus = acctStatus ?? 'Unknown';
-        _nida = nida; // ✅ Fixed
+        _nida = nida;
       });
 
       if (cdsNumber == null || cdsNumber.isEmpty) {
@@ -225,8 +225,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         return;
       }
 
-      final url = Uri.parse(
-          '$cSharpApi/UserBasicDetails');
+      final url = Uri.parse('$cSharpApi/UserBasicDetails');
       final response = await http.post(url,
           headers: {'Content-Type': 'application/json'},
           body: json.encode({'CDSNumber': cdsNumber}));
@@ -235,16 +234,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final userData = Map<String, dynamic>.from(data['data']);
-
           final email = (userData['Email'] as String? ?? '').trim();
-          if (email.isNotEmpty) {
-            await prefs.setString('userEmail', email);
-          }
-
-          setState(() {
-            _userData  = userData;
-            _isLoading = false;
-          });
+          if (email.isNotEmpty) await prefs.setString('userEmail', email);
+          setState(() { _userData = userData; _isLoading = false; });
           _fadeController.forward();
         } else {
           setState(() {
@@ -263,7 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  // ── Change password dialog ───────────────────────────────────────────────
+  // ── Change password dialog ────────────────────────────────────────────────
   void _showChangePasswordDialog() {
     final s      = _sNow;
     final card   = _cardNow;
@@ -272,7 +264,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     final txtS   = _txtSNow;
     final txtH   = _txtHNow;
     final isDark = _darkNow;
-    const teal   = TSLColors.teal;
 
     final currentPwCtrl = TextEditingController();
     final newPwCtrl     = TextEditingController();
@@ -315,8 +306,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 return;
               }
 
-              final url = Uri.parse(
-                  '$cSharpApi/ChangePassword');
+              final url = Uri.parse('$cSharpApi/ChangePassword');
               final response = await http.post(url,
                   headers: {'Content-Type': 'application/json'},
                   body: json.encode({
@@ -338,13 +328,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Row(children: [
-                      const Icon(Icons.check_circle_outline_rounded,
-                          color: Colors.white, size: 18),
+                      Icon(Icons.check_circle_outline_rounded,
+                          color: TSLColors.white, size: 18),
                       const SizedBox(width: 10),
                       Expanded(child: Text(statusDesc,
                           style: const TextStyle(fontWeight: FontWeight.w600))),
                     ]),
-                    backgroundColor: const Color(0xFF4CAF50),
+                    backgroundColor: TSLColors.teal,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -363,10 +353,10 @@ class _ProfileScreenState extends State<ProfileScreen>
           }
 
           return _buildPasswordDialog(
-            ctx: ctx,
-            s: s, card: card, border: border,
+            ctx: ctx, s: s,
+            card: card, border: border,
             txtP: txtP, txtS: txtS, txtH: txtH,
-            isDark: isDark, teal: teal,
+            isDark: isDark,
             currentPwCtrl: currentPwCtrl,
             newPwCtrl: newPwCtrl,
             confirmPwCtrl: confirmPwCtrl,
@@ -385,13 +375,13 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Shared password dialog widget ────────────────────────────────────────
+  // ── Password dialog widget ────────────────────────────────────────────────
   static Widget _buildPasswordDialog({
     required BuildContext ctx,
     required _PS s,
     required Color card, required Color border,
     required Color txtP, required Color txtS, required Color txtH,
-    required bool isDark, required Color teal,
+    required bool isDark,
     required TextEditingController currentPwCtrl,
     required TextEditingController newPwCtrl,
     required TextEditingController confirmPwCtrl,
@@ -417,21 +407,21 @@ class _ProfileScreenState extends State<ProfileScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: teal.withOpacity(0.12),
+                  color: TSLColors.blue.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.lock_outline_rounded, color: teal, size: 22),
+                child: Icon(Icons.lock_outline_rounded,
+                    color: TSLColors.blue, size: 22),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(s.changePassword,
-                      style: TextStyle(fontSize: 17,
-                          fontWeight: FontWeight.bold, color: txtP)),
-                  Text('Update your account password',
-                      style: TextStyle(fontSize: 11, color: txtH)),
-                ]),
-              ),
+              Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(s.changePassword,
+                    style: TextStyle(fontSize: 17,
+                        fontWeight: FontWeight.bold, color: txtP)),
+                Text('Update your account password',
+                    style: TextStyle(fontSize: 11, color: txtH)),
+              ])),
               GestureDetector(
                 onTap: isSubmitting ? null : () => Navigator.of(ctx).pop(),
                 child: Container(
@@ -449,25 +439,26 @@ class _ProfileScreenState extends State<ProfileScreen>
             if (dialogError != null) ...[
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.red.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.red.withOpacity(0.25)),
                 ),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.error_outline_rounded,
-                      color: Colors.redAccent, size: 17),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(dialogError!,
-                      style: const TextStyle(fontSize: 13,
-                          color: Colors.redAccent, height: 1.45))),
-                ]),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          color: Colors.redAccent, size: 17),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(dialogError!,
+                          style: const TextStyle(fontSize: 13,
+                              color: Colors.redAccent, height: 1.45))),
+                    ]),
               ),
               const SizedBox(height: 16),
             ],
 
-            // Current password
             _pwLabelStatic(s.currentPassword, txtH),
             const SizedBox(height: 6),
             _pwFieldStatic(
@@ -479,7 +470,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
             const SizedBox(height: 16),
 
-            // New password
             _pwLabelStatic(s.newPassword, txtH),
             const SizedBox(height: 6),
             _pwFieldStatic(
@@ -491,7 +481,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
             const SizedBox(height: 16),
 
-            // Confirm password
             _pwLabelStatic(s.confirmNewPassword, txtH),
             const SizedBox(height: 6),
             _pwFieldStatic(
@@ -503,8 +492,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
             const SizedBox(height: 28),
 
-            // Buttons
             Row(children: [
+              // Cancel
               Expanded(
                 child: GestureDetector(
                   onTap: isSubmitting ? null : () => Navigator.of(ctx).pop(),
@@ -522,6 +511,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
               const SizedBox(width: 12),
+              // Submit — TSL blue → teal gradient
               Expanded(
                 flex: 2,
                 child: GestureDetector(
@@ -530,27 +520,30 @@ class _ProfileScreenState extends State<ProfileScreen>
                     height: 50,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      gradient: const LinearGradient(
-                          colors: [Color(0xFF2E7D99), Color(0xFF1A5F77)]),
+                      gradient: LinearGradient(
+                          colors: [TSLColors.blue, TSLColors.teal]),
                       boxShadow: [BoxShadow(
-                          color: teal.withOpacity(0.35),
+                          color: TSLColors.blue.withOpacity(0.35),
                           blurRadius: 14, offset: const Offset(0, 6))],
                     ),
                     child: Center(
                       child: isSubmitting
-                          ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        const SizedBox(width: 16, height: 16,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2)),
-                        const SizedBox(width: 10),
-                        Text(s.changingPassword,
-                            style: const TextStyle(fontSize: 13,
-                                fontWeight: FontWeight.w600, color: Colors.white)),
-                      ])
+                          ? Row(mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(width: 16, height: 16,
+                                child: CircularProgressIndicator(
+                                    color: TSLColors.white, strokeWidth: 2)),
+                            const SizedBox(width: 10),
+                            Text(s.changingPassword,
+                                style: TextStyle(fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: TSLColors.white)),
+                          ])
                           : Text(s.submit,
-                          style: const TextStyle(fontSize: 14,
+                          style: TextStyle(fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white, letterSpacing: 0.4)),
+                              color: TSLColors.white,
+                              letterSpacing: 0.4)),
                     ),
                   ),
                 ),
@@ -562,7 +555,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Static password helpers (usable from static context) ─────────────────
+  // ── Static password helpers ───────────────────────────────────────────────
   static Widget _pwLabelStatic(String text, Color color) => Text(text,
       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
           color: color, letterSpacing: 0.4));
@@ -594,7 +587,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         hintText: hint,
         hintStyle: TextStyle(fontSize: 13, color: txtH),
         border: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 14),
         suffixIcon: IconButton(
           icon: Icon(
             obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -606,7 +600,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     ),
   );
 
-  // Keep non-static wrappers for backward compat (used nowhere now but harmless)
+  // Non-static wrappers kept for backward compat
   Widget _pwLabel(String text, Color color) => _pwLabelStatic(text, color);
   Widget _pwField({
     required TextEditingController controller, required String hint,
@@ -669,9 +663,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   );
 
   Widget _shimmerBox(double w, double h, {double radius = 12}) {
-    final t = _shimmerController.value;
-    final shimA = _dark ? const Color(0xFF1A2E1C) : const Color(0xFFA8D8C2);
-    final shimB = _dark ? const Color(0xFF243828) : const Color(0xFFD4EFE4);
+    final t    = _shimmerController.value;
+    final shimA = _dark
+        ? TSLColors.black.withOpacity(0.6)
+        : const Color(0xFFA8D8C2);
+    final shimB = _dark
+        ? TSLColors.black.withOpacity(0.35)
+        : const Color(0xFFD4EFE4);
     return Container(
       width: w, height: h,
       decoration: BoxDecoration(
@@ -750,11 +748,13 @@ class _ProfileScreenState extends State<ProfileScreen>
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: _dark
-            ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0x4A2E7D99), Color(0x3A1A5F77)])
-            : const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0x662E7D99), Color(0x661A5F77)]),
+        // Header gradient: TSL blue tint
+        gradient: LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: _dark
+              ? [TSLColors.blue.withOpacity(0.29), TSLColors.teal.withOpacity(0.23)]
+              : [TSLColors.blue.withOpacity(0.40), TSLColors.teal.withOpacity(0.40)],
+        ),
         border: Border.all(color: _teal.withOpacity(0.2)),
         boxShadow: [BoxShadow(color: _teal.withOpacity(0.35),
             blurRadius: 30, offset: const Offset(0, 12))],
@@ -765,49 +765,55 @@ class _ProfileScreenState extends State<ProfileScreen>
             width: 96, height: 96,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.15),
-              border: Border.all(color: Colors.white.withOpacity(0.4), width: 3),
-              boxShadow: [BoxShadow(color: Colors.white.withOpacity(0.12),
+              color: TSLColors.white.withOpacity(0.15),
+              border: Border.all(
+                  color: TSLColors.white.withOpacity(0.4), width: 3),
+              boxShadow: [BoxShadow(
+                  color: TSLColors.white.withOpacity(0.12),
                   blurRadius: 20, spreadRadius: 4)],
             ),
             child: Center(child: Text(initials,
-                style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold,
-                    color: Colors.white, letterSpacing: 2))),
+                style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold,
+                    color: TSLColors.white, letterSpacing: 2))),
           ),
+          // Online dot — TSL teal
           Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF4CAF50),
-                border: Border.all(color: _teal, width: 2.5)),
-            child: const Icon(Icons.check, size: 12, color: Colors.white),
+              shape: BoxShape.circle,
+              color: TSLColors.teal,
+              border: Border.all(color: _teal, width: 2.5),
+            ),
+            child: Icon(Icons.check, size: 12, color: TSLColors.white),
           ),
         ]),
         const SizedBox(height: 16),
         Text(name, textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold,
-                color: Colors.white, letterSpacing: 0.4)),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,
+                color: TSLColors.white, letterSpacing: 0.4)),
         const SizedBox(height: 4),
         Text('${s.individual} • ${s.member}',
             style: TextStyle(fontSize: 13,
-                color: Colors.white.withOpacity(0.72), letterSpacing: 0.3)),
+                color: TSLColors.white.withOpacity(0.72), letterSpacing: 0.3)),
         const SizedBox(height: 16),
+        // Status badge — TSL teal
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            color: const Color(0xFF4CAF50),
-            boxShadow: [BoxShadow(color: const Color(0xFF4CAF50).withOpacity(0.45),
+            color: TSLColors.teal,
+            boxShadow: [BoxShadow(
+                color: TSLColors.teal.withOpacity(0.45),
                 blurRadius: 14, offset: const Offset(0, 5))],
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Container(width: 7, height: 7,
-                decoration: const BoxDecoration(
-                    shape: BoxShape.circle, color: Colors.white)),
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle, color: TSLColors.white)),
             const SizedBox(width: 7),
             Text('${s.accountStatus}: ${_accountStatus ?? s.active}',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                    color: Colors.white, letterSpacing: 0.4)),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                    color: TSLColors.white, letterSpacing: 0.4)),
           ]),
         ),
       ]),
@@ -861,16 +867,11 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildInfoCard(_PS s) {
     final fields = [
-      _InfoField(Icons.person_outline_rounded, s.fullName,
-          _userData?['Names']  ?? s.notProvided, _teal),
-      _InfoField(Icons.mail_outline_rounded, s.email,
-          _userData?['Email']  ?? s.notProvided, _accent),
-      _InfoField(Icons.phone_outlined, s.mobile,
-          _userData?['Mobile'] ?? s.notProvided, _teal),
-      _InfoField(Icons.badge_outlined, 'NIDA Number',          // ✅ Add this
-          _nida ?? s.notProvided, _accent),
-      _InfoField(Icons.location_on_outlined, s.address,
-          _userData?['Add_1']  ?? s.notProvided, _accent),
+      _InfoField(Icons.person_outline_rounded,   s.fullName,    _userData?['Names']  ?? s.notProvided, _teal),
+      _InfoField(Icons.mail_outline_rounded,      s.email,       _userData?['Email']  ?? s.notProvided, _accent),
+      _InfoField(Icons.phone_outlined,            s.mobile,      _userData?['Mobile'] ?? s.notProvided, _teal),
+      _InfoField(Icons.badge_outlined,            'NIDA Number', _nida                ?? s.notProvided, _accent),
+      _InfoField(Icons.location_on_outlined,      s.address,     _userData?['Add_1']  ?? s.notProvided, _accent),
     ];
 
     return Padding(
@@ -880,7 +881,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           color: _card,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: _border),
-          boxShadow: [BoxShadow(color: _teal.withOpacity(_dark ? 0.06 : 0.12),
+          boxShadow: [BoxShadow(
+              color: _teal.withOpacity(_dark ? 0.06 : 0.12),
               blurRadius: 20, offset: const Offset(0, 8))],
         ),
         child: Column(
@@ -913,7 +915,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: Icon(f.icon, color: f.color, size: 22),
         ),
         const SizedBox(width: 16),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(f.label, style: TextStyle(fontSize: 11, color: _txtH,
               letterSpacing: 0.4, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
@@ -931,7 +934,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     child: Column(children: [
       _primaryButton(s.editProfile, () =>
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(s.editComingSoon),
+            content: Text(s.editComingSoon,
+                style: TextStyle(color: TSLColors.white)),
             backgroundColor: _teal,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -950,19 +954,20 @@ class _ProfileScreenState extends State<ProfileScreen>
       width: double.infinity, height: 54,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
+        // Change password button: TSL blue → teal gradient, both modes
         gradient: LinearGradient(
-          colors: _dark
-              ? [const Color(0xFF1A4A5C), const Color(0xFF0F3040)]
-              : [const Color(0xFF2E7D99), const Color(0xFF1A5F77)],
+          colors: [TSLColors.blue, TSLColors.teal],
         ),
-        boxShadow: [BoxShadow(color: _teal.withOpacity(0.32),
+        boxShadow: [BoxShadow(
+            color: TSLColors.blue.withOpacity(0.32),
             blurRadius: 16, offset: const Offset(0, 7))],
       ),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Icon(Icons.lock_reset_rounded, size: 18, color: Colors.white),
+        Icon(Icons.lock_reset_rounded, size: 18, color: TSLColors.white),
         const SizedBox(width: 8),
-        Text(s.changePassword, style: const TextStyle(fontSize: 15,
-            fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5)),
+        Text(s.changePassword, style: TextStyle(fontSize: 15,
+            fontWeight: FontWeight.w700, color: TSLColors.white,
+            letterSpacing: 0.5)),
       ]),
     ),
   );
@@ -973,15 +978,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       width: double.infinity, height: 54,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
+        // Primary action button: TSL teal → blue gradient
         gradient: LinearGradient(
-            colors: _dark
-                ? [const Color(0xFF4ADE80), const Color(0xFF16A34A)]
-                : [const Color(0xFF4CAF50), const Color(0xFF388E3C)]),
-        boxShadow: [BoxShadow(color: _accent.withOpacity(0.38),
+            colors: [TSLColors.teal, TSLColors.blue]),
+        boxShadow: [BoxShadow(
+            color: _accent.withOpacity(0.38),
             blurRadius: 18, offset: const Offset(0, 8))],
       ),
-      child: Center(child: Text(label, style: const TextStyle(fontSize: 15,
-          fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.6))),
+      child: Center(child: Text(label, style: TextStyle(fontSize: 15,
+          fontWeight: FontWeight.w700, color: TSLColors.white,
+          letterSpacing: 0.6))),
     ),
   );
 
@@ -999,8 +1005,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.refresh_rounded, size: 18, color: _teal),
         const SizedBox(width: 8),
-        Text(label, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
-            color: _teal, letterSpacing: 0.4)),
+        Text(label, style: TextStyle(fontSize: 15,
+            fontWeight: FontWeight.w600, color: _teal, letterSpacing: 0.4)),
       ]),
     ),
   );
@@ -1030,12 +1036,13 @@ class _BlobPainter extends CustomPainter {
         ).createShader(Rect.fromCircle(center: c, radius: r));
       canvas.drawCircle(c, r * pulse, paint);
     }
+    // Blobs now use TSL brand colours
     blob(Offset(size.width * 0.85, size.height * 0.08),
-        size.width * 0.5, const Color(0xFF2E7D99));
+        size.width * 0.5, TSLColors.blue);
     blob(Offset(size.width * 0.1,  size.height * 0.5),
-        size.width * 0.45, const Color(0xFF4CAF50));
+        size.width * 0.45, TSLColors.teal);
     blob(Offset(size.width * 0.6,  size.height * 0.9),
-        size.width * 0.38, const Color(0xFF2E7D32));
+        size.width * 0.38, TSLColors.teal);
   }
 
   @override

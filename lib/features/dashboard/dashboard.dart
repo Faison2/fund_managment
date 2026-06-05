@@ -15,6 +15,15 @@ import '../../provider/theme_provider.dart';
 import 'drawer.dart';
 import 'homescreen.dart';
 
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
+class _TSL {
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
+}
+
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _DS {
   final String funds, home, portfolio, profile,
@@ -82,13 +91,13 @@ class _DashboardScreenState extends State<DashboardScreen>
   ];
 
   // ── Theme helpers ──────────────────────────────────────────────────────────
-  bool get _dark  => context.watch<ThemeProvider>().isDark;
-  _DS  get _s     => context.watch<LocaleProvider>().isSwahili ? _dsSw : _dsEn;
+  bool get _dark => context.watch<ThemeProvider>().isDark;
+  _DS  get _s    => context.watch<LocaleProvider>().isSwahili ? _dsSw : _dsEn;
 
-  Color get _scaffoldBg => _dark ? const Color(0xFF0B1A0C) : const Color(0xFFB8E6D3);
-  Color get _appBarBg   => _dark ? const Color(0xFF0B1A0C) : const Color(0xFFB8E6D3);
-  Color get _txtPrim    => _dark ? const Color(0xFFE8F5E9) : Colors.black87;
-  Color get _txtSec     => _dark ? const Color(0xFF81A884)  : Colors.black54;
+  Color get _scaffoldBg => _dark ? _TSL.black : const Color(0xFFB8E6D3);
+  Color get _appBarBg   => _dark ? _TSL.black : const Color(0xFFB8E6D3);
+  Color get _txtPrim    => _dark ? _TSL.white : _TSL.black;
+  Color get _txtSec     => _dark ? _TSL.teal  : _TSL.grey;
 
   @override
   void initState() {
@@ -210,14 +219,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     final s = _s;
 
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarBrightness: _dark ? Brightness.dark : Brightness.light,
-      statusBarIconBrightness: _dark ? Brightness.light : Brightness.dark,
+      statusBarBrightness:      _dark ? Brightness.dark  : Brightness.light,
+      statusBarIconBrightness:  _dark ? Brightness.light : Brightness.dark,
     ));
 
     return Scaffold(
       backgroundColor: _scaffoldBg,
-      // KEY FIX: extendBody allows the body to go behind the nav bar.
-      // This prevents the system gesture area from squashing the body content.
       extendBody: true,
       appBar: AppBar(
         backgroundColor: _appBarBg,
@@ -255,8 +262,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: _dark
-                  ? Colors.white.withOpacity(0.08)
-                  : Colors.white.withOpacity(0.3),
+                  ? _TSL.white.withOpacity(0.08)
+                  : _TSL.white.withOpacity(0.3),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Stack(children: [
@@ -288,12 +295,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       (Icons.person_outline,                  Icons.person),
     ];
 
-    // KEY FIX 1: Read the system bottom inset (gesture nav bar / home indicator).
-    // This is the height of the system navigation area we must not overlap.
-    final bottomInset = MediaQuery.of(context).padding.bottom;
-
-    // KEY FIX 2: Responsive pill height based on screen size.
-    // Smaller phones get a shorter pill so it doesn't crowd the screen.
+    final bottomInset  = MediaQuery.of(context).padding.bottom;
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth  = MediaQuery.of(context).size.width;
     final pillHeight   = screenHeight < 680 || screenWidth < 360 ? 56.0 : 64.0;
@@ -302,10 +304,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         ? _glassPill(labels, icons, pillHeight)
         : _solidPill(labels, icons, pillHeight);
 
-    // KEY FIX 3: Remove SafeArea wrapper — handle insets manually via padding.
-    // SafeArea can double-count padding when extendBody is true on the Scaffold.
-    // We add bottomInset directly as bottom padding so the pill floats above
-    // the gesture bar without being crushed or unreachable.
     return Container(
       color: _scaffoldBg,
       padding: EdgeInsets.fromLTRB(16, 8, 16, 12 + bottomInset),
@@ -313,7 +311,79 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ── Frosted glass pill (dark mode) ─────────────────────────────────────────
+  // ── Liquid Glass decoration helper ────────────────────────────────────────
+  BoxDecoration _liquidGlassDecoration({
+    required bool isDark,
+    double borderRadius = 32,
+  }) {
+    return BoxDecoration(
+      color: isDark
+          ? _TSL.white.withOpacity(0.08)
+          : _TSL.black.withOpacity(0.82),
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: Border.all(
+        color: isDark
+            ? _TSL.white.withOpacity(0.14)
+            : Colors.black.withOpacity(0.10),
+        width: 1.0,
+      ),
+      boxShadow: isDark
+          ? [
+        BoxShadow(
+          color: _TSL.black.withOpacity(0.40),
+          blurRadius: 32,
+          spreadRadius: -4,
+          offset: const Offset(0, 8),
+        ),
+        BoxShadow(
+          color: _TSL.black.withOpacity(0.20),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ]
+          : [
+        BoxShadow(
+          color: _TSL.black.withOpacity(0.45),
+          blurRadius: 40,
+          spreadRadius: -4,
+          offset: const Offset(0, 12),
+        ),
+        BoxShadow(
+          color: _TSL.black.withOpacity(0.15),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
+
+  // ── Inner gloss sheen (top-edge highlight) ────────────────────────────────
+  Widget _innerGlossLayer({required Widget child}) {
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          top: 0,
+          left: 16,
+          right: 16,
+          height: 1,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  _TSL.white.withOpacity(0.18),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Frosted glass pill (dark mode) ────────────────────────────────────────
   Widget _glassPill(
       List<String> labels,
       List<(IconData, IconData)> icons,
@@ -322,35 +392,26 @@ class _DashboardScreenState extends State<DashboardScreen>
     return ClipRRect(
       borderRadius: BorderRadius.circular(32),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
           height: pillHeight,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(
-                color: Colors.white.withOpacity(0.12), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.35),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: _navItems(
-            labels, icons,
-            selectedItemColor:   const Color(0xFF4ADE80),
-            unselectedItemColor: Colors.white38,
-            selectedBgColor:     const Color(0xFF4ADE80).withOpacity(0.12),
-            pillHeight:          pillHeight,
+          decoration: _liquidGlassDecoration(isDark: true),
+          child: _innerGlossLayer(
+            child: _navItems(
+              labels, icons,
+              selectedItemColor:   _TSL.teal,
+              unselectedItemColor: _TSL.white.withOpacity(0.38),
+              selectedBgColor:     _TSL.teal.withOpacity(0.22),
+              pillHeight:          pillHeight,
+              glowColor:           _TSL.teal,
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ── Solid pill (light mode) ────────────────────────────────────────────────
+  // ── Solid pill (light mode) ───────────────────────────────────────────────
   Widget _solidPill(
       List<String> labels,
       List<(IconData, IconData)> icons,
@@ -358,23 +419,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       ) {
     return Container(
       height: pillHeight,
-      decoration: BoxDecoration(
-        color: const Color(0xFF2D4F28),
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF2D4F28).withOpacity(0.35),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: _navItems(
-        labels, icons,
-        selectedItemColor:   const Color(0xFF81C784),
-        unselectedItemColor: Colors.white54,
-        selectedBgColor:     const Color(0xFF4CAF50).withOpacity(0.25),
-        pillHeight:          pillHeight,
+      decoration: _liquidGlassDecoration(isDark: false),
+      child: _innerGlossLayer(
+        child: _navItems(
+          labels, icons,
+          selectedItemColor:   _TSL.teal,
+          unselectedItemColor: _TSL.white.withOpacity(0.38),
+          selectedBgColor:     _TSL.teal.withOpacity(0.22),
+          pillHeight:          pillHeight,
+          glowColor:           _TSL.teal,
+        ),
       ),
     );
   }
@@ -387,9 +441,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         required Color unselectedItemColor,
         required Color selectedBgColor,
         required double pillHeight,
+        Color glowColor = Colors.transparent,
       }) {
-    // KEY FIX 4: Scale icon and font sizes relative to the pill height
-    // so they stay proportional on all screen sizes.
     final double selectedIconSize   = pillHeight < 60 ? 22.0 : 24.0;
     final double unselectedIconSize = pillHeight < 60 ? 20.0 : 22.0;
     final double selectedFontSize   = pillHeight < 60 ? 9.0  : 10.0;
@@ -407,14 +460,22 @@ class _DashboardScreenState extends State<DashboardScreen>
               setState(() => _currentIndex = index);
             },
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
+              duration: const Duration(milliseconds: 280),
               curve: Curves.easeInOut,
-              // KEY FIX 5: Use symmetric vertical margin derived from pillHeight
-              // instead of a hardcoded value, so items don't overflow on small pills.
               margin: EdgeInsets.symmetric(horizontal: 4, vertical: verticalMargin),
               decoration: BoxDecoration(
                 color: isSelected ? selectedBgColor : Colors.transparent,
                 borderRadius: BorderRadius.circular(24),
+                // Liquid glass teal glow on active item
+                boxShadow: isSelected
+                    ? [
+                  BoxShadow(
+                    color: glowColor.withOpacity(0.25),
+                    blurRadius: 20,
+                    spreadRadius: -2,
+                  ),
+                ]
+                    : null,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -436,6 +497,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                       fontSize:   isSelected ? selectedFontSize : unselectedFontSize,
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
                       color:      isSelected ? selectedItemColor : unselectedItemColor,
+                      // Subtle text glow on active label
+                      shadows: isSelected
+                          ? [
+                        Shadow(
+                          color: glowColor.withOpacity(0.60),
+                          blurRadius: 8,
+                        ),
+                      ]
+                          : null,
                     ),
                     child: Text(
                       labels[index],

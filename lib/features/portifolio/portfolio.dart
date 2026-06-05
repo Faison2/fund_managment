@@ -8,6 +8,15 @@ import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
+class _TSL {
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
+}
+
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _PS {
   final String portfolio, totalPortfolioValue, accNo,
@@ -129,32 +138,31 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   ];
 
   // ── Theme helpers ──────────────────────────────────────────────────────────
-  bool  get _dark   => context.watch<ThemeProvider>().isDark;
-  _PS   get _s      => context.watch<LocaleProvider>().isSwahili ? _psSw : _psEn;
+  bool get _dark => context.watch<ThemeProvider>().isDark;
+  _PS  get _s    => context.watch<LocaleProvider>().isSwahili ? _psSw : _psEn;
 
   // Background gradient
   Gradient get _bgGradient => _dark
-      ? const LinearGradient(
+      ? LinearGradient(
       begin: Alignment.topLeft, end: Alignment.bottomRight,
-      colors: [Color(0xFF0B1A0C), Color(0xFF091510), Color(0xFF0D1A10)])
+      colors: [_TSL.black, _TSL.black.withOpacity(0.92), _TSL.black.withOpacity(0.95)])
       : const LinearGradient(
       begin: Alignment.topLeft, end: Alignment.bottomRight,
       colors: [Color(0xFFB8E6D3), Color(0xFF98D8C8), Color(0xFFFFE5B4)]);
 
   // Card surface
-  Color get _cardBg     => _dark ? const Color(0xFF132013).withOpacity(0.85)
-      : Colors.white.withOpacity(0.55);
-  Color get _cardBorder => _dark ? const Color(0xFF1E3320)
-      : Colors.white.withOpacity(0.7);
-  Color get _txtPrim    => _dark ? const Color(0xFFE8F5E9) : Colors.black87;
-  Color get _txtSec     => _dark ? const Color(0xFF81A884) : Colors.black45;
-  Color get _txtHint    => _dark ? const Color(0xFF4A7A4D) : Colors.black38;
-  Color get _divider    => _dark ? const Color(0xFF1E3320) : Colors.black12;
-  Color get _teal       => _dark ? const Color(0xFF38BDF8) : Colors.teal.shade700;
-  Color get _tealDim    => _dark ? const Color(0xFF38BDF8).withOpacity(0.12)
-      : Colors.teal.withOpacity(0.08);
-  Color get _green      => _dark ? const Color(0xFF4ADE80) : Colors.green.shade700;
-  Color get _statItem   => _dark ? const Color(0xFF1A2E1C) : Colors.white.withOpacity(0.4);
+  Color get _cardBg     => _dark ? _TSL.black                     : _TSL.white.withOpacity(0.55);
+  Color get _cardBorder => _dark ? _TSL.black.withOpacity(0.35)   : _TSL.white.withOpacity(0.7);
+  Color get _txtPrim    => _dark ? _TSL.white                      : _TSL.black;
+  Color get _txtSec     => _dark ? _TSL.teal                       : _TSL.grey;
+  Color get _txtHint    => _dark ? _TSL.teal.withOpacity(0.6)      : _TSL.grey.withOpacity(0.6);
+  Color get _divider    => _dark ? _TSL.black.withOpacity(0.3)     : _TSL.black.withOpacity(0.12);
+  // _teal: accent/chart colour — TSL blue used for both modes
+  Color get _teal       => _TSL.blue;
+  Color get _tealDim    => _TSL.blue.withOpacity(_dark ? 0.12 : 0.08);
+  // _green: positive indicator — TSL teal used for both modes
+  Color get _green      => _TSL.teal;
+  Color get _statItem   => _dark ? _TSL.black                      : _TSL.white.withOpacity(0.4);
 
   @override
   void initState() {
@@ -293,7 +301,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
           label: Text(s.retry),
           style: ElevatedButton.styleFrom(
               backgroundColor: _green,
-              foregroundColor: Colors.white),
+              foregroundColor: _TSL.white),
         ),
       ]),
     ),
@@ -366,7 +374,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       child: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: _dark ? const Color(0xFF132013) : Colors.white.withOpacity(0.3),
+          color: _dark ? _TSL.black : _TSL.white.withOpacity(0.3),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _cardBorder, width: 1),
         ),
@@ -375,7 +383,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
           indicator: BoxDecoration(color: _teal,
               borderRadius: BorderRadius.circular(18)),
           indicatorSize: TabBarIndicatorSize.tab,
-          labelColor: Colors.white,
+          labelColor: _TSL.white,
           unselectedLabelColor: _txtSec,
           labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
           unselectedLabelStyle:
@@ -414,14 +422,14 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     // Capture theme values as locals — never call context.watch() inside
     // fl_chart callbacks (getDrawingHorizontalLine, getTitlesWidget, etc.)
     // as those run outside Flutter's build tree and will silently break.
-    final isDark       = _dark;
-    final gridColor    = (isDark ? Colors.white : Colors.black).withOpacity(0.06);
-    final hintColor    = _txtHint;
-    final primColor    = _txtPrim;
-    final tealColor    = _teal;
-    final cardBgColor  = _cardBg;
-    final cardBdColor  = _cardBorder;
-    final tooltipBg    = isDark ? const Color(0xFF132013) : Colors.teal.shade800;
+    final isDark        = _dark;
+    final gridColor     = (isDark ? _TSL.white : _TSL.black).withOpacity(0.06);
+    final hintColor     = _txtHint;
+    final primColor     = _txtPrim;
+    final tealColor     = _teal;
+    final cardBgColor   = _cardBg;
+    final cardBdColor   = _cardBorder;
+    final tooltipBg     = isDark ? _TSL.black : _TSL.blue;
     final shadowOpacity = isDark ? 0.2 : 0.04;
 
     return Container(
@@ -429,7 +437,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       decoration: BoxDecoration(
         color: cardBgColor, borderRadius: BorderRadius.circular(20),
         border: Border.all(color: cardBdColor, width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(shadowOpacity),
+        boxShadow: [BoxShadow(color: _TSL.black.withOpacity(shadowOpacity),
             blurRadius: 8, offset: const Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -451,7 +459,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                 ),
                 child: Text(_periods[i],
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                        color: active ? Colors.white : hintColor)),
+                        color: active ? _TSL.white : hintColor)),
               ),
             );
           }),
@@ -485,7 +493,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                 getTooltipColor: (_) => tooltipBg,
                 getTooltipItems: (spots) => spots.map((s) => LineTooltipItem(
                   'TZS ${s.y.toStringAsFixed(2)}M',
-                  const TextStyle(color: Colors.white, fontSize: 10,
+                  TextStyle(color: _TSL.white, fontSize: 10,
                       fontWeight: FontWeight.w600),
                 )).toList(),
               ),
@@ -531,7 +539,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       decoration: BoxDecoration(
         color: _cardBg, borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder, width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(_dark ? 0.2 : 0.04),
+        boxShadow: [BoxShadow(color: _TSL.black.withOpacity(_dark ? 0.2 : 0.04),
             blurRadius: 8, offset: const Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -599,7 +607,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       decoration: BoxDecoration(
         color: _cardBg, borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder, width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(_dark ? 0.2 : 0.04),
+        boxShadow: [BoxShadow(color: _TSL.black.withOpacity(_dark ? 0.2 : 0.04),
             blurRadius: 8, offset: const Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -751,7 +759,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                     ],
                   ]),
             ),
-// Status badge
             // Status badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -813,11 +820,9 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: _dark
-                      ? Colors.grey.withOpacity(0.08)
-                      : Colors.grey.withOpacity(0.06),
+                  color: _TSL.grey.withOpacity(_dark ? 0.08 : 0.06),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+                  border: Border.all(color: _TSL.grey.withOpacity(0.2), width: 1),
                 ),
                 child: Row(children: [
                   Icon(Icons.info_outline, size: 14, color: _txtSec),

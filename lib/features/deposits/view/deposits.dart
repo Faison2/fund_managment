@@ -11,27 +11,32 @@ import '../../funds/repository/repository.dart';
 import '../../../../provider/locale_provider.dart';
 import '../../../../provider/theme_provider.dart';
 
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
+class _TSL {
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
+}
+
 // ── Tanzania network providers ────────────────────────────────────────────────
 class _NetworkProvider {
-  final String name;
-  final String code;
+  final String name, code;
   final Color  color;
   final IconData icon;
-
   const _NetworkProvider({
-    required this.name,
-    required this.code,
-    required this.color,
-    required this.icon,
+    required this.name, required this.code,
+    required this.color, required this.icon,
   });
 }
 
 const _tanzaniaNetworks = [
-  _NetworkProvider(name: 'Airtel',    code: 'Airtel',   color: Color(0xFFFF6B00), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Tigo',      code: 'Tigo',     color: Color(0xFF0057A8), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Halopesa',  code: 'Halopesa', color: Color(0xFF00A651), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Airtel',   code: 'Airtel',   color: Color(0xFFFF6B00), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Tigo',     code: 'Tigo',     color: Color(0xFF0057A8), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Halopesa', code: 'Halopesa', color: Color(0xFF00A651), icon: Icons.sim_card),
   _NetworkProvider(name: 'Azampesa', code: 'Azampesa', color: Color(0xFF6A0DAD), icon: Icons.sim_card),
-  _NetworkProvider(name: 'Mpesa',     code: 'Mpesa',    color: Color(0xFFE10000), icon: Icons.sim_card),
+  _NetworkProvider(name: 'Mpesa',    code: 'Mpesa',    color: Color(0xFFE10000), icon: Icons.sim_card),
 ];
 
 // ── Localised strings ─────────────────────────────────────────────────────────
@@ -43,8 +48,7 @@ class _DS {
       confirmDeposit, confirmDetails, cancel, confirm,
       depositInitiated, done, phone, amount,
       failedLoadFunds, failedLoadUser, retry, noFunds, networkError,
-      free, notSet, loadingUser,
-      selectNetwork, walletProvider;
+      free, notSet, loadingUser, selectNetwork, walletProvider;
   const _DS({
     required this.depositFunds,    required this.chooseFund,
     required this.selectFund,      required this.enterAmount,
@@ -131,9 +135,7 @@ const _dsSw = _DS(
 // ── DepositPage ───────────────────────────────────────────────────────────────
 class DepositPage extends StatefulWidget {
   const DepositPage({Key? key}) : super(key: key);
-
-  @override
-  State<DepositPage> createState() => _DepositPageState();
+  @override State<DepositPage> createState() => _DepositPageState();
 }
 
 class _DepositPageState extends State<DepositPage> {
@@ -141,10 +143,8 @@ class _DepositPageState extends State<DepositPage> {
   final TextEditingController _mobileController = TextEditingController();
   String _selectedCurrency = 'TZS';
 
-  // ── Network provider ───────────────────────────────────────────────────────
   _NetworkProvider? _selectedNetwork;
 
-  // ── User data ──────────────────────────────────────────────────────────────
   String _cdsNumber   = '';
   String _names       = '';
   String _email       = '';
@@ -153,7 +153,6 @@ class _DepositPageState extends State<DepositPage> {
   bool   _isLoadingUser = true;
   String _userError     = '';
 
-  // ── Funds ──────────────────────────────────────────────────────────────────
   List<Fund> _funds         = [];
   Fund?      _selectedFund;
   bool       _isLoadingFunds = true;
@@ -211,24 +210,19 @@ class _DepositPageState extends State<DepositPage> {
     }
     try {
       setState(() { _isLoadingUser = true; _userError = ''; });
-
       final res = await http.post(
         Uri.parse('$cSharpApi/UserBasicDetails'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'CDSNumber': _cdsNumber}),
       ).timeout(const Duration(seconds: 12));
-
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-
       if (res.statusCode == 200 && body['status'] == 'success') {
         final d = Map<String, dynamic>.from(body['data'] as Map);
-
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_names',   d['Names']  ?? '');
         await prefs.setString('user_email',   d['Email']  ?? '');
         await prefs.setString('user_mobile',  d['Mobile'] ?? '');
         await prefs.setString('user_address', d['Add_1']  ?? '');
-
         final mobile = d['Mobile'] ?? '';
         setState(() {
           _names   = d['Names']  ?? '';
@@ -246,8 +240,7 @@ class _DepositPageState extends State<DepositPage> {
       }
     } catch (e) {
       setState(() {
-        _userError     = '${_s.networkError}: $e';
-        _isLoadingUser = false;
+        _userError = '${_s.networkError}: $e'; _isLoadingUser = false;
       });
     }
   }
@@ -257,25 +250,20 @@ class _DepositPageState extends State<DepositPage> {
       setState(() { _isLoadingFunds = true; _fundsError = ''; });
       final funds = await FundsRepository().fetchFunds();
       setState(() {
-        _funds          = funds;
-        _selectedFund   = null;
-        _isLoadingFunds = false;
+        _funds = funds; _selectedFund = null; _isLoadingFunds = false;
       });
     } catch (_) {
       setState(() { _fundsError = _s.failedLoadFunds; _isLoadingFunds = false; });
     }
   }
 
-  // ── Deposit API ────────────────────────────────────────────────────────────
   Future<void> _processDeposit() async {
     if (_amountController.text.isEmpty || _selectedFund == null) return;
     if (_mobileController.text.trim().isEmpty) {
-      _snackErr('Please enter a phone number');
-      return;
+      _snackErr('Please enter a phone number'); return;
     }
     if (_selectedNetwork == null) {
-      _snackErr('Please select a network provider');
-      return;
+      _snackErr('Please select a network provider'); return;
     }
     final ok = await _showConfirmation();
     if (!ok) return;
@@ -286,8 +274,7 @@ class _DepositPageState extends State<DepositPage> {
         Uri.parse('$cSharpApi/Deposit'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername':    'User2',
-          'APIPassword':    'CBZ1234#2',
+          'APIUsername':    'User2', 'APIPassword': 'CBZ1234#2',
           'cdsNumber':      _cdsNumber,
           'PhoneNumber':    _mobileController.text.trim(),
           'Fund':           _selectedFund!.fundingName ?? '',
@@ -314,40 +301,48 @@ class _DepositPageState extends State<DepositPage> {
   // ── Confirmation dialog ────────────────────────────────────────────────────
   Future<bool> _showConfirmation() async {
     final dark   = Provider.of<ThemeProvider>(context, listen: false).isDark;
-    final s      = Provider.of<LocaleProvider>(context, listen: false).isSwahili ? _dsSw : _dsEn;
+    final s      = Provider.of<LocaleProvider>(context, listen: false).isSwahili
+        ? _dsSw : _dsEn;
     final mobile = _mobileController.text.trim();
     final fund   = _selectedFund?.fundingName ?? '—';
     final amt    = '$_selectedCurrency ${_fmt(_amountController.text)}';
     final wallet = _selectedNetwork?.name ?? '—';
 
-    final cardBg = dark ? const Color(0xFF132013) : Colors.white;
-    final txtP   = dark ? const Color(0xFFE8F5E9) : Colors.black87;
-    final txtS   = dark ? const Color(0xFF81A884)  : Colors.grey.shade600;
-    final border = dark ? const Color(0xFF1E3320)  : Colors.grey.shade200;
-    final green  = dark ? const Color(0xFF4ADE80)  : Colors.green;
+    final cardBg = dark ? _TSL.black : _TSL.white;
+    final txtP   = dark ? _TSL.white : _TSL.black;
+    final txtS   = dark ? _TSL.teal  : _TSL.grey;
+    final border = dark ? _TSL.black.withOpacity(0.35) : const Color(0xFFE5E7EB);
+    // Deposit uses TSL teal as the confirm accent
+    const green  = _TSL.teal;
 
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => Dialog(
         backgroundColor: cardBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Container(padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: green.withOpacity(0.12),
+                  Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                          color: green.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(10)),
-                      child: Icon(Icons.receipt_long_outlined, color: green, size: 20)),
+                      child: const Icon(Icons.receipt_long_outlined,
+                          color: green, size: 20)),
                   const SizedBox(width: 12),
-                  Flexible(child: Text(s.confirmDeposit, style: TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.w800, color: txtP))),
+                  Flexible(child: Text(s.confirmDeposit,
+                      style: TextStyle(fontSize: 17,
+                          fontWeight: FontWeight.w800, color: txtP))),
                 ]),
                 const SizedBox(height: 20),
                 _dRow(s.fund,           fund,   txtP, txtS, border),
                 _dRow(s.amount,         amt,    txtP, txtS, border),
-                _dRow(s.phone,          mobile.isNotEmpty ? mobile : s.notSet, txtP, txtS, border),
+                _dRow(s.phone,
+                    mobile.isNotEmpty ? mobile : s.notSet, txtP, txtS, border),
                 _dRow(s.walletProvider, wallet, txtP, txtS, border),
                 const SizedBox(height: 12),
                 Text(s.confirmDetails,
@@ -356,24 +351,33 @@ class _DepositPageState extends State<DepositPage> {
                 Row(children: [
                   Expanded(child: GestureDetector(
                     onTap: () => Navigator.pop(context, false),
-                    child: Container(height: 46,
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: border, width: 1.5)),
-                        child: Center(child: Text(s.cancel, style: TextStyle(
-                            color: txtS, fontWeight: FontWeight.w600)))),
+                    child: Container(
+                      height: 46,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: border, width: 1.5)),
+                      child: Center(child: Text(s.cancel,
+                          style: TextStyle(color: txtS,
+                              fontWeight: FontWeight.w600))),
+                    ),
                   )),
                   const SizedBox(width: 12),
                   Expanded(child: GestureDetector(
                     onTap: () => Navigator.pop(context, true),
-                    child: Container(height: 46,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [green, green.withOpacity(0.75)]),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [BoxShadow(color: green.withOpacity(0.35),
-                              blurRadius: 10, offset: const Offset(0, 4))],
-                        ),
-                        child: Center(child: Text(s.confirm, style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w700)))),
+                    child: Container(
+                      height: 46,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            colors: [_TSL.teal, _TSL.blue]),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [BoxShadow(
+                            color: _TSL.teal.withOpacity(0.35),
+                            blurRadius: 10, offset: const Offset(0, 4))],
+                      ),
+                      child: Center(child: Text(s.confirm,
+                          style: TextStyle(color: _TSL.white,
+                              fontWeight: FontWeight.w700))),
+                    ),
                   )),
                 ]),
               ]),
@@ -387,13 +391,16 @@ class _DepositPageState extends State<DepositPage> {
       Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(border: Border.all(color: bd),
+        decoration: BoxDecoration(
+            border: Border.all(color: bd),
             borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
-          SizedBox(width: 88, child: Text(lbl, style: TextStyle(
-              fontSize: 12, color: ts, fontWeight: FontWeight.w500))),
-          Expanded(child: Text(val, style: TextStyle(fontSize: 13,
-              fontWeight: FontWeight.w700, color: tp),
+          SizedBox(width: 88, child: Text(lbl,
+              style: TextStyle(fontSize: 12, color: ts,
+                  fontWeight: FontWeight.w500))),
+          Expanded(child: Text(val,
+              style: TextStyle(fontSize: 13,
+                  fontWeight: FontWeight.w700, color: tp),
               overflow: TextOverflow.ellipsis)),
         ]),
       );
@@ -401,44 +408,53 @@ class _DepositPageState extends State<DepositPage> {
   // ── Success dialog ─────────────────────────────────────────────────────────
   void _showSuccess(String msg) {
     final dark   = Provider.of<ThemeProvider>(context, listen: false).isDark;
-    final s      = Provider.of<LocaleProvider>(context, listen: false).isSwahili ? _dsSw : _dsEn;
-    final cardBg = dark ? const Color(0xFF132013) : Colors.white;
-    final txtP   = dark ? const Color(0xFFE8F5E9) : Colors.black87;
-    final txtS   = dark ? const Color(0xFF81A884)  : Colors.grey.shade600;
+    final s      = Provider.of<LocaleProvider>(context, listen: false).isSwahili
+        ? _dsSw : _dsEn;
+    final cardBg = dark ? _TSL.black : _TSL.white;
+    final txtP   = dark ? _TSL.white : _TSL.black;
+    final txtS   = dark ? _TSL.teal  : _TSL.grey;
 
     showDialog(
       context: context, barrierDismissible: false,
       builder: (_) => Dialog(
         backgroundColor: cardBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24)),
         child: Padding(padding: const EdgeInsets.all(28),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 72, height: 72,
-                decoration: const BoxDecoration(
+            // Success icon: TSL teal → blue gradient
+            Container(
+                width: 72, height: 72,
+                decoration: BoxDecoration(
                     gradient: LinearGradient(
-                        colors: [Color(0xFF4CAF50), Color(0xFF388E3C)]),
+                        colors: [_TSL.teal, _TSL.blue]),
                     shape: BoxShape.circle),
-                child: const Icon(Icons.check_rounded, color: Colors.white, size: 36)),
+                child: Icon(Icons.check_rounded,
+                    color: _TSL.white, size: 36)),
             const SizedBox(height: 20),
-            Text(s.depositInitiated, style: TextStyle(fontSize: 18,
-                fontWeight: FontWeight.w800, color: txtP)),
+            Text(s.depositInitiated,
+                style: TextStyle(fontSize: 18,
+                    fontWeight: FontWeight.w800, color: txtP)),
             const SizedBox(height: 10),
             Text(msg, textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: txtS, height: 1.5)),
             const SizedBox(height: 24),
             GestureDetector(
               onTap: () { Navigator.pop(context); Navigator.pop(context); },
-              child: Container(width: double.infinity, height: 50,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: [Color(0xFF4CAF50), Color(0xFF388E3C)]),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.35),
-                        blurRadius: 12, offset: const Offset(0, 5))],
-                  ),
-                  child: Center(child: Text(s.done, style: const TextStyle(
-                      color: Colors.white, fontSize: 15,
-                      fontWeight: FontWeight.w700)))),
+              child: Container(
+                width: double.infinity, height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                      colors: [_TSL.teal, _TSL.blue]),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(
+                      color: _TSL.teal.withOpacity(0.35),
+                      blurRadius: 12, offset: const Offset(0, 5))],
+                ),
+                child: Center(child: Text(s.done,
+                    style: TextStyle(color: _TSL.white,
+                        fontSize: 15, fontWeight: FontWeight.w700))),
+              ),
             ),
           ]),
         ),
@@ -447,10 +463,13 @@ class _DepositPageState extends State<DepositPage> {
   }
 
   void _snackErr(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(msg), backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 4)),
+    SnackBar(
+      content: Text(msg, style: TextStyle(color: _TSL.white)),
+      backgroundColor: Colors.red,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      duration: const Duration(seconds: 4),
+    ),
   );
 
   String _fmt(String v) {
@@ -469,17 +488,19 @@ class _DepositPageState extends State<DepositPage> {
     final bottomInset   = MediaQuery.of(context).padding.bottom;
     final scrollPadding = 40.0 + bottomInset;
 
-    final dark      = _dark;  final s = _s;
-    final bg        = dark ? const Color(0xFF0B1A0C) : const Color(0xFFB8E6D3);
-    final cardBg    = dark ? const Color(0xFF132013) : Colors.white;
-    final sheet     = dark ? const Color(0xFF111D12) : Colors.white;
-    final border    = dark ? const Color(0xFF1E3320) : const Color(0xFFE5E7EB);
-    final txtP      = dark ? const Color(0xFFE8F5E9) : Colors.black87;
-    final txtS      = dark ? const Color(0xFF81A884)  : Colors.black54;
-    final txtH      = dark ? const Color(0xFF4A7A4D)  : Colors.grey.shade400;
-    final green     = dark ? const Color(0xFF4ADE80)  : const Color(0xFF15803D);
-    final inputBg   = dark ? const Color(0xFF132013)  : const Color(0xFFF9FAFB);
-    final summaryBg = dark ? const Color(0xFF0F1A10)  : const Color(0xFFF9FAFB);
+    final dark = _dark; final s = _s;
+
+    final bg        = dark ? _TSL.black                   : const Color(0xFFB8E6D3);
+    final cardBg    = dark ? _TSL.black                   : _TSL.white;
+    final sheet     = dark ? _TSL.black.withOpacity(0.95) : _TSL.white;
+    final border    = dark ? _TSL.black.withOpacity(0.35) : const Color(0xFFE5E7EB);
+    final txtP      = dark ? _TSL.white                   : _TSL.black;
+    final txtS      = dark ? _TSL.teal                    : _TSL.grey;
+    final txtH      = dark ? _TSL.teal.withOpacity(0.6)   : _TSL.grey.withOpacity(0.6);
+    // green = TSL teal (deposit domain accent)
+    final green     = _TSL.teal;
+    final inputBg   = dark ? _TSL.black                   : const Color(0xFFF9FAFB);
+    final summaryBg = dark ? _TSL.black                   : const Color(0xFFF9FAFB);
 
     final bool canSubmit = _amountController.text.isNotEmpty &&
         _selectedFund    != null &&
@@ -492,42 +513,42 @@ class _DepositPageState extends State<DepositPage> {
       backgroundColor: bg,
       body: Column(children: [
 
-        // ── Gradient header ──────────────────────────────────────────────────
+        // ── Gradient header — TSL blue → teal ──────────────────────────────
         Container(
           decoration: BoxDecoration(
-            gradient: dark
-                ? const LinearGradient(begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF0B1A0C), Color(0xFF132013), Color(0xFF09100A)])
-                : const LinearGradient(begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [_TSL.blue, _TSL.teal],
+            ),
           ),
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Row(children: [
               GestureDetector(
                 onTap: () => Navigator.pop(context),
-                child: Container(padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15),
+                child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: _TSL.white.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 18)),
+                    child: Icon(Icons.arrow_back_ios_new,
+                        color: _TSL.white, size: 18)),
               ),
               const SizedBox(width: 16),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(s.depositFunds, style: const TextStyle(color: Colors.white,
-                        fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                    const SizedBox(height: 2),
-                    Text(s.chooseFund, style: TextStyle(
-                        color: Colors.white.withOpacity(0.65), fontSize: 12)),
-                  ])),
+              Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(s.depositFunds, style: TextStyle(
+                    color: _TSL.white, fontSize: 22,
+                    fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                const SizedBox(height: 2),
+                Text(s.chooseFund, style: TextStyle(
+                    color: _TSL.white.withOpacity(0.65), fontSize: 12)),
+              ])),
             ]),
           )),
         ),
 
-        // ── Scrollable form ──────────────────────────────────────────────────
+        // ── Scrollable form ───────────────────────────────────────────────
         Expanded(
           child: Container(
             color: sheet,
@@ -537,43 +558,46 @@ class _DepositPageState extends State<DepositPage> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    // ── Fund dropdown ─────────────────────────────────────────
+                    // ── Fund dropdown ───────────────────────────────────────
                     _secLabel(s.selectFund, txtH),
                     const SizedBox(height: 10),
                     if (_isLoadingFunds)
                       Center(child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 20),
-                          child: CircularProgressIndicator(color: green, strokeWidth: 2.5)))
+                          child: CircularProgressIndicator(
+                              color: green, strokeWidth: 2.5)))
                     else if (_fundsError.isNotEmpty)
-                      _errBanner(_fundsError, s.retry, green, border, onRetry: _loadFunds)
+                      _errBanner(_fundsError, s.retry, green, border,
+                          onRetry: _loadFunds)
                     else
                       _dropdown(bg: inputBg, border: border,
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<Fund>(
-                            value: _selectedFund,
-                            isExpanded: true,
+                            value: _selectedFund, isExpanded: true,
                             dropdownColor: cardBg,
-                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: txtS),
+                            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                                color: txtS),
                             hint: Row(children: [
                               const SizedBox(width: 2),
                               Text(s.selectFund, style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w500, color: txtH)),
+                                  fontSize: 14, fontWeight: FontWeight.w500,
+                                  color: txtH)),
                             ]),
                             items: _funds.map((f) => DropdownMenuItem<Fund>(
                               value: f,
                               child: Row(children: [
-                                Container(
-                                  width: 8, height: 8,
-                                  decoration: BoxDecoration(
-                                    color: f.status?.toLowerCase() == 'active'
-                                        ? const Color(0xFF22C55E)
-                                        : Colors.orange,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
+                                Container(width: 8, height: 8,
+                                    decoration: BoxDecoration(
+                                      color: f.status?.toLowerCase() == 'active'
+                                          ? const Color(0xFF22C55E)
+                                          : Colors.orange,
+                                      shape: BoxShape.circle,
+                                    )),
                                 const SizedBox(width: 10),
-                                Expanded(child: Text(f.fundingName ?? s.noFunds,
-                                    style: TextStyle(fontWeight: FontWeight.w600,
+                                Expanded(child: Text(
+                                    f.fundingName ?? s.noFunds,
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
                                         fontSize: 14, color: txtP),
                                     overflow: TextOverflow.ellipsis)),
                               ]),
@@ -585,28 +609,23 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Network provider ──────────────────────────────────────
+                    // ── Network provider ────────────────────────────────────
                     _secLabel(s.selectNetwork, txtH),
                     const SizedBox(height: 10),
                     _networkProviderPicker(
-                      inputBg: inputBg,
-                      border:  border,
-                      cardBg:  cardBg,
-                      txtP:    txtP,
-                      txtS:    txtS,
-                      txtH:    txtH,
-                      green:   green,
-                      dark:    dark,
-                      s:       s,
+                      inputBg: inputBg, border: border, cardBg: cardBg,
+                      txtP: txtP, txtS: txtS, txtH: txtH,
+                      green: green, dark: dark, s: s,
                     ),
 
                     const SizedBox(height: 24),
 
-                    // ── Phone number ──────────────────────────────────────────
+                    // ── Phone number ────────────────────────────────────────
                     _secLabel(s.phone, txtH),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: inputBg,
                         borderRadius: BorderRadius.circular(14),
@@ -618,17 +637,19 @@ class _DepositPageState extends State<DepositPage> {
                         Expanded(child: TextField(
                           controller: _mobileController,
                           keyboardType: TextInputType.phone,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly],
                           style: TextStyle(fontSize: 15,
                               fontWeight: FontWeight.w600, color: txtP),
-                          scrollPadding: EdgeInsets.only(bottom: bottomInset + 80),
+                          scrollPadding:
+                          EdgeInsets.only(bottom: bottomInset + 80),
                           decoration: InputDecoration(
                             hintText: s.notSet,
                             hintStyle: TextStyle(color: txtH),
                             border: InputBorder.none,
                             isDense: true,
-                            contentPadding:
-                            const EdgeInsets.symmetric(vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12),
                           ),
                         )),
                       ]),
@@ -636,14 +657,15 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Amount ────────────────────────────────────────────────
+                    // ── Amount ──────────────────────────────────────────────
                     _secLabel(s.enterAmount, txtH),
                     const SizedBox(height: 10),
                     Row(children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 14),
-                        decoration: BoxDecoration(color: inputBg,
+                        decoration: BoxDecoration(
+                            color: inputBg,
                             borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(14),
                                 bottomLeft: Radius.circular(14)),
@@ -652,7 +674,8 @@ class _DepositPageState extends State<DepositPage> {
                           child: DropdownButton<String>(
                             value: _selectedCurrency,
                             dropdownColor: cardBg, isDense: true,
-                            icon: Icon(Icons.expand_more, size: 18, color: txtS),
+                            icon: Icon(Icons.expand_more,
+                                size: 18, color: txtS),
                             items: _currencies.map((c) => DropdownMenuItem(
                               value: c,
                               child: Text(c, style: TextStyle(
@@ -666,12 +689,15 @@ class _DepositPageState extends State<DepositPage> {
                       Expanded(child: TextField(
                         controller: _amountController,
                         keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly],
                         style: TextStyle(fontSize: 18,
                             fontWeight: FontWeight.w800, color: txtP),
-                        scrollPadding: EdgeInsets.only(bottom: bottomInset + 80),
+                        scrollPadding:
+                        EdgeInsets.only(bottom: bottomInset + 80),
                         decoration: InputDecoration(
-                          hintText: '0.00', hintStyle: TextStyle(color: txtH),
+                          hintText: '0.00',
+                          hintStyle: TextStyle(color: txtH),
                           filled: true, fillColor: inputBg,
                           border: OutlineInputBorder(
                               borderSide: BorderSide(color: border),
@@ -696,7 +722,7 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 20),
 
-                    // ── Quick amounts ─────────────────────────────────────────
+                    // ── Quick amounts ───────────────────────────────────────
                     _secLabel(s.quickSelect, txtH),
                     const SizedBox(height: 10),
                     Row(
@@ -705,23 +731,29 @@ class _DepositPageState extends State<DepositPage> {
                         return Expanded(child: GestureDetector(
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            setState(() =>
-                            _amountController.text = a['amount']!);
+                            setState(
+                                    () => _amountController.text = a['amount']!);
                           },
                           child: Container(
                             margin: EdgeInsets.only(
-                                right: e.key < _quickAmounts.length - 1 ? 8 : 0),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                                right: e.key < _quickAmounts.length - 1
+                                    ? 8 : 0),
+                            padding:
+                            const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: green.withOpacity(dark ? 0.1 : 0.08),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: green.withOpacity(0.3)),
+                              border: Border.all(
+                                  color: green.withOpacity(0.3)),
                             ),
                             child: Column(children: [
-                              Text(a['label']!, style: TextStyle(fontSize: 14,
-                                  fontWeight: FontWeight.w800, color: green)),
+                              Text(a['label']!,
+                                  style: TextStyle(fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: green)),
                               const SizedBox(height: 2),
-                              Text('$_selectedCurrency ${_fmt(a['amount']!)}',
+                              Text(
+                                  '$_selectedCurrency ${_fmt(a['amount']!)}',
                                   style: TextStyle(fontSize: 9,
                                       color: green.withOpacity(0.7))),
                             ]),
@@ -732,15 +764,16 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Summary ───────────────────────────────────────────────
+                    // ── Summary ─────────────────────────────────────────────
                     Container(
                       padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(color: summaryBg,
+                      decoration: BoxDecoration(
+                          color: summaryBg,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: border)),
                       child: Column(children: [
-                        _sRow(s.fund, _selectedFund?.fundingName ?? '—',
-                            txtP, txtS),
+                        _sRow(s.fund,
+                            _selectedFund?.fundingName ?? '—', txtP, txtS),
                         _sDiv(border),
                         _sRow(s.walletProvider,
                             _selectedNetwork?.name ?? '—', txtP, txtS),
@@ -765,31 +798,34 @@ class _DepositPageState extends State<DepositPage> {
 
                     const SizedBox(height: 28),
 
-                    // ── Submit button ─────────────────────────────────────────
+                    // ── Submit button ───────────────────────────────────────
                     GestureDetector(
                       onTap: canSubmit ? _processDeposit : null,
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200), height: 56,
+                        duration: const Duration(milliseconds: 200),
+                        height: 56,
                         decoration: BoxDecoration(
                           gradient: canSubmit
-                              ? LinearGradient(colors: [green,
-                            dark ? const Color(0xFF16A34A)
-                                : const Color(0xFF15803D)])
+                              ? LinearGradient(
+                              colors: [_TSL.teal, _TSL.blue])
                               : LinearGradient(colors: [txtH, txtH]),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: canSubmit
-                              ? [BoxShadow(color: green.withOpacity(0.35),
-                              blurRadius: 14, offset: const Offset(0, 6))]
+                              ? [BoxShadow(
+                              color: _TSL.teal.withOpacity(0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6))]
                               : [],
                         ),
                         child: Center(child: _isSubmitting
-                            ? const SizedBox(width: 22, height: 22,
+                            ? SizedBox(width: 22, height: 22,
                             child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2.5))
-                            : Text(s.depositNow, style: const TextStyle(
-                            color: Colors.white, fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.3))),
+                                color: _TSL.white, strokeWidth: 2.5))
+                            : Text(s.depositNow,
+                            style: TextStyle(
+                                color: _TSL.white, fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3))),
                       ),
                     ),
                   ]),
@@ -801,44 +837,32 @@ class _DepositPageState extends State<DepositPage> {
   }
 
   // ── Network provider picker ───────────────────────────────────────────────
-  // 5 providers: rendered as a 2-column grid where the last item (5th)
-  // spans the full width so the layout stays balanced and touch-friendly.
   Widget _networkProviderPicker({
     required Color inputBg, required Color border, required Color cardBg,
     required Color txtP,    required Color txtS,   required Color txtH,
     required Color green,   required bool  dark,   required _DS   s,
   }) {
-    return Column(
-      children: [
-        // First row: items 0 & 1
-        Row(children: [
-          _networkTile(_tanzaniaNetworks[0], inputBg, border, txtS, dark),
-          const SizedBox(width: 10),
-          _networkTile(_tanzaniaNetworks[1], inputBg, border, txtS, dark),
-        ]),
-        const SizedBox(height: 10),
-        // Second row: items 2 & 3
-        Row(children: [
-          _networkTile(_tanzaniaNetworks[2], inputBg, border, txtS, dark),
-          const SizedBox(width: 10),
-          _networkTile(_tanzaniaNetworks[3], inputBg, border, txtS, dark),
-        ]),
-        const SizedBox(height: 10),
-        // Third row: item 4 spans full width
-        _networkTile(_tanzaniaNetworks[4], inputBg, border, txtS, dark,
-            fullWidth: true),
-      ],
-    );
+    return Column(children: [
+      Row(children: [
+        _networkTile(_tanzaniaNetworks[0], inputBg, border, txtS, dark),
+        const SizedBox(width: 10),
+        _networkTile(_tanzaniaNetworks[1], inputBg, border, txtS, dark),
+      ]),
+      const SizedBox(height: 10),
+      Row(children: [
+        _networkTile(_tanzaniaNetworks[2], inputBg, border, txtS, dark),
+        const SizedBox(width: 10),
+        _networkTile(_tanzaniaNetworks[3], inputBg, border, txtS, dark),
+      ]),
+      const SizedBox(height: 10),
+      _networkTile(_tanzaniaNetworks[4], inputBg, border, txtS, dark,
+          fullWidth: true),
+    ]);
   }
 
   Widget _networkTile(
-      _NetworkProvider n,
-      Color inputBg,
-      Color border,
-      Color txtS,
-      bool dark, {
-        bool fullWidth = false,
-      }) {
+      _NetworkProvider n, Color inputBg, Color border,
+      Color txtS, bool dark, {bool fullWidth = false}) {
     final selected = _selectedNetwork?.code == n.code;
     final tile = GestureDetector(
       onTap: () {
@@ -854,44 +878,30 @@ class _DepositPageState extends State<DepositPage> {
               : inputBg,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? n.color : border,
-            width: selected ? 2 : 1,
-          ),
+              color: selected ? n.color : border,
+              width: selected ? 2 : 1),
           boxShadow: selected
-              ? [BoxShadow(
-              color: n.color.withOpacity(0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 3))]
+              ? [BoxShadow(color: n.color.withOpacity(0.25),
+              blurRadius: 8, offset: const Offset(0, 3))]
               : [],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 10, height: 10,
-              decoration: BoxDecoration(color: n.color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                n.name,
-                style: TextStyle(
-                  fontSize: 13,
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(width: 10, height: 10,
+              decoration: BoxDecoration(
+                  color: n.color, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Flexible(child: Text(n.name,
+              style: TextStyle(fontSize: 13,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: selected ? n.color : txtS,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (selected) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.check_circle_rounded, color: n.color, size: 14),
-            ],
+                  color: selected ? n.color : txtS),
+              overflow: TextOverflow.ellipsis)),
+          if (selected) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.check_circle_rounded, color: n.color, size: 14),
           ],
-        ),
+        ]),
       ),
     );
-
     return fullWidth ? tile : Expanded(child: tile);
   }
 
@@ -922,8 +932,8 @@ class _DepositPageState extends State<DepositPage> {
         child: Row(children: [
           const Icon(Icons.error_outline_rounded, color: Colors.red, size: 18),
           const SizedBox(width: 10),
-          Expanded(child: Text(msg, style: const TextStyle(
-              color: Colors.red, fontSize: 13))),
+          Expanded(child: Text(msg,
+              style: const TextStyle(color: Colors.red, fontSize: 13))),
           GestureDetector(onTap: onRetry,
               child: Text(lbl, style: TextStyle(color: green,
                   fontWeight: FontWeight.w700, fontSize: 13))),
@@ -932,9 +942,11 @@ class _DepositPageState extends State<DepositPage> {
 
   Widget _sRow(String l, String v, Color vc, Color lc, {bool bold = false}) =>
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(l, style: TextStyle(fontSize: bold ? 15 : 13,
+        Text(l, style: TextStyle(
+            fontSize: bold ? 15 : 13,
             fontWeight: bold ? FontWeight.w700 : FontWeight.w500, color: lc)),
-        Text(v, style: TextStyle(fontSize: bold ? 15 : 13,
+        Text(v, style: TextStyle(
+            fontSize: bold ? 15 : 13,
             fontWeight: FontWeight.w700, color: vc)),
       ]);
 

@@ -11,17 +11,21 @@ import '../../funds/repository/repository.dart';
 import '../../../../provider/locale_provider.dart';
 import '../../../../provider/theme_provider.dart';
 
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
+class _TSL {
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
+}
+
 // ── Tanzania network providers ────────────────────────────────────────────────
 class _NetworkProvider {
-  final String name;
-  final String code;
+  final String name, code;
   final Color  color;
-
   const _NetworkProvider({
-    required this.name,
-    required this.code,
-    required this.color,
-  });
+    required this.name, required this.code, required this.color});
 }
 
 const _tanzaniaNetworks = [
@@ -121,29 +125,23 @@ const _wsSw = _WS(
 // ── WithdrawalPage ────────────────────────────────────────────────────────────
 class WithdrawalPage extends StatefulWidget {
   const WithdrawalPage({Key? key}) : super(key: key);
-
-  @override
-  State<WithdrawalPage> createState() => _WithdrawalPageState();
+  @override State<WithdrawalPage> createState() => _WithdrawalPageState();
 }
 
 class _WithdrawalPageState extends State<WithdrawalPage> {
   final TextEditingController _amountController = TextEditingController();
   String _selectedCurrency = 'TZS';
 
-  // ── Network provider ───────────────────────────────────────────────────────
   _NetworkProvider? _selectedNetwork;
 
-  // ── User data ──────────────────────────────────────────────────────────────
   String _cdsNumber   = '';
   String _phoneNumber = '';
 
-  // ── Funds ──────────────────────────────────────────────────────────────────
   List<Fund> _funds         = [];
   Fund?      _selectedFund;
   bool       _isLoadingFunds = true;
   String     _fundsError     = '';
 
-  // ── Balance ────────────────────────────────────────────────────────────────
   double? _availableBalance;
   double? _availableUnits;
   bool    _isLoadingBalance = false;
@@ -188,9 +186,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
       setState(() { _isLoadingFunds = true; _fundsError = ''; });
       final funds = await FundsRepository().fetchFunds();
       setState(() {
-        _funds          = funds;
-        _selectedFund   = null;
-        _isLoadingFunds = false;
+        _funds = funds; _selectedFund = null; _isLoadingFunds = false;
       });
     } catch (_) {
       setState(() { _fundsError = _s.failedLoadFunds; _isLoadingFunds = false; });
@@ -209,10 +205,8 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         Uri.parse('$cSharpApi/GetAvailableBalance'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername': 'User2',
-          'APIPassword': 'CBZ1234#2',
-          'cdsNumber':   _cdsNumber,
-          'Fund':        _selectedFund!.fundingName ?? '',
+          'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+          'cdsNumber': _cdsNumber, 'Fund': _selectedFund!.fundingName ?? '',
         }),
       );
       final data = jsonDecode(res.body);
@@ -251,18 +245,16 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         Uri.parse('$cSharpApi/Redeem'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername':    'User2',
-          'APIPassword':    'CBZ1234#2',
-          'cdsNumber':      _cdsNumber,
-          'PhoneNumber':    _phoneNumber,
+          'APIUsername':    'User2', 'APIPassword': 'CBZ1234#2',
+          'cdsNumber':      _cdsNumber, 'PhoneNumber': _phoneNumber,
           'Fund':           _selectedFund!.fundingName ?? '',
           'Amount':         _amountController.text,
           'WalletProvider': _selectedNetwork!.code,
         }),
       );
-      final data     = jsonDecode(res.body);
+      final data = jsonDecode(res.body);
       final String msg = data['statusDesc'] ?? 'No response from server';
-      final bool ok  = res.statusCode == 200 && data['status'] == 'success';
+      final bool ok    = res.statusCode == 200 && data['status'] == 'success';
       _showResultDialog(success: ok, message: msg);
     } catch (e) {
       _showResultDialog(success: false, message: '${_s.networkError}: $e');
@@ -281,23 +273,27 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
     final phone  = _phoneNumber.isNotEmpty ? _phoneNumber : s.notSet;
     final wallet = _selectedNetwork?.name ?? '—';
 
-    final cardBg = dark ? const Color(0xFF132013) : Colors.white;
-    final txtP   = dark ? const Color(0xFFE8F5E9) : Colors.black87;
-    final txtS   = dark ? const Color(0xFF81A884)  : Colors.grey.shade600;
-    final border = dark ? const Color(0xFF1E3320)  : Colors.grey.shade200;
-    final orange = dark ? const Color(0xFFFB923C)  : Colors.orange;
+    // Dialog uses TSL tokens
+    final cardBg = dark ? _TSL.black : _TSL.white;
+    final txtP   = dark ? _TSL.white : _TSL.black;
+    final txtS   = dark ? _TSL.teal  : _TSL.grey;
+    final border = dark ? _TSL.black.withOpacity(0.35) : const Color(0xFFE5E7EB);
+    // orange is kept as the withdrawal-action accent
+    final orange = dark ? const Color(0xFFFB923C) : Colors.orange;
 
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => Dialog(
         backgroundColor: cardBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Container(padding: const EdgeInsets.all(8),
+                  Container(
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                           color: orange.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(10)),
@@ -320,28 +316,33 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                 Row(children: [
                   Expanded(child: GestureDetector(
                     onTap: () => Navigator.pop(context, false),
-                    child: Container(height: 46,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: border, width: 1.5)),
-                        child: Center(child: Text(s.cancel,
-                            style: TextStyle(color: txtS,
-                                fontWeight: FontWeight.w600)))),
+                    child: Container(
+                      height: 46,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: border, width: 1.5)),
+                      child: Center(child: Text(s.cancel,
+                          style: TextStyle(color: txtS,
+                              fontWeight: FontWeight.w600))),
+                    ),
                   )),
                   const SizedBox(width: 12),
                   Expanded(child: GestureDetector(
                     onTap: () => Navigator.pop(context, true),
-                    child: Container(height: 46,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                              colors: [orange, orange.withOpacity(0.75)]),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [BoxShadow(color: orange.withOpacity(0.35),
-                              blurRadius: 10, offset: const Offset(0, 4))],
-                        ),
-                        child: Center(child: Text(s.confirm,
-                            style: const TextStyle(color: Colors.white,
-                                fontWeight: FontWeight.w700)))),
+                    child: Container(
+                      height: 46,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            colors: [orange, orange.withOpacity(0.75)]),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [BoxShadow(
+                            color: orange.withOpacity(0.35),
+                            blurRadius: 10, offset: const Offset(0, 4))],
+                      ),
+                      child: Center(child: Text(s.confirm,
+                          style: TextStyle(color: _TSL.white,
+                              fontWeight: FontWeight.w700))),
+                    ),
                   )),
                 ]),
               ]),
@@ -359,10 +360,12 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
             border: Border.all(color: bd),
             borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
-          SizedBox(width: 88, child: Text(lbl, style: TextStyle(
-              fontSize: 12, color: ts, fontWeight: FontWeight.w500))),
-          Expanded(child: Text(val, style: TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w700, color: tp),
+          SizedBox(width: 88, child: Text(lbl,
+              style: TextStyle(fontSize: 12, color: ts,
+                  fontWeight: FontWeight.w500))),
+          Expanded(child: Text(val,
+              style: TextStyle(fontSize: 13,
+                  fontWeight: FontWeight.w700, color: tp),
               overflow: TextOverflow.ellipsis)),
         ]),
       );
@@ -372,25 +375,29 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
     final dark   = Provider.of<ThemeProvider>(context, listen: false).isDark;
     final s      = Provider.of<LocaleProvider>(context, listen: false).isSwahili
         ? _wsSw : _wsEn;
-    final cardBg = dark ? const Color(0xFF132013) : Colors.white;
-    final txtP   = dark ? const Color(0xFFE8F5E9) : Colors.black87;
-    final txtS   = dark ? const Color(0xFF81A884)  : Colors.grey.shade600;
+    final cardBg = dark ? _TSL.black : _TSL.white;
+    final txtP   = dark ? _TSL.white : _TSL.black;
+    final txtS   = dark ? _TSL.teal  : _TSL.grey;
     final accent = success ? Colors.orange : Colors.red;
 
     showDialog(
       context: context, barrierDismissible: false,
       builder: (_) => Dialog(
         backgroundColor: cardBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(padding: const EdgeInsets.all(28),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 72, height: 72,
+            Container(
+                width: 72, height: 72,
                 decoration: BoxDecoration(
                     gradient: LinearGradient(
                         colors: [accent, accent.withOpacity(0.75)]),
                     shape: BoxShape.circle),
-                child: Icon(success ? Icons.check_rounded : Icons.close_rounded,
-                    color: Colors.white, size: 36)),
+                child: Icon(
+                    success ? Icons.check_rounded : Icons.close_rounded,
+                    color: _TSL.white, size: 36)),
             const SizedBox(height: 20),
             Text(success ? s.withdrawalRequested : s.requestFailed,
                 style: TextStyle(fontSize: 18,
@@ -404,18 +411,21 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                 Navigator.pop(context);
                 if (success) Navigator.pop(context);
               },
-              child: Container(width: double.infinity, height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        colors: [accent, accent.withOpacity(0.75)]),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: accent.withOpacity(0.35),
-                        blurRadius: 12, offset: const Offset(0, 5))],
-                  ),
-                  child: Center(child: Text(
-                      success ? s.done : s.tryAgain,
-                      style: const TextStyle(color: Colors.white,
-                          fontSize: 15, fontWeight: FontWeight.w700)))),
+              child: Container(
+                width: double.infinity, height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                      colors: [accent, accent.withOpacity(0.75)]),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(
+                      color: accent.withOpacity(0.35),
+                      blurRadius: 12, offset: const Offset(0, 5))],
+                ),
+                child: Center(child: Text(
+                    success ? s.done : s.tryAgain,
+                    style: TextStyle(color: _TSL.white,
+                        fontSize: 15, fontWeight: FontWeight.w700))),
+              ),
             ),
           ]),
         ),
@@ -424,10 +434,13 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   }
 
   void _snackErr(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(msg), backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 4)),
+    SnackBar(
+      content: Text(msg, style: TextStyle(color: _TSL.white)),
+      backgroundColor: Colors.red,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      duration: const Duration(seconds: 4),
+    ),
   );
 
   String _fmt(String v) {
@@ -453,68 +466,68 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
     final bottomInset   = MediaQuery.of(context).padding.bottom;
     final scrollPadding = 40.0 + bottomInset;
 
-    final dark      = _dark; final s = _s;
-    final bg        = dark ? const Color(0xFF0B1A0C) : const Color(0xFFB8E6D3);
-    final cardBg    = dark ? const Color(0xFF132013) : Colors.white;
-    final sheet     = dark ? const Color(0xFF111D12) : Colors.white;
-    final border    = dark ? const Color(0xFF1E3320) : const Color(0xFFE5E7EB);
-    final txtP      = dark ? const Color(0xFFE8F5E9) : Colors.black87;
-    final txtS      = dark ? const Color(0xFF81A884)  : Colors.black54;
-    final txtH      = dark ? const Color(0xFF4A7A4D)  : Colors.grey.shade400;
-    final orange    = dark ? const Color(0xFFFB923C)  : Colors.orange;
-    final inputBg   = dark ? const Color(0xFF132013)  : const Color(0xFFF9FAFB);
-    final balanceBg = dark ? const Color(0xFF0F1A10)  : Colors.white;
+    final dark = _dark; final s = _s;
+
+    // Surface tokens — all TSL brand colours
+    final bg        = dark ? _TSL.black                      : const Color(0xFFB8E6D3);
+    final cardBg    = dark ? _TSL.black                      : _TSL.white;
+    final sheet     = dark ? _TSL.black.withOpacity(0.95)    : _TSL.white;
+    final border    = dark ? _TSL.black.withOpacity(0.35)    : const Color(0xFFE5E7EB);
+    final txtP      = dark ? _TSL.white                      : _TSL.black;
+    final txtS      = dark ? _TSL.teal                       : _TSL.grey;
+    final txtH      = dark ? _TSL.teal.withOpacity(0.6)      : _TSL.grey.withOpacity(0.6);
+    final inputBg   = dark ? _TSL.black                      : const Color(0xFFF9FAFB);
+    final balanceBg = dark ? _TSL.black                      : _TSL.white;
+    // orange stays: it's the withdrawal-domain accent (caution/action)
+    final orange    = dark ? const Color(0xFFFB923C) : Colors.orange;
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: bg,
       body: Column(children: [
 
-        // ── Gradient header ──────────────────────────────────────────────────
+        // ── Gradient header — TSL blue → teal, both modes ──────────────────
         Container(
           decoration: BoxDecoration(
-            gradient: dark
-                ? const LinearGradient(begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF0B1A0C), Color(0xFF132013), Color(0xFF09100A)])
-                : const LinearGradient(begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [_TSL.blue, _TSL.teal],
+            ),
           ),
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Row(children: [
               GestureDetector(
                 onTap: () => Navigator.pop(context),
-                child: Container(padding: const EdgeInsets.all(8),
+                child: Container(
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: _TSL.white.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 18)),
+                    child: Icon(Icons.arrow_back_ios_new,
+                        color: _TSL.white, size: 18)),
               ),
               const SizedBox(width: 16),
               Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(s.withdrawFunds, style: const TextStyle(
-                    color: Colors.white, fontSize: 22,
+                Text(s.withdrawFunds, style: TextStyle(
+                    color: _TSL.white, fontSize: 22,
                     fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                 const SizedBox(height: 2),
                 Text(s.withdrawSubtitle, style: TextStyle(
-                    color: Colors.white.withOpacity(0.65), fontSize: 12)),
+                    color: _TSL.white.withOpacity(0.65), fontSize: 12)),
               ])),
             ]),
           )),
         ),
 
-        // ── Available balance banner ─────────────────────────────────────────
+        // ── Available balance banner ──────────────────────────────────────
         Container(
           decoration: BoxDecoration(
-            gradient: dark
-                ? const LinearGradient(
-                colors: [Color(0xFF132013), Color(0xFF0F1A10)])
-                : const LinearGradient(
-                colors: [Color(0xFF388E3C), Color(0xFF2E7D32)]),
+            // Banner uses same TSL teal gradient (slightly shifted)
+            gradient: LinearGradient(
+              colors: [_TSL.teal, _TSL.blue],
+            ),
           ),
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
           child: Container(
@@ -524,7 +537,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: border),
               boxShadow: [BoxShadow(
-                  color: Colors.black.withOpacity(dark ? 0.3 : 0.08),
+                  color: _TSL.black.withOpacity(dark ? 0.3 : 0.08),
                   blurRadius: 12, offset: const Offset(0, 4))],
             ),
             child: Row(children: [
@@ -553,7 +566,8 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                    color: orange.withOpacity(0.12), shape: BoxShape.circle),
+                    color: orange.withOpacity(0.12),
+                    shape: BoxShape.circle),
                 child: Icon(Icons.account_balance_wallet_outlined,
                     color: orange, size: 26),
               ),
@@ -561,7 +575,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
           ),
         ),
 
-        // ── Scrollable form ──────────────────────────────────────────────────
+        // ── Scrollable form ───────────────────────────────────────────────
         Expanded(
           child: Container(
             color: sheet,
@@ -571,7 +585,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    // ── Fund dropdown ─────────────────────────────────────────
+                    // ── Fund dropdown ───────────────────────────────────────
                     _secLabel(s.selectFund, txtH),
                     const SizedBox(height: 10),
                     if (_isLoadingFunds)
@@ -593,9 +607,9 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                                 color: txtS),
                             hint: Row(children: [
                               const SizedBox(width: 2),
-                              Text(s.selectFund, style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w500,
-                                  color: txtH)),
+                              Text(s.selectFund,
+                                  style: TextStyle(fontSize: 14,
+                                      fontWeight: FontWeight.w500, color: txtH)),
                             ]),
                             items: _funds.map((f) => DropdownMenuItem<Fund>(
                               value: f,
@@ -628,7 +642,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Network provider ──────────────────────────────────────
+                    // ── Network provider ────────────────────────────────────
                     _secLabel(s.selectNetwork, txtH),
                     const SizedBox(height: 10),
                     _networkProviderPicker(
@@ -638,14 +652,15 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
 
                     const SizedBox(height: 24),
 
-                    // ── Amount ────────────────────────────────────────────────
+                    // ── Amount ──────────────────────────────────────────────
                     _secLabel(s.enterAmount, txtH),
                     const SizedBox(height: 10),
                     Row(children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 14),
-                        decoration: BoxDecoration(color: inputBg,
+                        decoration: BoxDecoration(
+                            color: inputBg,
                             borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(14),
                                 bottomLeft: Radius.circular(14)),
@@ -669,12 +684,15 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                       Expanded(child: TextField(
                         controller: _amountController,
                         keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly],
                         style: TextStyle(fontSize: 18,
                             fontWeight: FontWeight.w800, color: txtP),
-                        scrollPadding: EdgeInsets.only(bottom: bottomInset + 80),
+                        scrollPadding:
+                        EdgeInsets.only(bottom: bottomInset + 80),
                         decoration: InputDecoration(
-                          hintText: '0.00', hintStyle: TextStyle(color: txtH),
+                          hintText: '0.00',
+                          hintStyle: TextStyle(color: txtH),
                           filled: true, fillColor: inputBg,
                           border: OutlineInputBorder(
                               borderSide: BorderSide(color: border),
@@ -699,7 +717,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
 
                     const SizedBox(height: 20),
 
-                    // ── Quick amounts ─────────────────────────────────────────
+                    // ── Quick amounts ───────────────────────────────────────
                     _secLabel(s.quickSelect, txtH),
                     const SizedBox(height: 10),
                     Row(
@@ -713,7 +731,8 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                           },
                           child: Container(
                             margin: EdgeInsets.only(
-                                right: e.key < _quickAmounts.length - 1 ? 8 : 0),
+                                right: e.key < _quickAmounts.length - 1
+                                    ? 8 : 0),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: orange.withOpacity(dark ? 0.1 : 0.08),
@@ -722,10 +741,13 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                                   color: orange.withOpacity(0.3)),
                             ),
                             child: Column(children: [
-                              Text(a['label']!, style: TextStyle(fontSize: 14,
-                                  fontWeight: FontWeight.w800, color: orange)),
+                              Text(a['label']!,
+                                  style: TextStyle(fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: orange)),
                               const SizedBox(height: 2),
-                              Text('$_selectedCurrency ${_fmt(a['amount']!)}',
+                              Text(
+                                  '$_selectedCurrency ${_fmt(a['amount']!)}',
                                   style: TextStyle(fontSize: 9,
                                       color: orange.withOpacity(0.7))),
                             ]),
@@ -736,29 +758,34 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
 
                     const SizedBox(height: 28),
 
-                    // ── Submit button ─────────────────────────────────────────
+                    // ── Submit button ───────────────────────────────────────
                     GestureDetector(
                       onTap: _canWithdraw ? _processWithdrawal : null,
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200), height: 56,
+                        duration: const Duration(milliseconds: 200),
+                        height: 56,
                         decoration: BoxDecoration(
                           gradient: _canWithdraw
-                              ? LinearGradient(colors: [orange,
+                              ? LinearGradient(colors: [
+                            orange,
                             dark ? Colors.deepOrange
-                                : Colors.orange.shade700])
+                                : Colors.orange.shade700,
+                          ])
                               : LinearGradient(colors: [txtH, txtH]),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: _canWithdraw
-                              ? [BoxShadow(color: orange.withOpacity(0.35),
-                              blurRadius: 14, offset: const Offset(0, 6))]
+                              ? [BoxShadow(
+                              color: orange.withOpacity(0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6))]
                               : [],
                         ),
                         child: Center(child: _isSubmitting
-                            ? const SizedBox(width: 22, height: 22,
+                            ? SizedBox(width: 22, height: 22,
                             child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2.5))
+                                color: _TSL.white, strokeWidth: 2.5))
                             : Text(s.requestWithdrawal,
-                            style: const TextStyle(color: Colors.white,
+                            style: TextStyle(color: _TSL.white,
                                 fontSize: 16, fontWeight: FontWeight.w800,
                                 letterSpacing: 0.3))),
                       ),
@@ -772,42 +799,31 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   }
 
   // ── Network provider picker ───────────────────────────────────────────────
-  // 5 providers: 2-column grid, last item spans full width.
   Widget _networkProviderPicker({
     required Color inputBg, required Color border,
     required Color txtS,    required bool  dark,
   }) {
-    return Column(
-      children: [
-        // Row 1: Airtel + Tigo
-        Row(children: [
-          _networkTile(_tanzaniaNetworks[0], inputBg, border, txtS, dark),
-          const SizedBox(width: 10),
-          _networkTile(_tanzaniaNetworks[1], inputBg, border, txtS, dark),
-        ]),
-        const SizedBox(height: 10),
-        // Row 2: Halopesa + Azampesa
-        Row(children: [
-          _networkTile(_tanzaniaNetworks[2], inputBg, border, txtS, dark),
-          const SizedBox(width: 10),
-          _networkTile(_tanzaniaNetworks[3], inputBg, border, txtS, dark),
-        ]),
-        const SizedBox(height: 10),
-        // Row 3: Mpesa spans full width
-        _networkTile(_tanzaniaNetworks[4], inputBg, border, txtS, dark,
-            fullWidth: true),
-      ],
-    );
+    return Column(children: [
+      Row(children: [
+        _networkTile(_tanzaniaNetworks[0], inputBg, border, txtS, dark),
+        const SizedBox(width: 10),
+        _networkTile(_tanzaniaNetworks[1], inputBg, border, txtS, dark),
+      ]),
+      const SizedBox(height: 10),
+      Row(children: [
+        _networkTile(_tanzaniaNetworks[2], inputBg, border, txtS, dark),
+        const SizedBox(width: 10),
+        _networkTile(_tanzaniaNetworks[3], inputBg, border, txtS, dark),
+      ]),
+      const SizedBox(height: 10),
+      _networkTile(_tanzaniaNetworks[4], inputBg, border, txtS, dark,
+          fullWidth: true),
+    ]);
   }
 
   Widget _networkTile(
-      _NetworkProvider n,
-      Color inputBg,
-      Color border,
-      Color txtS,
-      bool dark, {
-        bool fullWidth = false,
-      }) {
+      _NetworkProvider n, Color inputBg, Color border,
+      Color txtS, bool dark, {bool fullWidth = false}) {
     final selected = _selectedNetwork?.code == n.code;
     final tile = GestureDetector(
       onTap: () {
@@ -823,52 +839,39 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               : inputBg,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? n.color : border,
-            width: selected ? 2 : 1,
-          ),
+              color: selected ? n.color : border,
+              width: selected ? 2 : 1),
           boxShadow: selected
-              ? [BoxShadow(
-              color: n.color.withOpacity(0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 3))]
+              ? [BoxShadow(color: n.color.withOpacity(0.25),
+              blurRadius: 8, offset: const Offset(0, 3))]
               : [],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 10, height: 10,
-              decoration: BoxDecoration(color: n.color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                n.name,
-                style: TextStyle(
-                  fontSize: 13,
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(width: 10, height: 10,
+              decoration: BoxDecoration(
+                  color: n.color, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Flexible(child: Text(n.name,
+              style: TextStyle(fontSize: 13,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: selected ? n.color : txtS,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (selected) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.check_circle_rounded, color: n.color, size: 14),
-            ],
+                  color: selected ? n.color : txtS),
+              overflow: TextOverflow.ellipsis)),
+          if (selected) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.check_circle_rounded, color: n.color, size: 14),
           ],
-        ),
+        ]),
       ),
     );
-
     return fullWidth ? tile : Expanded(child: tile);
   }
 
   // ── Shared helpers ─────────────────────────────────────────────────────────
   Widget _secLabel(String t, Color c) => Padding(
       padding: const EdgeInsets.only(left: 2),
-      child: Text(t.toUpperCase(), style: TextStyle(fontSize: 11,
-          fontWeight: FontWeight.w800, color: c, letterSpacing: 1.2)));
+      child: Text(t.toUpperCase(),
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800,
+              color: c, letterSpacing: 1.2)));
 
   Widget _dropdown({required Widget child,
     required Color bg, required Color border}) =>
@@ -889,13 +892,16 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
           border: Border.all(color: Colors.red.withOpacity(0.3)),
         ),
         child: Row(children: [
-          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 18),
+          const Icon(Icons.error_outline_rounded,
+              color: Colors.red, size: 18),
           const SizedBox(width: 10),
-          Expanded(child: Text(msg, style: const TextStyle(
-              color: Colors.red, fontSize: 13))),
-          GestureDetector(onTap: onRetry,
-              child: Text(lbl, style: TextStyle(color: orange,
-                  fontWeight: FontWeight.w700, fontSize: 13))),
+          Expanded(child: Text(msg,
+              style: const TextStyle(color: Colors.red, fontSize: 13))),
+          GestureDetector(
+              onTap: onRetry,
+              child: Text(lbl,
+                  style: TextStyle(color: orange,
+                      fontWeight: FontWeight.w700, fontSize: 13))),
         ]),
       );
 }

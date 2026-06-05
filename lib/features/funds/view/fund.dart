@@ -12,6 +12,15 @@ import '../repository/repository.dart';
 import '../../../../provider/locale_provider.dart';
 import '../../../../provider/theme_provider.dart';
 
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
+class _TSL {
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
+}
+
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _FS {
   final String availableFunds, code, issuer, description,
@@ -103,9 +112,9 @@ class FundsScreen extends StatelessWidget {
       case 'closed': case 'inactive': case 'suspended':
       return const Color(0xFFEF4444);
       case 'paused': case 'maintenance':
-      return const Color(0xFF3B82F6);
+      return _TSL.blue;
       default:
-        return const Color(0xFF9CA3AF);
+        return _TSL.grey;
     }
   }
 
@@ -116,9 +125,9 @@ class FundsScreen extends StatelessWidget {
       _FS s,
       bool dark,
       ) async {
-    final Color cardBg = dark ? const Color(0xFF132013) : Colors.white;
-    final Color txtP   = dark ? const Color(0xFFE8F5E9) : const Color(0xFF1A2E1A);
-    final Color txtS   = dark ? const Color(0xFF81A884) : const Color(0xFF5A7A5C);
+    final Color cardBg = dark ? _TSL.black : _TSL.white;
+    final Color txtP   = dark ? _TSL.white : _TSL.black;
+    final Color txtS   = dark ? _TSL.teal  : _TSL.grey;
 
     return await showDialog<bool>(
       context: context,
@@ -129,7 +138,6 @@ class FundsScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            // Icon
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -140,22 +148,16 @@ class FundsScreen extends StatelessWidget {
                   size: 36, color: Color(0xFF22C55E)),
             ),
             const SizedBox(height: 16),
-
-            // Title
             Text(s.confirmTitle,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800,
                     color: txtP)),
             const SizedBox(height: 10),
-
-            // Body
             Text(
               '${s.confirmBody} "${fund.fundingName ?? fund.fundingCode}".',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: txtS, height: 1.5),
             ),
             const SizedBox(height: 24),
-
-            // Buttons
             Row(children: [
               Expanded(
                 child: OutlinedButton(
@@ -177,7 +179,7 @@ class FundsScreen extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pop(true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
-                    foregroundColor: Colors.white,
+                    foregroundColor: _TSL.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -198,7 +200,7 @@ class FundsScreen extends StatelessWidget {
   void _showSuccess(BuildContext context, _FS s, SubAccount sub) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: const Color(0xFF132013),
+        backgroundColor: _TSL.black,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -212,12 +214,11 @@ class FundsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(s.subscribedTitle,
-                  style: const TextStyle(color: Colors.white,
+                  style: TextStyle(color: _TSL.white,
                       fontWeight: FontWeight.w800, fontSize: 14)),
               const SizedBox(height: 2),
               Text('${s.accountNumber}: ${sub.accountNumber}',
-                  style: const TextStyle(
-                      color: Color(0xFF81A884), fontSize: 12)),
+                  style: TextStyle(color: _TSL.teal, fontSize: 12)),
             ],
           )),
         ]),
@@ -238,7 +239,7 @@ class FundsScreen extends StatelessWidget {
               color: Colors.redAccent, size: 26),
           const SizedBox(width: 12),
           Expanded(child: Text('${s.error}: $message',
-              style: const TextStyle(color: Colors.white, fontSize: 13))),
+              style: TextStyle(color: _TSL.white, fontSize: 13))),
         ]),
       ),
     );
@@ -249,14 +250,14 @@ class FundsScreen extends StatelessWidget {
     final dark = context.watch<ThemeProvider>().isDark;
     final s    = context.watch<LocaleProvider>().isSwahili ? _fsSw : _fsEn;
 
-    final Color bg     = dark ? const Color(0xFF0B1A0C) : const Color(0xFFB8E6D3);
-    final Color cardBg = dark ? const Color(0xFF132013) : Colors.white;
-    final Color border = dark ? const Color(0xFF1E3320) : const Color(0xFFE2ECE2);
-    final Color txtP   = dark ? const Color(0xFFE8F5E9) : const Color(0xFF1A2E1A);
-    final Color txtS   = dark ? const Color(0xFF81A884) : const Color(0xFF5A7A5C);
-    final Color txtH   = dark ? const Color(0xFF4A7A4D) : const Color(0xFF9AAA9C);
-    final Color teal   = dark ? const Color(0xFF38BDF8) : const Color(0xFF2E7D99);
-    final Color green  = dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D);
+    final Color bg     = dark ? _TSL.black                      : const Color(0xFFB8E6D3);
+    final Color cardBg = dark ? _TSL.black                      : _TSL.white;
+    final Color border = dark ? _TSL.black.withOpacity(0.35)    : const Color(0xFFE2ECE2);
+    final Color txtP   = dark ? _TSL.white                      : _TSL.black;
+    final Color txtS   = dark ? _TSL.teal                       : _TSL.grey;
+    final Color txtH   = dark ? _TSL.teal.withOpacity(0.6)      : _TSL.grey.withOpacity(0.6);
+    final Color teal   = _TSL.blue;   // accent/link colour — TSL blue both modes
+    final Color green  = _TSL.teal;   // positive/action colour — TSL teal both modes
 
     return BlocProvider(
       create: (_) => FundsBloc(fundsRepository: FundsRepository())
@@ -283,7 +284,6 @@ class FundsScreen extends StatelessWidget {
               child: BlocBuilder<FundsBloc, FundsState>(
                 builder: (context, state) {
 
-                  // Resolve fund list across all post-load states
                   final List<Fund>? funds = switch (state) {
                     FundsLoaded()           => state.funds,
                     FundSubscribing()       => state.funds,
@@ -292,16 +292,13 @@ class FundsScreen extends StatelessWidget {
                     _                       => null,
                   };
 
-                  // Which card is mid-subscription (null = none)
                   final String? subscribingCode =
                   state is FundSubscribing ? state.fundingCode : null;
 
-                  // ── Loading ──────────────────────────────────────────────
                   if (state is FundsLoading) {
                     return _Loader(green: green);
                   }
 
-                  // ── Hard error (initial load failed) ─────────────────────
                   if (state is FundsError) {
                     return _ErrorView(
                       message: '${s.error}: ${state.message}',
@@ -313,7 +310,6 @@ class FundsScreen extends StatelessWidget {
                     );
                   }
 
-                  // ── Fund list ─────────────────────────────────────────────
                   if (funds != null) {
                     if (funds.isEmpty) {
                       return _Empty(message: s.noFunds, txtS: txtS);
@@ -346,17 +342,11 @@ class FundsScreen extends StatelessWidget {
                               final confirmed = await _confirm(context, fund, s, dark);
                               if (confirmed && context.mounted) {
                                 HapticFeedback.mediumImpact();
-
                                 final userData = await LoginRepository.getUserData();
                                 final cdsNo = userData['cdsNumber'] ?? '';
-
                                 if (!context.mounted) return;
-
                                 context.read<FundsBloc>().add(
-                                  SubscribeToFund(
-                                    fund:  fund,
-                                    cdsNo: cdsNo,
-                                  ),
+                                  SubscribeToFund(fund: fund, cdsNo: cdsNo),
                                 );
                               }
                             },
@@ -366,7 +356,6 @@ class FundsScreen extends StatelessWidget {
                     );
                   }
 
-                  // ── Initial / welcome ─────────────────────────────────────
                   return _Empty(message: s.welcome, txtS: txtS);
                 },
               ),
@@ -385,7 +374,7 @@ class _Header extends StatelessWidget {
   final Color teal, txtP, txtS, bg;
 
   const _Header({
-    required this.dark, required this.s,   required this.teal,
+    required this.dark, required this.s,    required this.teal,
     required this.txtP, required this.txtS, required this.bg,
   });
 
@@ -393,13 +382,11 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: dark
-            ? const LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF0B1A0C), Color(0xFF132013), Color(0xFF09100A)])
-            : const LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          // Header gradient: TSL blue → TSL teal, both modes
+          colors: [_TSL.blue, _TSL.teal],
+        ),
       ),
       child: SafeArea(
         bottom: false,
@@ -410,12 +397,12 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(s.availableFunds,
-                    style: const TextStyle(color: Colors.white, fontSize: 22,
+                    style: TextStyle(color: _TSL.white, fontSize: 22,
                         fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                 const SizedBox(height: 2),
                 Text('● Live Market Data',
                     style: TextStyle(
-                        color: Colors.white.withOpacity(0.6), fontSize: 12)),
+                        color: _TSL.white.withOpacity(0.6), fontSize: 12)),
               ],
             )),
             // Refresh button
@@ -428,17 +415,17 @@ class _Header extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: _TSL.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    border: Border.all(color: _TSL.white.withOpacity(0.2)),
                   ),
                   child: state is FundsLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                       width: 18, height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.refresh_rounded,
-                      color: Colors.white, size: 18),
+                          strokeWidth: 2, color: _TSL.white))
+                      : Icon(Icons.refresh_rounded,
+                      color: _TSL.white, size: 18),
                 ),
               ),
             ),
@@ -618,7 +605,6 @@ class _FundCard extends StatelessWidget {
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
                       child: isSubscribing
-                      // ── Spinner state ──────────────────────────────
                           ? Container(
                         key: const ValueKey('loading'),
                         padding: const EdgeInsets.symmetric(vertical: 13),
@@ -644,7 +630,6 @@ class _FundCard extends StatelessWidget {
                           ],
                         ),
                       )
-                      // ── Normal state ───────────────────────────────
                           : GestureDetector(
                         key: const ValueKey('button'),
                         onTap: onSubscribe,
@@ -666,14 +651,14 @@ class _FundCard extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.account_balance_wallet_rounded,
-                                color: Colors.white, size: 16,
+                                color: _TSL.white, size: 16,
                               ),
                               const SizedBox(width: 8),
                               Text(s.subscribe,
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: _TSL.white,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.2)),
@@ -727,7 +712,7 @@ class _FundCard extends StatelessWidget {
 
   Widget _divider(bool dark) => Container(
     width: 1, height: 36,
-    color: (dark ? Colors.white : Colors.black).withOpacity(0.07),
+    color: (dark ? _TSL.white : _TSL.black).withOpacity(0.07),
     margin: const EdgeInsets.symmetric(horizontal: 6),
   );
 }
@@ -791,19 +776,19 @@ class _ErrorView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
                 horizontal: 28, vertical: 14),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                  colors: [Color(0xFF4CAF50), Color(0xFF388E3C)]),
+              gradient: LinearGradient(
+                  colors: [_TSL.teal, _TSL.blue]),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [BoxShadow(
-                  color: const Color(0xFF4CAF50).withOpacity(0.35),
+                  color: _TSL.teal.withOpacity(0.35),
                   blurRadius: 14, offset: const Offset(0, 6))],
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.refresh_rounded,
-                  color: Colors.white, size: 18),
+              Icon(Icons.refresh_rounded,
+                  color: _TSL.white, size: 18),
               const SizedBox(width: 8),
               Text(retryLabel,
-                  style: const TextStyle(color: Colors.white,
+                  style: TextStyle(color: _TSL.white,
                       fontSize: 14, fontWeight: FontWeight.w700)),
             ]),
           ),

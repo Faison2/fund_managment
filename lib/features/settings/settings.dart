@@ -8,28 +8,31 @@ import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 
-// ── Colour tokens (shared with ProfileScreen) ─────────────────────────────────
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
 class TSLColors {
-  static const darkBg        = Color(0xFF0B1A0C);
-  static const darkCard      = Color(0xFF132013);
-  static const darkCard2     = Color(0xFF1A2B1B);
-  static const darkBorder    = Color(0xFF1E3320);
-  static const darkTextPrim  = Color(0xFFE8F5E9);
-  static const darkTextSec   = Color(0xFF81A884);
-  static const darkTextHint  = Color(0xFF4A7A4D);
-  static const darkDivider   = Color(0xFF1E3320);
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
 
-  static const lightBg       = Color(0xFFB8E6D3);
-  static const lightCard     = Color(0xFFFFFFFF);
-  static const lightBorder   = Color(0xFFE2ECE2);
-  static const lightTextPrim = Color(0xFF1A2E1A);
-  static const lightTextSec  = Color(0xFF5A7A5C);
-  static const lightTextHint = Color(0xFF9AAA9C);
-  static const lightDivider  = Color(0xFFEEEEEE);
+  // Semantic surface tokens — all derived from brand palette
+  static Color get darkBg        => black;
+  static Color get darkCard      => black;
+  static Color get darkCard2     => black.withOpacity(0.85);
+  static Color get darkBorder    => black.withOpacity(0.35);
+  static Color get darkTextPrim  => white;
+  static Color get darkTextSec   => teal;
+  static Color get darkTextHint  => teal.withOpacity(0.6);
+  static Color get darkDivider   => black.withOpacity(0.3);
 
-  static const green500 = Color(0xFF4ADE80);
-  static const green700 = Color(0xFF15803D);
-  static const teal     = Color(0xFF2E7D99);
+  static const Color lightBg      = Color(0xFFB8E6D3);
+  static Color get lightCard      => white;
+  static const Color lightBorder  = Color(0xFFE2ECE2);
+  static Color get lightTextPrim  => black;
+  static Color get lightTextSec   => grey;
+  static Color get lightTextHint  => grey.withOpacity(0.6);
+  static const Color lightDivider = Color(0xFFEEEEEE);
 }
 
 // ── Localised strings ─────────────────────────────────────────────────────────
@@ -39,7 +42,6 @@ class _S {
       security, biometric, biometricDesc,
       changePassword, changePasswordDesc,
       comingSoon,
-  // Password-dialog strings
       currentPassword, newPassword, confirmNewPassword,
       passwordsDoNotMatch, cancel, submit, changingPassword,
       emailNotFound, currentPasswordHint, newPasswordHint;
@@ -117,26 +119,26 @@ const _sw = _S(
 // ── SettingsPage ──────────────────────────────────────────────────────────────
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
-  @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  @override State<SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _biometric = false;
 
-  // ── Theme helpers ────────────────────────────────────────────────────────
+  // ── Theme helpers ─────────────────────────────────────────────────────────
   bool  get _dark   => context.watch<ThemeProvider>().isDark;
   _S    get _s      => context.watch<LocaleProvider>().isSwahili ? _sw : _en;
-  Color get _bg     => _dark ? TSLColors.darkBg       : TSLColors.lightBg;
-  Color get _card   => _dark ? TSLColors.darkCard      : TSLColors.lightCard;
-  Color get _border => _dark ? TSLColors.darkBorder    : TSLColors.lightBorder;
-  Color get _txtP   => _dark ? TSLColors.darkTextPrim  : TSLColors.lightTextPrim;
-  Color get _txtS   => _dark ? TSLColors.darkTextSec   : TSLColors.lightTextSec;
-  Color get _txtH   => _dark ? TSLColors.darkTextHint  : TSLColors.lightTextHint;
-  Color get _div    => _dark ? TSLColors.darkDivider   : TSLColors.lightDivider;
-  Color get _accent => _dark ? TSLColors.green500      : TSLColors.green700;
+  Color get _bg     => _dark ? TSLColors.darkBg      : TSLColors.lightBg;
+  Color get _card   => _dark ? TSLColors.darkCard     : TSLColors.lightCard;
+  Color get _border => _dark ? TSLColors.darkBorder   : TSLColors.lightBorder;
+  Color get _txtP   => _dark ? TSLColors.darkTextPrim : TSLColors.lightTextPrim;
+  Color get _txtS   => _dark ? TSLColors.darkTextSec  : TSLColors.lightTextSec;
+  Color get _txtH   => _dark ? TSLColors.darkTextHint : TSLColors.lightTextHint;
+  Color get _div    => _dark ? TSLColors.darkDivider  : TSLColors.lightDivider;
+  // accent = TSL teal both modes
+  Color get _accent => TSLColors.teal;
 
-  // Safe variants for use outside build()
+  // Safe variants for outside build()
   bool  get _darkNow   => Provider.of<ThemeProvider>(context, listen: false).isDark;
   _S    get _sNow      => Provider.of<LocaleProvider>(context, listen: false).isSwahili
       ? _sw : _en;
@@ -146,7 +148,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Color get _txtSNow   => _darkNow ? TSLColors.darkTextSec  : TSLColors.lightTextSec;
   Color get _txtHNow   => _darkNow ? TSLColors.darkTextHint : TSLColors.lightTextHint;
 
-  // ── Build ────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     context.watch<ThemeProvider>();
@@ -163,65 +165,68 @@ class _SettingsPageState extends State<SettingsPage> {
           physics: const BouncingScrollPhysics(),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
 
-              // ── Appearance ───────────────────────────────────────────
-              _label(s.appearance),
-              const SizedBox(height: 10),
-              _cardWidget([
-                _toggleRow(
-                  Icons.dark_mode_outlined,
-                  _dark ? const Color(0xFF818CF8) : const Color(0xFF6366F1),
-                  const Color(0xFFEDE9FE),
-                  s.darkMode,
-                  tp.isDark ? s.darkModeOn : s.lightModeOn,
-                  tp.isDark,
-                      (v) { HapticFeedback.lightImpact(); tp.setDark(v); },
-                ),
-              ]),
+                  // ── Appearance ──────────────────────────────────────────
+                  _label(s.appearance),
+                  const SizedBox(height: 10),
+                  _cardWidget([
+                    _toggleRow(
+                      Icons.dark_mode_outlined,
+                      // Dark mode icon uses indigo — not a brand colour,
+                      // it's a UI status indicator, intentionally kept
+                      _dark ? const Color(0xFF818CF8) : const Color(0xFF6366F1),
+                      const Color(0xFFEDE9FE),
+                      s.darkMode,
+                      tp.isDark ? s.darkModeOn : s.lightModeOn,
+                      tp.isDark,
+                          (v) { HapticFeedback.lightImpact(); tp.setDark(v); },
+                    ),
+                  ]),
 
-              const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-              // ── Language ─────────────────────────────────────────────
-              _label(s.language),
-              const SizedBox(height: 10),
-              _cardWidget([
-                _langRow(
-                  flag: 'EN', nativeName: s.english, localName: 'English',
-                  selected: !lp.isSwahili,
-                  onTap: () { HapticFeedback.selectionClick(); lp.setEnglish(); },
-                ),
-                Divider(height: 1, color: _div, indent: 66),
-                _langRow(
-                  flag: 'SW', nativeName: s.swahili, localName: 'Kiswahili',
-                  selected: lp.isSwahili,
-                  onTap: () { HapticFeedback.selectionClick(); lp.setSwahili(); },
-                ),
-              ]),
+                  // ── Language ────────────────────────────────────────────
+                  _label(s.language),
+                  const SizedBox(height: 10),
+                  _cardWidget([
+                    _langRow(
+                      flag: 'EN', nativeName: s.english, localName: 'English',
+                      selected: !lp.isSwahili,
+                      onTap: () { HapticFeedback.selectionClick(); lp.setEnglish(); },
+                    ),
+                    Divider(height: 1, color: _div, indent: 66),
+                    _langRow(
+                      flag: 'SW', nativeName: s.swahili, localName: 'Kiswahili',
+                      selected: lp.isSwahili,
+                      onTap: () { HapticFeedback.selectionClick(); lp.setSwahili(); },
+                    ),
+                  ]),
 
-              const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-              // ── Security ─────────────────────────────────────────────
-              _label(s.security),
-              const SizedBox(height: 10),
-              _cardWidget([
-                _toggleRow(
-                  Icons.fingerprint,
-                  const Color(0xFF059669), const Color(0xFFD1FAE5),
-                  s.biometric, s.biometricDesc, _biometric,
-                      (v) { HapticFeedback.lightImpact(); setState(() => _biometric = v); },
-                ),
-                Divider(height: 1, color: _div, indent: 66),
-                // ✅ Change Password — opens real dialog (PIN row removed)
-                _navRow(
-                  Icons.lock_outline,
-                  const Color(0xFFEF4444), const Color(0xFFFEE2E2),
-                  s.changePassword, s.changePasswordDesc,
-                  _showChangePasswordDialog,
-                ),
-              ]),
+                  // ── Security ────────────────────────────────────────────
+                  _label(s.security),
+                  const SizedBox(height: 10),
+                  _cardWidget([
+                    _toggleRow(
+                      Icons.fingerprint,
+                      const Color(0xFF059669), const Color(0xFFD1FAE5),
+                      s.biometric, s.biometricDesc, _biometric,
+                          (v) { HapticFeedback.lightImpact();
+                      setState(() => _biometric = v); },
+                    ),
+                    Divider(height: 1, color: _div, indent: 66),
+                    _navRow(
+                      Icons.lock_outline,
+                      const Color(0xFFEF4444), const Color(0xFFFEE2E2),
+                      s.changePassword, s.changePasswordDesc,
+                      _showChangePasswordDialog,
+                    ),
+                  ]),
 
-            ]),
+                ]),
           ),
         )),
       ]),
@@ -237,7 +242,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final txtS   = _txtSNow;
     final txtH   = _txtHNow;
     final isDark = _darkNow;
-    const teal   = TSLColors.teal;
 
     final currentPwCtrl = TextEditingController();
     final newPwCtrl     = TextEditingController();
@@ -267,11 +271,9 @@ class _SettingsPageState extends State<SettingsPage> {
               setDialogState(() => dialogError = s.passwordsDoNotMatch);
               return;
             }
-
             setDialogState(() { isSubmitting = true; dialogError = null; });
 
             try {
-              // ✅ Read email that ProfileScreen saved to SharedPreferences
               final prefs     = await SharedPreferences.getInstance();
               final userEmail = (prefs.getString('userEmail') ?? '').trim();
 
@@ -283,8 +285,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 return;
               }
 
-              final url = Uri.parse(
-                  '$cSharpApi/ChangePassword');
+              final url = Uri.parse('$cSharpApi/ChangePassword');
               final response = await http.post(url,
                   headers: {'Content-Type': 'application/json'},
                   body: json.encode({
@@ -306,13 +307,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Row(children: [
-                      const Icon(Icons.check_circle_outline_rounded,
-                          color: Colors.white, size: 18),
+                      Icon(Icons.check_circle_outline_rounded,
+                          color: TSLColors.white, size: 18),
                       const SizedBox(width: 10),
                       Expanded(child: Text(statusDesc,
                           style: const TextStyle(fontWeight: FontWeight.w600))),
                     ]),
-                    backgroundColor: const Color(0xFF4CAF50),
+                    // Snackbar bg = TSL teal (success)
+                    backgroundColor: TSLColors.teal,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -330,7 +332,6 @@ class _SettingsPageState extends State<SettingsPage> {
             }
           }
 
-          // ── Dialog UI ─────────────────────────────────────────────────
           return Dialog(
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24)),
@@ -349,30 +350,24 @@ class _SettingsPageState extends State<SettingsPage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: teal.withOpacity(0.12),
+                        color: TSLColors.blue.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.lock_outline_rounded,
-                          color: teal, size: 22),
+                          color: TSLColors.blue, size: 22),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(s.changePassword,
-                                style: TextStyle(fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: txtP)),
-                            Text('Update your account password',
-                                style: TextStyle(fontSize: 11,
-                                    color: txtH)),
-                          ]),
-                    ),
+                    Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(s.changePassword, style: TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.bold,
+                              color: txtP)),
+                          Text('Update your account password',
+                              style: TextStyle(fontSize: 11, color: txtH)),
+                        ])),
                     GestureDetector(
-                      onTap: isSubmitting
-                          ? null
-                          : () => Navigator.of(ctx).pop(),
+                      onTap: isSubmitting ? null : () => Navigator.of(ctx).pop(),
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
@@ -406,130 +401,105 @@ class _SettingsPageState extends State<SettingsPage> {
                             const SizedBox(width: 8),
                             Expanded(child: Text(dialogError!,
                                 style: const TextStyle(fontSize: 13,
-                                    color: Colors.redAccent,
-                                    height: 1.45))),
+                                    color: Colors.redAccent, height: 1.45))),
                           ]),
                     ),
                     const SizedBox(height: 16),
                   ],
 
-                  // Current password
                   _pwLabel(s.currentPassword, txtH),
                   const SizedBox(height: 6),
                   _pwField(
-                    controller: currentPwCtrl,
-                    hint: s.currentPasswordHint,
+                    controller: currentPwCtrl, hint: s.currentPasswordHint,
                     obscure: obscureCurrent,
                     onToggle: () => setDialogState(
                             () => obscureCurrent = !obscureCurrent),
-                    enabled: !isSubmitting,
-                    isDark: isDark,
+                    enabled: !isSubmitting, isDark: isDark,
                     border: border, txtP: txtP, txtH: txtH,
                   ),
 
                   const SizedBox(height: 16),
 
-                  // New password
                   _pwLabel(s.newPassword, txtH),
                   const SizedBox(height: 6),
                   _pwField(
-                    controller: newPwCtrl,
-                    hint: s.newPasswordHint,
+                    controller: newPwCtrl, hint: s.newPasswordHint,
                     obscure: obscureNew,
                     onToggle: () => setDialogState(
                             () => obscureNew = !obscureNew),
-                    enabled: !isSubmitting,
-                    isDark: isDark,
+                    enabled: !isSubmitting, isDark: isDark,
                     border: border, txtP: txtP, txtH: txtH,
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Confirm new password
                   _pwLabel(s.confirmNewPassword, txtH),
                   const SizedBox(height: 6),
                   _pwField(
-                    controller: confirmPwCtrl,
-                    hint: s.newPasswordHint,
+                    controller: confirmPwCtrl, hint: s.newPasswordHint,
                     obscure: obscureConfirm,
                     onToggle: () => setDialogState(
                             () => obscureConfirm = !obscureConfirm),
-                    enabled: !isSubmitting,
-                    isDark: isDark,
+                    enabled: !isSubmitting, isDark: isDark,
                     border: border, txtP: txtP, txtH: txtH,
                   ),
 
                   const SizedBox(height: 28),
 
-                  // Buttons
                   Row(children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: isSubmitting
-                            ? null
-                            : () => Navigator.of(ctx).pop(),
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: card,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                                color: border, width: 1.5),
-                          ),
-                          child: Center(child: Text(s.cancel,
-                              style: TextStyle(fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: txtS))),
+                    // Cancel
+                    Expanded(child: GestureDetector(
+                      onTap: isSubmitting ? null : () => Navigator.of(ctx).pop(),
+                      child: Container(
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: card,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: border, width: 1.5),
                         ),
+                        child: Center(child: Text(s.cancel,
+                            style: TextStyle(fontSize: 14,
+                                fontWeight: FontWeight.w600, color: txtS))),
                       ),
-                    ),
+                    )),
                     const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: GestureDetector(
-                        onTap: isSubmitting ? null : handleSubmit,
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFF2E7D99),
-                                  Color(0xFF1A5F77),
-                                ]),
-                            boxShadow: [BoxShadow(
-                                color: teal.withOpacity(0.35),
-                                blurRadius: 14,
-                                offset: const Offset(0, 6))],
-                          ),
-                          child: Center(
-                            child: isSubmitting
-                                ? Row(
-                              mainAxisAlignment:
-                              MainAxisAlignment.center,
-                              children: [
-                                const SizedBox(width: 16, height: 16,
-                                    child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2)),
-                                const SizedBox(width: 10),
-                                Text(s.changingPassword,
-                                    style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white)),
-                              ],
-                            )
-                                : Text(s.submit,
-                                style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    letterSpacing: 0.4)),
-                          ),
+                    // Submit — TSL blue → teal gradient
+                    Expanded(flex: 2, child: GestureDetector(
+                      onTap: isSubmitting ? null : handleSubmit,
+                      child: Container(
+                        height: 50,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          gradient: LinearGradient(
+                              colors: [TSLColors.blue, TSLColors.teal]),
+                          boxShadow: [BoxShadow(
+                              color: TSLColors.blue.withOpacity(0.35),
+                              blurRadius: 14, offset: const Offset(0, 6))],
+                        ),
+                        child: Center(
+                          child: isSubmitting
+                              ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(width: 16, height: 16,
+                                  child: CircularProgressIndicator(
+                                      color: TSLColors.white,
+                                      strokeWidth: 2)),
+                              const SizedBox(width: 10),
+                              Text(s.changingPassword,
+                                  style: TextStyle(fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: TSLColors.white)),
+                            ],
+                          )
+                              : Text(s.submit,
+                              style: TextStyle(fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: TSLColors.white,
+                                  letterSpacing: 0.4)),
                         ),
                       ),
-                    ),
+                    )),
                   ]),
                 ],
               ),
@@ -555,48 +525,46 @@ class _SettingsPageState extends State<SettingsPage> {
     required Color border,
     required Color txtP,
     required Color txtH,
-  }) => Container(
-    decoration: BoxDecoration(
-      color: isDark
-          ? TSLColors.darkCard2.withOpacity(0.8)
-          : TSLColors.lightBg.withOpacity(0.6),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: border),
-    ),
-    child: TextField(
-      controller: controller,
-      obscureText: obscure,
-      enabled: enabled,
-      style: TextStyle(fontSize: 14, color: txtP),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(fontSize: 13, color: txtH),
-        border: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16, vertical: 14),
-        suffixIcon: IconButton(
-          icon: Icon(
-            obscure
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-            size: 18, color: txtH,
-          ),
-          onPressed: onToggle,
+  }) =>
+      Container(
+        decoration: BoxDecoration(
+          color: isDark
+              ? TSLColors.darkCard2.withOpacity(0.8)
+              : TSLColors.lightBg.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: border),
         ),
-      ),
-    ),
-  );
+        child: TextField(
+          controller: controller,
+          obscureText: obscure,
+          enabled: enabled,
+          style: TextStyle(fontSize: 14, color: txtP),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(fontSize: 13, color: txtH),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 14),
+            suffixIcon: IconButton(
+              icon: Icon(
+                obscure ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                size: 18, color: txtH,
+              ),
+              onPressed: onToggle,
+            ),
+          ),
+        ),
+      );
 
-  // ── UI helpers ────────────────────────────────────────────────────────────
+  // ── UI helpers ─────────────────────────────────────────────────────────────
   Widget _buildHeader(_S s) => Container(
     decoration: BoxDecoration(
-      gradient: _dark
-          ? const LinearGradient(
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFF0B1A0C), Color(0xFF132013), Color(0xFF09100A)])
-          : const LinearGradient(
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)]),
+      // Header gradient: TSL blue → teal, both modes
+      gradient: LinearGradient(
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [TSLColors.blue, TSLColors.teal],
+      ),
     ),
     child: SafeArea(bottom: false, child: Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -606,16 +574,16 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: const Color.fromRGBO(255, 255, 255, 0.15),
+                color: TSLColors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.arrow_back_ios_new,
-                color: Colors.white, size: 18),
+            child: Icon(Icons.arrow_back_ios_new,
+                color: TSLColors.white, size: 18),
           ),
         ),
         const SizedBox(width: 16),
-        Text(s.settings,
-            style: const TextStyle(color: Colors.white, fontSize: 22,
-                fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+        Text(s.settings, style: TextStyle(
+            color: TSLColors.white, fontSize: 22,
+            fontWeight: FontWeight.w900, letterSpacing: -0.5)),
       ]),
     )),
   );
@@ -626,10 +594,11 @@ class _SettingsPageState extends State<SettingsPage> {
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         child: Row(children: [
-          _iconBox(icon,
-              _dark ? Color.fromRGBO(iconColor.red, iconColor.green,
-                  iconColor.blue, 0.15) : iconBg,
-              iconColor),
+          _iconBox(
+            icon,
+            _dark ? iconColor.withOpacity(0.15) : iconBg,
+            iconColor,
+          ),
           const SizedBox(width: 14),
           Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -650,10 +619,11 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           child: Row(children: [
-            _iconBox(icon,
-                _dark ? Color.fromRGBO(iconColor.red, iconColor.green,
-                    iconColor.blue, 0.15) : iconBg,
-                iconColor),
+            _iconBox(
+              icon,
+              _dark ? iconColor.withOpacity(0.15) : iconBg,
+              iconColor,
+            ),
             const SizedBox(width: 14),
             Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -662,9 +632,7 @@ class _SettingsPageState extends State<SettingsPage> {
               Text(subtitle, style: TextStyle(fontSize: 12, color: _txtS)),
             ])),
             Icon(Icons.chevron_right,
-                color: Color.fromRGBO(
-                    _txtS.red, _txtS.green, _txtS.blue, 0.4),
-                size: 20),
+                color: _txtS.withOpacity(0.4), size: 20),
           ]),
         ),
       );
@@ -675,54 +643,54 @@ class _SettingsPageState extends State<SettingsPage> {
     required String localName,
     required bool selected,
     required VoidCallback onTap,
-  }) => InkWell(
-    onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      child: Row(children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          width: 40, height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: selected
-                ? Color.fromRGBO(_accent.red, _accent.green,
-                _accent.blue, 0.12)
-                : (_dark ? TSLColors.darkCard2
-                : const Color(0xFFF3F4F6)),
-            border: selected ? Border.all(
-                color: Color.fromRGBO(_accent.red, _accent.green,
-                    _accent.blue, 0.35), width: 2) : null,
-          ),
-          child: Center(child: Text(flag,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800,
-                  color: selected ? _accent : _txtS))),
+  }) =>
+      InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected
+                    ? _accent.withOpacity(0.12)
+                    : (_dark ? TSLColors.darkCard2
+                    : const Color(0xFFF3F4F6)),
+                border: selected
+                    ? Border.all(color: _accent.withOpacity(0.35), width: 2)
+                    : null,
+              ),
+              child: Center(child: Text(flag,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800,
+                      color: selected ? _accent : _txtS))),
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(nativeName, style: TextStyle(fontSize: 14,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected ? _accent : _txtP)),
+              Text(localName,
+                  style: TextStyle(fontSize: 12, color: _txtS)),
+            ])),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: 22, height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? _accent : Colors.transparent,
+                border: Border.all(
+                    color: selected ? _accent : _border, width: 2),
+              ),
+              child: selected
+                  ? Icon(Icons.check, size: 13, color: TSLColors.white)
+                  : null,
+            ),
+          ]),
         ),
-        const SizedBox(width: 14),
-        Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(nativeName, style: TextStyle(fontSize: 14,
-              fontWeight: selected
-                  ? FontWeight.w800 : FontWeight.w600,
-              color: selected ? _accent : _txtP)),
-          Text(localName, style: TextStyle(fontSize: 12, color: _txtS)),
-        ])),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          width: 22, height: 22,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: selected ? _accent : Colors.transparent,
-            border: Border.all(
-                color: selected ? _accent : _border, width: 2),
-          ),
-          child: selected
-              ? const Icon(Icons.check, size: 13, color: Colors.white)
-              : null,
-        ),
-      ]),
-    ),
-  );
+      );
 
   Widget _iconBox(IconData icon, Color bg, Color fg) => Container(
       width: 36, height: 36,
@@ -736,7 +704,7 @@ class _SettingsPageState extends State<SettingsPage> {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: _border),
           boxShadow: [BoxShadow(
-              color: const Color.fromRGBO(0, 0, 0, 0.04),
+              color: TSLColors.black.withOpacity(0.04),
               blurRadius: 12, offset: const Offset(0, 4))]),
       child: ClipRRect(
           borderRadius: BorderRadius.circular(18),

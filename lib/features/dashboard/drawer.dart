@@ -13,6 +13,15 @@ import '../contact_us/contact.dart';
 import '../payments/view/payment.dart';
 import '../trade/dashboad/trade_dashboad.dart';
 
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
+class _TSL {
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
+}
+
 class AppDrawer extends StatefulWidget {
   final int currentIndex;
   final Function(int) onNavigationChanged;
@@ -59,7 +68,7 @@ class _AppDrawerState extends State<AppDrawer>
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _userName = prefs.getString('user_fullname') ?? '';
+        _userName  = prefs.getString('user_fullname') ?? '';
         _cdsNumber = prefs.getString('cdsNumber') ?? '';
       });
     }
@@ -67,18 +76,18 @@ class _AppDrawerState extends State<AppDrawer>
 
   // ── Theme helpers ──────────────────────────────────────────────────────────
   bool get _dark => context.watch<ThemeProvider>().isDark;
-  _DS get _s => context.watch<LocaleProvider>().isSwahili ? _sw : _en;
+  _DS  get _s    => context.watch<LocaleProvider>().isSwahili ? _sw : _en;
 
-  Color get _drawerBg => _dark ? const Color(0xFF0F1F10) : Colors.white;
+  Color get _drawerBg => _dark ? _TSL.black : _TSL.white;
 
+  // Trade mode = orange accent; FMS mode = TSL blue/teal
   Color get _accent => _isTradeMode
       ? (_dark ? const Color(0xFFFFB347) : const Color(0xFFE67E22))
-      : (_dark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D99));
+      : _TSL.blue;
 
-  Color get _accentGreen => const Color(0xFF4CAF50);
-  Color get _txtPrim => _dark ? Colors.white : const Color(0xFF1A1A2E);
-  Color get _txtSec => _dark ? Colors.white54 : Colors.grey.shade500;
-  Color get _divider => _dark ? Colors.white12 : Colors.grey.shade100;
+  Color get _txtPrim => _dark ? _TSL.white : _TSL.black;
+  Color get _txtSec  => _dark ? _TSL.white.withOpacity(0.54) : _TSL.grey;
+  Color get _divider => _dark ? _TSL.white.withOpacity(0.12) : _TSL.grey.withOpacity(0.15);
 
   String get _greeting {
     final h = DateTime.now().hour;
@@ -118,11 +127,12 @@ class _AppDrawerState extends State<AppDrawer>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Could not open Privacy Policy'),
-            backgroundColor: const Color(0xFF2E7D99),
+            content: Text('Could not open Privacy Policy',
+                style: TextStyle(color: _TSL.white)),
+            backgroundColor: _TSL.blue,
             behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -143,7 +153,7 @@ class _AppDrawerState extends State<AppDrawer>
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: _TSL.black.withOpacity(0.2),
                 blurRadius: 30,
                 offset: const Offset(0, 12),
               ),
@@ -170,8 +180,8 @@ class _AppDrawerState extends State<AppDrawer>
               const SizedBox(height: 8),
               Text(s.logoutMsg,
                   textAlign: TextAlign.center,
-                  style:
-                  TextStyle(fontSize: 14, color: _txtSec, height: 1.5)),
+                  style: TextStyle(
+                      fontSize: 14, color: _txtSec, height: 1.5)),
               const SizedBox(height: 24),
               Row(children: [
                 Expanded(
@@ -194,15 +204,14 @@ class _AppDrawerState extends State<AppDrawer>
                     onPressed: () => Navigator.of(ctx).pop(true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFEF4444),
-                      foregroundColor: Colors.white,
+                      foregroundColor: _TSL.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(s.logout,
-                        style:
-                        const TextStyle(fontWeight: FontWeight.w700)),
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ]),
@@ -238,8 +247,8 @@ class _AppDrawerState extends State<AppDrawer>
           return FadeTransition(
             opacity: curved,
             child: SlideTransition(
-              position:
-              Tween<Offset>(begin: const Offset(0.08, 0), end: Offset.zero)
+              position: Tween<Offset>(
+                  begin: const Offset(0.08, 0), end: Offset.zero)
                   .animate(curved),
               child: child,
             ),
@@ -251,7 +260,6 @@ class _AppDrawerState extends State<AppDrawer>
   }
 
   // ─────────────────────────────── BUILD ────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     context.watch<ThemeProvider>();
@@ -263,7 +271,7 @@ class _AppDrawerState extends State<AppDrawer>
       width: MediaQuery.of(context).size.width * 0.80,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
-          topRight: Radius.circular(28),
+          topRight:    Radius.circular(28),
           bottomRight: Radius.circular(28),
         ),
       ),
@@ -279,27 +287,25 @@ class _AppDrawerState extends State<AppDrawer>
                 _sectionLabel('NAVIGATION'),
                 const SizedBox(height: 4),
                 _item(
-                  icon: Icons.credit_card_outlined,
+                  icon:  Icons.credit_card_outlined,
                   label: s.paymentMethods,
-                  color: const Color(0xFF388E3C),
+                  color: _TSL.teal,
                   delay: 0,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                        context,
+                    Navigator.push(context,
                         MaterialPageRoute(
                             builder: (_) => const BankingDetailsPage()));
                   },
                 ),
                 _item(
-                  icon: Icons.description_outlined,
+                  icon:  Icons.description_outlined,
                   label: s.clientStatement,
-                  color: const Color(0xFF2E7D99),
+                  color: _TSL.blue,
                   delay: 50,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                        context,
+                    Navigator.push(context,
                         MaterialPageRoute(
                             builder: (_) => const ClientStatementPage()));
                   },
@@ -308,39 +314,35 @@ class _AppDrawerState extends State<AppDrawer>
                 _sectionLabel('GENERAL'),
                 const SizedBox(height: 4),
                 _item(
-                  icon: Icons.settings_outlined,
+                  icon:  Icons.settings_outlined,
                   label: s.settings,
-                  color: const Color(0xFF388E3C),
+                  color: _TSL.teal,
                   delay: 100,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                        context,
+                    Navigator.push(context,
                         MaterialPageRoute(
                             builder: (_) => const SettingsPage()));
                   },
                 ),
-                // ── Privacy Policy ───────────────────────────────────────
                 _item(
-                  icon: Icons.privacy_tip_outlined,
+                  icon:  Icons.privacy_tip_outlined,
                   label: s.privacyPolicy,
-                  color: const Color(0xFF2E7D99),
+                  color: _TSL.blue,
                   delay: 150,
                   onTap: () {
                     Navigator.pop(context);
                     _openPrivacyPolicy();
                   },
                 ),
-                // ── Contact Us ───────────────────────────────────────────
                 _item(
-                  icon: Icons.contact_support_outlined,
+                  icon:  Icons.contact_support_outlined,
                   label: s.contactUs,
-                  color: const Color(0xFF4CAF50),
+                  color: _TSL.teal,
                   delay: 200,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                        context,
+                    Navigator.push(context,
                         MaterialPageRoute(
                             builder: (_) => const ContactUsPage()));
                   },
@@ -367,8 +369,7 @@ class _AppDrawerState extends State<AppDrawer>
             child: Row(
               children: [
                 Container(
-                  width: 3,
-                  height: 12,
+                  width: 3, height: 12,
                   decoration: BoxDecoration(
                     color: _accent,
                     borderRadius: BorderRadius.circular(2),
@@ -378,10 +379,8 @@ class _AppDrawerState extends State<AppDrawer>
                 Text(
                   'ENVIRONMENT',
                   style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                    color: _txtSec,
-                    letterSpacing: 1.8,
+                    fontSize: 9.5, fontWeight: FontWeight.w700,
+                    color: _txtSec, letterSpacing: 1.8,
                   ),
                 ),
               ],
@@ -391,17 +390,18 @@ class _AppDrawerState extends State<AppDrawer>
             height: 48,
             decoration: BoxDecoration(
               color: _dark
-                  ? Colors.white.withOpacity(0.06)
-                  : Colors.grey.shade100,
+                  ? _TSL.white.withOpacity(0.06)
+                  : _TSL.grey.withOpacity(0.08),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: _dark
-                    ? Colors.white.withOpacity(0.08)
-                    : Colors.grey.shade200,
+                    ? _TSL.white.withOpacity(0.08)
+                    : _TSL.grey.withOpacity(0.15),
               ),
             ),
             child: Stack(
               children: [
+                // Sliding active pill
                 AnimatedAlign(
                   duration: const Duration(milliseconds: 280),
                   curve: Curves.easeInOutCubic,
@@ -419,17 +419,14 @@ class _AppDrawerState extends State<AppDrawer>
                             const Color(0xFFE67E22),
                             const Color(0xFFFFB347),
                           ]
-                              : [
-                            const Color(0xFF2E7D99),
-                            const Color(0xFF4CAF50),
-                          ],
+                              : [_TSL.blue, _TSL.teal],
                         ),
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
                             color: (_isTradeMode
                                 ? const Color(0xFFE67E22)
-                                : const Color(0xFF2E7D99))
+                                : _TSL.blue)
                                 .withOpacity(0.35),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
@@ -441,6 +438,7 @@ class _AppDrawerState extends State<AppDrawer>
                 ),
                 Row(
                   children: [
+                    // FMS tab
                     Expanded(
                       child: GestureDetector(
                         onTap: () {
@@ -453,11 +451,11 @@ class _AppDrawerState extends State<AppDrawer>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.account_balance_outlined,
-                                size: 14,
-                                color: !_isTradeMode ? Colors.white : _txtSec,
-                              ),
+                              Icon(Icons.account_balance_outlined,
+                                  size: 14,
+                                  color: !_isTradeMode
+                                      ? _TSL.white
+                                      : _txtSec),
                               const SizedBox(width: 5),
                               AnimatedDefaultTextStyle(
                                 duration: const Duration(milliseconds: 200),
@@ -466,8 +464,9 @@ class _AppDrawerState extends State<AppDrawer>
                                   fontWeight: !_isTradeMode
                                       ? FontWeight.w800
                                       : FontWeight.w500,
-                                  color:
-                                  !_isTradeMode ? Colors.white : _txtSec,
+                                  color: !_isTradeMode
+                                      ? _TSL.white
+                                      : _txtSec,
                                   letterSpacing: 0.3,
                                 ),
                                 child: const Text('FMS'),
@@ -477,6 +476,7 @@ class _AppDrawerState extends State<AppDrawer>
                         ),
                       ),
                     ),
+                    // Trade tab
                     Expanded(
                       child: GestureDetector(
                         onTap: () {
@@ -486,12 +486,11 @@ class _AppDrawerState extends State<AppDrawer>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.candlestick_chart_outlined,
-                                size: 14,
-                                color:
-                                _isTradeMode ? Colors.white : _txtSec,
-                              ),
+                              Icon(Icons.candlestick_chart_outlined,
+                                  size: 14,
+                                  color: _isTradeMode
+                                      ? _TSL.white
+                                      : _txtSec),
                               const SizedBox(width: 5),
                               AnimatedDefaultTextStyle(
                                 duration: const Duration(milliseconds: 200),
@@ -500,8 +499,9 @@ class _AppDrawerState extends State<AppDrawer>
                                   fontWeight: _isTradeMode
                                       ? FontWeight.w800
                                       : FontWeight.w500,
-                                  color:
-                                  _isTradeMode ? Colors.white : _txtSec,
+                                  color: _isTradeMode
+                                      ? _TSL.white
+                                      : _txtSec,
                                   letterSpacing: 0.3,
                                 ),
                                 child: const Text('Trade'),
@@ -529,19 +529,16 @@ class _AppDrawerState extends State<AppDrawer>
         opacity: _headerFade,
         child: Container(
           width: double.infinity,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
+            // Header gradient: TSL blue → TSL teal
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF2E7D99),
-                Color(0xFF1A5F77),
-                Color(0xFF2E7D32),
-              ],
+              colors: [_TSL.blue, _TSL.teal],
             ),
-            borderRadius: BorderRadius.only(
-              topRight: Radius.circular(1),
-              bottomLeft: Radius.circular(5),
+            borderRadius: const BorderRadius.only(
+              topRight:    Radius.circular(1),
+              bottomLeft:  Radius.circular(5),
               bottomRight: Radius.circular(5),
             ),
           ),
@@ -554,25 +551,24 @@ class _AppDrawerState extends State<AppDrawer>
                 children: [
                   Stack(
                     children: [
+                      // Avatar circle
                       Container(
-                        width: 64,
-                        height: 64,
+                        width: 64, height: 64,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
                             colors: [
-                              Colors.white.withOpacity(0.28),
-                              Colors.white.withOpacity(0.10),
+                              _TSL.white.withOpacity(0.28),
+                              _TSL.white.withOpacity(0.10),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           border: Border.all(
-                              color: Colors.white.withOpacity(0.5),
-                              width: 2.5),
+                              color: _TSL.white.withOpacity(0.5), width: 2.5),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
+                              color: _TSL.black.withOpacity(0.15),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
@@ -581,28 +577,28 @@ class _AppDrawerState extends State<AppDrawer>
                         child: Center(
                           child: Text(
                             _initials,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
-                              color: Colors.white,
+                              color: _TSL.white,
                               letterSpacing: 1.5,
                             ),
                           ),
                         ),
                       ),
+                      // Online indicator
                       Positioned(
-                        bottom: 0,
-                        right: 0,
+                        bottom: 0, right: 0,
                         child: Container(
                           padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
-                            color: _accentGreen,
+                            color: _TSL.teal,
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: const Color(0xFF1A5F77), width: 2),
+                                color: _TSL.blue, width: 2),
                           ),
-                          child: const Icon(Icons.check,
-                              size: 10, color: Colors.white),
+                          child: Icon(Icons.check,
+                              size: 10, color: _TSL.white),
                         ),
                       ),
                     ],
@@ -610,8 +606,8 @@ class _AppDrawerState extends State<AppDrawer>
                   const SizedBox(height: 14),
                   Text(
                     _greeting,
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: _TSL.white.withOpacity(0.7),
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.3,
@@ -622,8 +618,8 @@ class _AppDrawerState extends State<AppDrawer>
                     _formattedName.isNotEmpty ? _formattedName : 'TSL Investor',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: _TSL.white,
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.2,
@@ -645,8 +641,7 @@ class _AppDrawerState extends State<AppDrawer>
       child: Row(
         children: [
           Container(
-            width: 3,
-            height: 12,
+            width: 3, height: 12,
             decoration: BoxDecoration(
               color: _accent,
               borderRadius: BorderRadius.circular(2),
@@ -656,10 +651,8 @@ class _AppDrawerState extends State<AppDrawer>
           Text(
             text,
             style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w700,
-              color: _txtSec,
-              letterSpacing: 1.8,
+              fontSize: 9.5, fontWeight: FontWeight.w700,
+              color: _txtSec, letterSpacing: 1.8,
             ),
           ),
         ],
@@ -704,12 +697,12 @@ class _AppDrawerState extends State<AppDrawer>
             splashColor: color.withOpacity(0.12),
             highlightColor: color.withOpacity(0.06),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 13),
               child: Row(
                 children: [
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: 38, height: 38,
                     decoration: BoxDecoration(
                       color: color.withOpacity(_dark ? 0.20 : 0.10),
                       borderRadius: BorderRadius.circular(10),
@@ -722,8 +715,9 @@ class _AppDrawerState extends State<AppDrawer>
                       label,
                       style: TextStyle(
                         color: selected ? color : _txtPrim,
-                        fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         fontSize: 14,
                         letterSpacing: 0.1,
                       ),
@@ -731,16 +725,14 @@ class _AppDrawerState extends State<AppDrawer>
                   ),
                   if (selected)
                     Container(
-                      width: 6,
-                      height: 6,
+                      width: 6, height: 6,
                       decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                      ),
+                          color: color, shape: BoxShape.circle),
                     )
                   else
                     Icon(Icons.chevron_right_rounded,
-                        size: 16, color: _txtSec.withOpacity(0.4)),
+                        size: 16,
+                        color: _txtSec.withOpacity(0.4)),
                 ],
               ),
             ),
@@ -768,13 +760,12 @@ class _AppDrawerState extends State<AppDrawer>
             borderRadius: BorderRadius.circular(14),
             splashColor: const Color(0xFFEF4444).withOpacity(0.08),
             child: Padding(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 13),
               child: Row(
                 children: [
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: 38, height: 38,
                     decoration: BoxDecoration(
                       color: const Color(0xFFEF4444).withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
@@ -806,68 +797,51 @@ class _AppDrawerState extends State<AppDrawer>
 
 // ── String tables ──────────────────────────────────────────────────────────────
 class _DS {
-  final String goodMorning,
-      goodAfternoon,
-      goodEvening,
-      accountNumber,
-      home,
-      paymentMethods,
-      clientStatement,
-      settings,
-      privacyPolicy,
-      contactUs,
-      logout,
-      logoutTitle,
-      logoutMsg,
-      cancel;
+  final String goodMorning, goodAfternoon, goodEvening,
+      accountNumber, home, paymentMethods, clientStatement,
+      settings, privacyPolicy, contactUs,
+      logout, logoutTitle, logoutMsg, cancel;
   const _DS({
-    required this.goodMorning,
-    required this.goodAfternoon,
-    required this.goodEvening,
-    required this.accountNumber,
-    required this.home,
-    required this.paymentMethods,
-    required this.clientStatement,
-    required this.settings,
-    required this.privacyPolicy,
-    required this.contactUs,
-    required this.logout,
-    required this.logoutTitle,
-    required this.logoutMsg,
-    required this.cancel,
+    required this.goodMorning,    required this.goodAfternoon,
+    required this.goodEvening,    required this.accountNumber,
+    required this.home,           required this.paymentMethods,
+    required this.clientStatement,required this.settings,
+    required this.privacyPolicy,  required this.contactUs,
+    required this.logout,         required this.logoutTitle,
+    required this.logoutMsg,      required this.cancel,
   });
 }
 
 const _en = _DS(
-  goodMorning: 'Good Morning',
-  goodAfternoon: 'Good Afternoon',
-  goodEvening: 'Good Evening',
-  accountNumber: 'Account No.',
-  home: 'Home',
-  paymentMethods: 'Banking Details',
-  clientStatement: 'Client Statement',
-  settings: 'Settings',
-  privacyPolicy: 'Privacy Policy',
-  contactUs: 'Contact Us',
-  logout: 'Logout',
-  logoutTitle: 'Logout',
-  logoutMsg: 'Are you sure you want to logout?',
-  cancel: 'Cancel',
+  goodMorning:      'Good Morning',
+  goodAfternoon:    'Good Afternoon',
+  goodEvening:      'Good Evening',
+  accountNumber:    'Account No.',
+  home:             'Home',
+  paymentMethods:   'Banking Details',
+  clientStatement:  'Client Statement',
+  settings:         'Settings',
+  privacyPolicy:    'Privacy Policy',
+  contactUs:        'Contact Us',
+  logout:           'Logout',
+  logoutTitle:      'Logout',
+  logoutMsg:        'Are you sure you want to logout?',
+  cancel:           'Cancel',
 );
 
 const _sw = _DS(
-  goodMorning: 'Habari za Asubuhi',
-  goodAfternoon: 'Habari za Mchana',
-  goodEvening: 'Habari za Jioni',
-  accountNumber: 'Nambari ya Akaunti',
-  home: 'Nyumbani',
-  paymentMethods: 'Maelezo ya Benki',
-  clientStatement: 'Taarifa ya Mteja',
-  settings: 'Mipangilio',
-  privacyPolicy: 'Sera ya Faragha',
-  contactUs: 'Wasiliana Nasi',
-  logout: 'Toka',
-  logoutTitle: 'Toka?',
-  logoutMsg: 'Una uhakika unataka kutoka?',
-  cancel: 'Ghairi',
+  goodMorning:      'Habari za Asubuhi',
+  goodAfternoon:    'Habari za Mchana',
+  goodEvening:      'Habari za Jioni',
+  accountNumber:    'Nambari ya Akaunti',
+  home:             'Nyumbani',
+  paymentMethods:   'Maelezo ya Benki',
+  clientStatement:  'Taarifa ya Mteja',
+  settings:         'Mipangilio',
+  privacyPolicy:    'Sera ya Faragha',
+  contactUs:        'Wasiliana Nasi',
+  logout:           'Toka',
+  logoutTitle:      'Toka?',
+  logoutMsg:        'Una uhakika unataka kutoka?',
+  cancel:           'Ghairi',
 );

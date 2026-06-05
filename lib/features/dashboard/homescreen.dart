@@ -19,6 +19,15 @@ import '../statement /client_statement.dart';
 import '../trade/dashboad/trade_dashboad.dart';
 import '../withdrawal/view/withdrawal_page.dart';
 
+// ── TSL Brand colours ──────────────────────────────────────────────────────────
+class _TSL {
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
+}
+
 // ── Localised strings ─────────────────────────────────────────────────────────
 class _HS {
   final String deposit, unitPrices, withdrawal, transactions,
@@ -179,8 +188,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double>   _chartFadeAnim;
 
   static const List<Color> _cardColors = [
-    Color(0xFF1B5E20), Color(0xFF1B5E20), Color(0xFF1B5E20),
-    Color(0xFF1B5E20), Color(0xFF1B5E20), Color(0xFF1B5E20),
+    _TSL.teal, _TSL.teal, _TSL.teal,
+    _TSL.teal, _TSL.teal, _TSL.teal,
   ];
 
   static const _kDeposit      = 'Invest';
@@ -222,7 +231,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       .where((t) => t['type'] == 'Withdrawal')
       .fold(0.0, (s, t) => s + (t['amount'] as double));
 
-  // ── Current fund shown in PageView (null if on SMA slide) ─────────────────
   Map<String, dynamic>? get _currentFund =>
       (!_isLoadingFunds && _funds.isNotEmpty && _currentFundIndex < _funds.length)
           ? _funds[_currentFundIndex]
@@ -421,17 +429,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── Subscribe — copied exactly from FundsScreen logic ─────────────────────
+  // ── Subscribe ──────────────────────────────────────────────────────────────
   Future<void> _subscribeToFund(Map<String, dynamic> fund) async {
     final fundCode = fund['fundCode'] as String;
     final fundName = fund['fundName'] as String;
-    // Use read (listen:false) — this runs in an event handler, not build()
     final dark     = _darkSafe;
-    final Color cardBg = dark ? const Color(0xFF132013) : Colors.white;
-    final Color txtP   = dark ? const Color(0xFFE8F5E9) : const Color(0xFF1A2E1A);
-    final Color txtS   = dark ? const Color(0xFF81A884)  : const Color(0xFF5A7A5C);
+    final Color cardBg = dark ? _TSL.black : _TSL.white;
+    final Color txtP   = dark ? _TSL.white : _TSL.black;
+    final Color txtS   = dark ? _TSL.teal  : _TSL.grey;
 
-    // ── Step 1: haptic + confirm dialog ───────────────────────────────────
     HapticFeedback.mediumImpact();
 
     final confirmed = await showDialog<bool>(
@@ -483,7 +489,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   onPressed: () => Navigator.of(context).pop(true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
-                    foregroundColor: Colors.white,
+                    foregroundColor: _TSL.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -501,7 +507,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     if (!confirmed || !mounted) return;
 
-    // ── Step 2: show spinner ───────────────────────────────────────────────
     setState(() => _subscribingFundCode = fundCode);
 
     try {
@@ -515,10 +520,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (!mounted) return;
       setState(() => _subscribingFundCode = null);
 
-      // ── Step 3: success snackbar ───────────────────────────────────────
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFF132013),
+          backgroundColor: _TSL.black,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -531,13 +535,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Sub Account Created',
-                    style: TextStyle(color: Colors.white,
+                Text('Sub Account Created',
+                    style: TextStyle(color: _TSL.white,
                         fontWeight: FontWeight.w800, fontSize: 14)),
                 const SizedBox(height: 2),
                 Text('Account No.: ${sub.accountNumber}',
-                    style: const TextStyle(
-                        color: Color(0xFF81A884), fontSize: 12)),
+                    style: TextStyle(color: _TSL.teal, fontSize: 12)),
               ],
             )),
           ]),
@@ -560,7 +563,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             const SizedBox(width: 12),
             Expanded(child: Text(
               'Error: ${e.toString().replaceAll("Exception: Network error: Exception: ", "")}',
-              style: const TextStyle(color: Colors.white, fontSize: 13),
+              style: TextStyle(color: _TSL.white, fontSize: 13),
             )),
           ]),
         ),
@@ -633,14 +636,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     final dark    = _dark;
     final s       = _s;
-    final txtP    = dark ? const Color(0xFFE8F5E9) : Colors.black87;
-    final txtS    = dark ? const Color(0xFF81A884)  : Colors.black54;
-    final txtH    = dark ? const Color(0xFF4A7A4D)  : Colors.grey.shade400;
-    final green   = dark ? const Color(0xFF4ADE80)  : const Color(0xFF1B5E20);
-    final cardBg  = dark ? const Color(0xFF132013)  : Colors.white.withOpacity(0.62);
-    final cardBg2 = dark ? const Color(0xFF0F1A10)  : Colors.white.withOpacity(0.55);
-    final border  = dark ? const Color(0xFF1E3320)  : Colors.white.withOpacity(0.7);
-    final divider = dark ? const Color(0xFF1E3320)  : Colors.black.withOpacity(0.05);
+    final txtP    = dark ? _TSL.white                        : _TSL.black;
+    final txtS    = dark ? _TSL.teal                         : _TSL.grey;
+    final txtH    = dark ? _TSL.teal.withOpacity(0.6)        : _TSL.grey.withOpacity(0.6);
+    final green   = dark ? _TSL.teal                         : _TSL.teal;
+    final cardBg  = dark ? _TSL.black                        : _TSL.white.withOpacity(0.62);
+    final cardBg2 = dark ? _TSL.black.withOpacity(0.85)      : _TSL.white.withOpacity(0.55);
+    final border  = dark ? _TSL.black.withOpacity(0.35)      : _TSL.white.withOpacity(0.7);
+    final divider = dark ? _TSL.black.withOpacity(0.3)       : _TSL.black.withOpacity(0.05);
     final baseColor = _cardColor(_currentFundIndex);
 
     final int totalSlides = _funds.isNotEmpty ? _funds.length + 1 : 0;
@@ -651,7 +654,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           gradient: dark
               ? const LinearGradient(
               begin: Alignment.topLeft, end: Alignment.bottomRight,
-              colors: [Color(0xFF0B1A0C), Color(0xFF0D1A0E), Color(0xFF111D12)])
+              colors: [_TSL.black, Color(0xFF0D1A0E), Color(0xFF111D12)])
               : const LinearGradient(
               begin: Alignment.topLeft, end: Alignment.bottomRight,
               colors: [Color(0xFFB8E6D3), Color(0xFF98D8C8), Color(0xFFFFE5B4)]),
@@ -664,11 +667,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                // ── PageView cards ────────────────────────────────────────
                 _buildPortfolioSection(dark, txtP, txtS, s),
-                // ── PageView card height increases to include button area
-                // Subscribe button is outside PageView (no gesture conflict)
-                // but uses negative margin to sit flush against card bottom
                 const SizedBox(height: 0),
 
                 if (!_isLoadingFunds && _fundsError == null &&
@@ -701,18 +700,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 key: const ValueKey('sub-loading'),
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(vertical: 13),
-                                child: const Row(
+                                child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     SizedBox(
                                       width: 16, height: 16,
                                       child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2),
+                                          color: _TSL.white, strokeWidth: 2),
                                     ),
-                                    SizedBox(width: 10),
+                                    const SizedBox(width: 10),
                                     Text('Subscribing…',
                                         style: TextStyle(
-                                            color: Colors.white,
+                                            color: _TSL.white,
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700)),
                                   ],
@@ -727,15 +726,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 child: Container(
                                   width: double.infinity,
                                   padding: const EdgeInsets.symmetric(vertical: 13),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(Icons.account_balance_wallet_rounded,
-                                          color: Colors.white, size: 16),
-                                      SizedBox(width: 8),
+                                          color: _TSL.white, size: 16),
+                                      const SizedBox(width: 8),
                                       Text('Subscribe',
                                           style: TextStyle(
-                                              color: Colors.white,
+                                              color: _TSL.white,
                                               fontSize: 13,
                                               fontWeight: FontWeight.w800,
                                               letterSpacing: 0.2)),
@@ -749,6 +748,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 const SizedBox(height: 6),
 
                 // ── Page dots ─────────────────────────────────────────────
+                // SMA dot = TSL blue; active fund dot = green; inactive = grey
                 if (!_isLoadingFunds && _fundsError == null && totalSlides > 0)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -756,8 +756,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       final active   = i == _currentFundIndex;
                       final isSmaDot = i == _funds.length;
                       final dotColor = active
-                          ? (isSmaDot ? const Color(0xFF0891B2) : green)
-                          : (dark ? Colors.white24 : Colors.black26);
+                          ? (isSmaDot ? _TSL.blue : green)
+                          : (dark ? Colors.white24 : _TSL.grey.withOpacity(0.35));
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -800,13 +800,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── DSE Trading banner ─────────────────────────────────────────────────────
+  // ── DSE Trading banner — TSL blue accent ───────────────────────────────────
   Widget _buildDSETradingButton(
       bool dark, Color txtP, Color txtS, Color border, _HS s) {
-    const Color accent = Color(0xFF0891B2);
+    const Color accent = _TSL.blue;
     final bg = dark
-        ? const Color(0xFF0C1F2A).withOpacity(0.9)
-        : Colors.white.withOpacity(0.45);
+        ? _TSL.black.withOpacity(0.9)
+        : _TSL.white.withOpacity(0.45);
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
@@ -818,7 +818,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: border, width: 1.2),
           boxShadow: [BoxShadow(
-              color: Colors.black.withOpacity(dark ? 0.2 : 0.05),
+              color: _TSL.black.withOpacity(dark ? 0.2 : 0.05),
               blurRadius: 10, offset: const Offset(0, 3))],
         ),
         child: Row(children: [
@@ -873,7 +873,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildTransactionsSection(
       bool dark, Color txtP, Color txtS, Color txtH, Color green,
       Color cardBg, Color cardBg2, Color border, Color divider, _HS s) {
-    const Color smaAccent = Color(0xFF0891B2);
+    // SMA section uses TSL teal; fund section uses green
+    const Color smaAccent = _TSL.teal;
     final sectionLabel = _onSMASlide ? s.smaTransactions : s.recentTransactions;
 
     return Column(
@@ -921,12 +922,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         blurRadius: 8, offset: const Offset(0, 3))],
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(s.seeAll, style: const TextStyle(
-                        fontSize: 12, color: Colors.white,
+                    Text(s.seeAll, style: TextStyle(
+                        fontSize: 12, color: _TSL.white,
                         fontWeight: FontWeight.w700)),
                     const SizedBox(width: 4),
-                    const Icon(Icons.arrow_forward_ios_rounded,
-                        size: 10, color: Colors.white),
+                    Icon(Icons.arrow_forward_ios_rounded,
+                        size: 10, color: _TSL.white),
                   ]),
                 ),
               ),
@@ -951,13 +952,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildSummaryPills(bool dark, _HS s) {
     final net        = _totalDeposits - _totalWithdrawals;
     final isPositive = net >= 0;
-    final depFg = _onSMASlide
-        ? const Color(0xFF0891B2) : const Color(0xFF2E7D32);
-    final depBg = dark ? const Color(0xFF1A2E1A) : const Color(0xFFE8F5E9);
-    final witBg = dark ? const Color(0xFF2A1010) : const Color(0xFFFFEBEE);
+    // Deposit pill: TSL teal on SMA slide, green on fund slide
+    final depFg = _onSMASlide ? _TSL.teal : const Color(0xFF2E7D32);
+    final depBg = dark ? _TSL.black : const Color(0xFFE8F5E9);
+    final witBg = dark ? _TSL.black : const Color(0xFFFFEBEE);
+    // Net flow positive uses TSL blue
     final netBg = isPositive
-        ? (dark ? const Color(0xFF0D1F30) : const Color(0xFFE3F2FD))
-        : (dark ? const Color(0xFF1E0A2A) : const Color(0xFFF3E5F5));
+        ? (dark ? _TSL.black : const Color(0xFFE3F2FD))
+        : (dark ? _TSL.black : const Color(0xFFF3E5F5));
 
     return Row(children: [
       _summaryPill(s.deposits, 'TZS ${_shortAmt(_totalDeposits)}',
@@ -969,7 +971,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _summaryPill(s.netFlow,
           '${isPositive ? '+' : ''}TZS ${_shortAmt(net)}',
           isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-          isPositive ? const Color(0xFF1565C0) : const Color(0xFF6A1B9A),
+          isPositive ? _TSL.blue : const Color(0xFF6A1B9A),
           netBg),
     ]);
   }
@@ -1004,11 +1006,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       );
 
+  // ── SMA Investments preview — TSL teal accent ──────────────────────────────
   Widget _buildSMAInvestmentsPreview(
       bool dark, Color txtP, Color txtS, Color txtH, Color border, _HS s) {
-    const Color accent = Color(0xFF0891B2);
+    const Color accent = _TSL.teal;
     final cardBg = dark
-        ? const Color(0xFF132013) : Colors.white.withOpacity(0.62);
+        ? _TSL.black : _TSL.white.withOpacity(0.62);
 
     if (_isLoadingSMA) {
       return Container(
@@ -1051,7 +1054,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: border, width: 1.5),
         boxShadow: [BoxShadow(
-            color: Colors.black.withOpacity(dark ? 0.2 : 0.06),
+            color: _TSL.black.withOpacity(dark ? 0.2 : 0.06),
             blurRadius: 12, offset: const Offset(0, 5))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1149,10 +1152,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       bool dark, Color txtP, Color txtS, Color green,
       Color cardBg, Color border, _HS s) {
     final points     = _buildLinePoints();
-    final labelColor = dark ? const Color(0xFF81A884) : Colors.black38;
+    final labelColor = dark ? _TSL.teal : _TSL.grey;
     final gridColor  = dark
-        ? Colors.white.withOpacity(0.05)
-        : Colors.black.withOpacity(0.05);
+        ? _TSL.white.withOpacity(0.05)
+        : _TSL.black.withOpacity(0.05);
     final double lastVal = points.isNotEmpty ? points.last.value : 0;
     final lineColor = lastVal >= 0 ? green : Colors.red.shade400;
 
@@ -1163,7 +1166,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: border, width: 1.5),
         boxShadow: [BoxShadow(
-            color: Colors.black.withOpacity(dark ? 0.2 : 0.06),
+            color: _TSL.black.withOpacity(dark ? 0.2 : 0.06),
             blurRadius: 12, offset: const Offset(0, 5))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1253,7 +1256,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (_isLoadingActiveTxns || _activeTransactions.isEmpty) {
       return const SizedBox.shrink();
     }
-    const Color smaAccent = Color(0xFF0891B2);
+    // SMA deposit = TSL teal; fund deposit = green
+    const Color smaAccent = _TSL.teal;
     final depositColor =
     _onSMASlide ? smaAccent : const Color(0xFF2E7D32);
     final recent = _activeTransactions.reversed.take(5).toList();
@@ -1273,11 +1277,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
                 color: dark
-                    ? const Color(0xFF1E3320)
-                    : Colors.white.withOpacity(0.8),
+                    ? _TSL.black.withOpacity(0.35)
+                    : _TSL.white.withOpacity(0.8),
                 width: 1.5),
             boxShadow: [BoxShadow(
-                color: Colors.black.withOpacity(dark ? 0.2 : 0.05),
+                color: _TSL.black.withOpacity(dark ? 0.2 : 0.05),
                 blurRadius: 12, offset: const Offset(0, 4))],
           ),
           child: ListView.separated(
@@ -1300,8 +1304,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final isDeposit = txn['type'] == 'Deposit';
     final color   = isDeposit ? depositColor : const Color(0xFFC62828);
     final bgColor = isDeposit
-        ? (dark ? const Color(0xFF1A2E1A) : const Color(0xFFE8F5E9))
-        : (dark ? const Color(0xFF2A1010) : const Color(0xFFFFEBEE));
+        ? (dark ? _TSL.black : const Color(0xFFE8F5E9))
+        : (dark ? _TSL.black : const Color(0xFFFFEBEE));
     final icon   = isDeposit
         ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded;
     final amount = txn['amount'] as double;
@@ -1335,41 +1339,44 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Portfolio section (PageView only — NO subscribe button inside) ─────────
+  // ── Portfolio section ──────────────────────────────────────────────────────
   Widget _buildPortfolioSection(
       bool dark, Color txtP, Color txtS, _HS s) {
     if (_isLoadingFunds) {
-      return _blankCard(height: 175, color: const Color(0xFF1B5E20),
+      return _blankCard(height: 175, color: _TSL.teal,
         child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center, children: [
-          const CircularProgressIndicator(
-              color: Colors.white54, strokeWidth: 2),
+          CircularProgressIndicator(
+              color: _TSL.white.withOpacity(0.54), strokeWidth: 2),
           const SizedBox(height: 12),
           Text(s.loadingPortfolio,
-              style: const TextStyle(color: Colors.white54, fontSize: 13)),
+              style: TextStyle(
+                  color: _TSL.white.withOpacity(0.54), fontSize: 13)),
         ])),
       );
     }
     if (_fundsError != null) {
-      return _blankCard(height: 175, color: const Color(0xFF1B5E20),
+      return _blankCard(height: 175, color: _TSL.teal,
         child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.cloud_off_outlined,
-              color: Colors.white54, size: 28),
+          Icon(Icons.cloud_off_outlined,
+              color: _TSL.white.withOpacity(0.54), size: 28),
           const SizedBox(height: 8),
           Text(_fundsError!, textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              style: TextStyle(
+                  color: _TSL.white.withOpacity(0.7), fontSize: 12)),
           const SizedBox(height: 10),
           GestureDetector(
             onTap: _fetchPortfolio,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
               decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: _TSL.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white30)),
+                  border: Border.all(
+                      color: _TSL.white.withOpacity(0.3))),
               child: Text(s.retry,
-                  style: const TextStyle(color: Colors.white, fontSize: 13)),
+                  style: TextStyle(color: _TSL.white, fontSize: 13)),
             ),
           ),
         ])),
@@ -1399,9 +1406,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── SMA slide card ─────────────────────────────────────────────────────────
+  // ── SMA slide card — TSL blue gradient ────────────────────────────────────
   Widget _buildSMASlideCard(bool dark, Color txtP, Color txtS, _HS s) {
-    const Color accent = Color(0xFF0891B2);
+    const Color accentLight = _TSL.blue;
+    const Color accentDeep  = Color(0xFF1A6FAF); // deeper TSL blue for gradient end
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(PageRouteBuilder(
@@ -1422,10 +1430,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-              colors: [Color(0xFF0C4A6E), Color(0xFF0891B2)],
+              colors: [accentDeep, accentLight],
               begin: Alignment.topLeft, end: Alignment.bottomRight),
           borderRadius: BorderRadius.circular(22),
-          boxShadow: [BoxShadow(color: accent.withOpacity(0.4),
+          boxShadow: [BoxShadow(color: accentLight.withOpacity(0.4),
               blurRadius: 16, offset: const Offset(0, 6))],
         ),
         child: Stack(children: [
@@ -1441,51 +1449,54 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: _TSL.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.white24, width: 1)),
-                  child: const Icon(Icons.account_tree_outlined,
-                      color: Colors.white, size: 16),
+                      border: Border.all(
+                          color: _TSL.white.withOpacity(0.24), width: 1)),
+                  child: Icon(Icons.account_tree_outlined,
+                      color: _TSL.white, size: 16),
                 ),
                 const SizedBox(width: 10),
                 Expanded(child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('SMA', style: TextStyle(
+                  Text('SMA', style: TextStyle(
                       fontSize: 10, fontWeight: FontWeight.w800,
-                      color: Colors.white70, letterSpacing: 0.5)),
-                  Text(s.smaTitle, style: const TextStyle(
+                      color: _TSL.white.withOpacity(0.7),
+                      letterSpacing: 0.5)),
+                  Text(s.smaTitle, style: TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w800,
-                      color: Colors.white, letterSpacing: 0.1),
+                      color: _TSL.white, letterSpacing: 0.1),
                       overflow: TextOverflow.ellipsis),
                 ])),
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: _TSL.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white24, width: 1)),
+                      border: Border.all(
+                          color: _TSL.white.withOpacity(0.24), width: 1)),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.touch_app_outlined,
-                        color: Colors.white70, size: 11),
+                    Icon(Icons.touch_app_outlined,
+                        color: _TSL.white.withOpacity(0.7), size: 11),
                     const SizedBox(width: 4),
-                    Text(s.viewDashboard, style: const TextStyle(
-                        fontSize: 9, color: Colors.white70,
+                    Text(s.viewDashboard, style: TextStyle(
+                        fontSize: 9, color: _TSL.white.withOpacity(0.7),
                         fontWeight: FontWeight.w600)),
                   ]),
                 ),
               ]),
               const Spacer(),
               if (_isLoadingSMA)
-                const SizedBox(width: 22, height: 22,
+                SizedBox(width: 22, height: 22,
                     child: CircularProgressIndicator(
-                        color: Colors.white54, strokeWidth: 2))
+                        color: _TSL.white.withOpacity(0.54), strokeWidth: 2))
               else
                 Row(children: [
                   Expanded(flex: 5, child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(s.totalValue, style: TextStyle(fontSize: 10,
-                        color: Colors.white.withOpacity(0.5),
+                        color: _TSL.white.withOpacity(0.5),
                         fontWeight: FontWeight.w500)),
                     const SizedBox(height: 4),
                     _smaTotalPortfolio > 0
@@ -1493,39 +1504,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         _isBalanceVisible
                             ? 'TZS ${_fmt(_smaTotalPortfolio)}'
                             : _mask(''),
-                        style: const TextStyle(fontSize: 17,
+                        style: TextStyle(fontSize: 17,
                             fontWeight: FontWeight.w900,
-                            color: Colors.white, letterSpacing: -0.3))
+                            color: _TSL.white, letterSpacing: -0.3))
                         : Text(s.notInvestedYet, style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.4),
+                        color: _TSL.white.withOpacity(0.4),
                         fontStyle: FontStyle.italic)),
                   ])),
                   _vDivider(),
                   Expanded(flex: 4, child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(s.cashBalance, style: TextStyle(fontSize: 10,
-                        color: Colors.white.withOpacity(0.5),
+                        color: _TSL.white.withOpacity(0.5),
                         fontWeight: FontWeight.w500)),
                     const SizedBox(height: 4),
                     Text(
                       _isBalanceVisible
                           ? 'TZS ${_fmt(_smaCashBalance)}'
                           : _mask(''),
-                      style: const TextStyle(fontSize: 13,
-                          fontWeight: FontWeight.w700, color: Colors.white),
+                      style: TextStyle(fontSize: 13,
+                          fontWeight: FontWeight.w700, color: _TSL.white),
                     ),
                   ])),
                   _vDivider(),
                   Expanded(flex: 3, child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(s.holdings, style: TextStyle(fontSize: 10,
-                        color: Colors.white.withOpacity(0.5),
+                        color: _TSL.white.withOpacity(0.5),
                         fontWeight: FontWeight.w500)),
                     const SizedBox(height: 4),
                     Text('${_smaInvestments.length}',
-                        style: const TextStyle(fontSize: 13,
-                            fontWeight: FontWeight.w700, color: Colors.white)),
+                        style: TextStyle(fontSize: 13,
+                            fontWeight: FontWeight.w700, color: _TSL.white)),
                   ])),
                 ]),
             ]),
@@ -1535,7 +1546,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Fund card — NO subscribe button inside ─────────────────────────────────
+  // ── Fund card ──────────────────────────────────────────────────────────────
   Widget _buildFundCard(Map<String, dynamic> fund, int index,
       bool dark, Color txtP, Color txtS, _HS s) {
     final baseColor     = _cardColor(index);
@@ -1558,7 +1569,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         statusColor = const Color(0xFFFFD740);
         statusIcon  = Icons.new_releases_outlined; break;
       default:
-        statusColor = Colors.white38;
+        statusColor = _TSL.white.withOpacity(0.38);
         statusIcon  = Icons.info_outline;
     }
 
@@ -1568,7 +1579,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         gradient: LinearGradient(
             colors: [baseColor, baseColor.withOpacity(0.72)],
             begin: Alignment.topLeft, end: Alignment.bottomRight),
-        // Flat bottom when subscribe button is shown so it connects seamlessly
         borderRadius: showSubscribe
             ? const BorderRadius.vertical(
             top: Radius.circular(22), bottom: Radius.circular(4))
@@ -1586,57 +1596,58 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-            // ── Header ─────────────────────────────────────────────────────
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
+                    color: _TSL.white.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white24, width: 1)),
+                    border: Border.all(
+                        color: _TSL.white.withOpacity(0.24), width: 1)),
                 child: Text(fundCode,
-                    style: const TextStyle(fontSize: 10,
-                        fontWeight: FontWeight.w800, color: Colors.white70,
+                    style: TextStyle(fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: _TSL.white.withOpacity(0.7),
                         letterSpacing: 0.5)),
               ),
               const SizedBox(width: 8),
               Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(fundName,
-                    style: const TextStyle(fontSize: 14,
-                        fontWeight: FontWeight.w800, color: Colors.white,
+                    style: TextStyle(fontSize: 14,
+                        fontWeight: FontWeight.w800, color: _TSL.white,
                         letterSpacing: 0.1),
                     overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 3),
                 Row(children: [
                   Text(fund['description'] as String? ?? '',
                       style: TextStyle(fontSize: 10,
-                          color: Colors.white.withOpacity(0.55))),
+                          color: _TSL.white.withOpacity(0.55))),
                   if (subAccount.isNotEmpty) ...[
                     Text('  ·  ', style: TextStyle(
                         fontSize: 10,
-                        color: Colors.white.withOpacity(0.3))),
+                        color: _TSL.white.withOpacity(0.3))),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.10),
+                        color: _TSL.white.withOpacity(0.10),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
+                            color: _TSL.white.withOpacity(0.2),
                             width: 0.8),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Text('Sub A/C  ',
+                        Text('Sub A/C  ',
                             style: TextStyle(fontSize: 9,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.white54,
+                                color: _TSL.white.withOpacity(0.54),
                                 letterSpacing: 0.3)),
                         Text(subAccount,
-                            style: const TextStyle(fontSize: 9,
+                            style: TextStyle(fontSize: 9,
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white70,
+                                color: _TSL.white.withOpacity(0.7),
                                 letterSpacing: 0.4)),
                       ]),
                     ),
@@ -1666,52 +1677,51 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     _isBalanceVisible
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    color: Colors.white38, size: 17),
+                    color: _TSL.white.withOpacity(0.38), size: 17),
               ),
             ]),
 
             const Spacer(),
 
-            // ── Portfolio value row ─────────────────────────────────────────
             Row(children: [
               Expanded(flex: 5, child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.portfolioValue, style: TextStyle(fontSize: 10,
-                    color: Colors.white.withOpacity(0.5),
+                    color: _TSL.white.withOpacity(0.5),
                     fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
                 hasInvestment
                     ? Text(
                     _isBalanceVisible
                         ? 'TZS ${_fmt(portfolioVal)}' : _mask(''),
-                    style: const TextStyle(fontSize: 17,
-                        fontWeight: FontWeight.w900, color: Colors.white,
+                    style: TextStyle(fontSize: 17,
+                        fontWeight: FontWeight.w900, color: _TSL.white,
                         letterSpacing: -0.3))
                     : Text(s.notInvestedYet, style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.4),
+                    color: _TSL.white.withOpacity(0.4),
                     fontStyle: FontStyle.italic)),
               ])),
               _vDivider(),
               Expanded(flex: 3, child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.myUnits, style: TextStyle(fontSize: 10,
-                    color: Colors.white.withOpacity(0.5),
+                    color: _TSL.white.withOpacity(0.5),
                     fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
                 Text(_isBalanceVisible ? _fmt(units) : _mask(''),
-                    style: const TextStyle(fontSize: 13,
-                        fontWeight: FontWeight.w700, color: Colors.white)),
+                    style: TextStyle(fontSize: 13,
+                        fontWeight: FontWeight.w700, color: _TSL.white)),
               ])),
               _vDivider(),
               Expanded(flex: 3, child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.nav, style: TextStyle(fontSize: 10,
-                    color: Colors.white.withOpacity(0.5),
+                    color: _TSL.white.withOpacity(0.5),
                     fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text(_fmt(nav), style: const TextStyle(fontSize: 13,
-                    fontWeight: FontWeight.w700, color: Colors.white)),
+                Text(_fmt(nav), style: TextStyle(fontSize: 13,
+                    fontWeight: FontWeight.w700, color: _TSL.white)),
               ])),
             ]),
           ]),
@@ -1739,10 +1749,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _circle(double size, double opacity) => Container(
       width: size, height: size,
       decoration: BoxDecoration(shape: BoxShape.circle,
-          color: Colors.white.withOpacity(opacity)));
+          color: _TSL.white.withOpacity(opacity)));
 
   Widget _vDivider() => Container(
-      width: 1, height: 34, color: Colors.white12,
+      width: 1, height: 34,
+      color: _TSL.white.withOpacity(0.12),
       margin: const EdgeInsets.symmetric(horizontal: 10));
 
   Widget _buildActionButton({
@@ -1753,12 +1764,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required VoidCallback onTap,
   }) {
     final containerBg = dark
-        ? const Color(0xFF132013).withOpacity(0.85)
-        : Colors.white.withOpacity(0.35);
+        ? _TSL.black.withOpacity(0.85)
+        : _TSL.white.withOpacity(0.35);
     final containerBorder = dark
-        ? const Color(0xFF1E3320) : Colors.white.withOpacity(0.6);
+        ? _TSL.black.withOpacity(0.35) : _TSL.white.withOpacity(0.6);
     final iconBg = dark
-        ? const Color(0xFF1A2B1B) : Colors.white.withOpacity(0.5);
+        ? _TSL.black : _TSL.white.withOpacity(0.5);
 
     return GestureDetector(
       onTap: onTap,
@@ -1941,11 +1952,11 @@ class _LineChartState extends State<_LineChart>
                           horizontal: 10, vertical: 8),
                       decoration: BoxDecoration(
                         color: widget.dark
-                            ? const Color(0xFF0D2E10)
-                            : const Color(0xFF1B5E20),
+                            ? _TSL.black
+                            : _TSL.teal,
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [BoxShadow(
-                            color: Colors.black.withOpacity(0.25),
+                            color: _TSL.black.withOpacity(0.25),
                             blurRadius: 12,
                             offset: const Offset(0, 4))],
                       ),
@@ -1955,9 +1966,9 @@ class _LineChartState extends State<_LineChart>
                           children: [
                             Text(
                               DateFormat('dd MMM yyyy').format(pt.date),
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 9,
-                                  color: Colors.white60,
+                                  color: _TSL.white.withOpacity(0.6),
                                   fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 4),
@@ -1982,9 +1993,9 @@ class _LineChartState extends State<_LineChart>
                             const SizedBox(height: 3),
                             Text(
                               'TZS ${widget.shortAmt(pt.value)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.white,
+                                  color: _TSL.white,
                                   fontWeight: FontWeight.w900),
                             ),
                           ]),
@@ -2111,8 +2122,9 @@ class _LinePainter extends CustomPainter {
               o, 10, Paint()..color = lineColor.withOpacity(0.15));
         }
 
+        // Chart dot border: TSL black in dark, TSL white in light
         canvas.drawCircle(o, r + 1.5, Paint()
-          ..color = (dark ? Colors.black : Colors.white)
+          ..color = (dark ? _TSL.black : _TSL.white)
           ..style = PaintingStyle.fill);
         canvas.drawCircle(o, r, Paint()
           ..color = lineColor
