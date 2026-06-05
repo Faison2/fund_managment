@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../buysell/buy.dart';
 import '../buysell/sell.dart';
 import '../market_watch/market_watch.dart';
@@ -44,25 +45,24 @@ class PastelColors {
 // CHART DATA MODEL
 // ─────────────────────────────────────────────────────────────────────────────
 class _MonthPoint {
-  final String label; // "Jan", "Feb" …
+  final String label;
   final int    buy;
   final int    sell;
   const _MonthPoint(this.label, this.buy, this.sell);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ORDERS CHART API  (same endpoints as my_orders.dart)
+// ORDERS CHART API
 // ─────────────────────────────────────────────────────────────────────────────
 class _ChartApi {
   static const _buyUrl  = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetBuyOrders';
   static const _sellUrl = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetSellOrders';
-  static const _nida    = '19931109111010000522';
 
   static String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   static Future<List<Map<String, dynamic>>> _fetchRaw(
-      String url, DateTime start, DateTime end) async {
+      String url, DateTime start, DateTime end, String nida) async {
     final client = HttpClient();
     client.badCertificateCallback = (_, __, ___) => true;
     client.connectionTimeout = const Duration(seconds: 15);
@@ -73,7 +73,7 @@ class _ChartApi {
         ..set('Content-Type', 'application/json')
         ..set('User-Agent', 'DSEApp/1.0');
       req.write(jsonEncode({
-        'nidaNumber': _nida,
+        'nidaNumber': nida,
         'startDate': _fmt(start),
         'endDate': _fmt(end),
         'orderStatus': '',
@@ -91,13 +91,18 @@ class _ChartApi {
   }
 
   /// Returns 12 monthly points for the given year.
+  /// Reads nidaNumber from SharedPreferences at call time.
   static Future<List<_MonthPoint>> fetchMonthly(int year) async {
+    final prefs = await SharedPreferences.getInstance();
+    final nida  = prefs.getString('nida_number') ?? '';
+    if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
+
     final start = DateTime(year, 1, 1);
     final end   = DateTime(year, 12, 31);
 
     final results = await Future.wait([
-      _fetchRaw(_buyUrl,  start, end),
-      _fetchRaw(_sellUrl, start, end),
+      _fetchRaw(_buyUrl,  start, end, nida),
+      _fetchRaw(_sellUrl, start, end, nida),
     ]);
 
     final buyCounts  = List<int>.filled(12, 0);
@@ -128,7 +133,7 @@ class _ChartApi {
 // ─────────────────────────────────────────────────────────────────────────────
 class _LineChartPainter extends CustomPainter {
   final List<_MonthPoint> points;
-  final int highlightIndex; // -1 = none
+  final int highlightIndex;
 
   _LineChartPainter({required this.points, this.highlightIndex = -1});
 
@@ -147,7 +152,6 @@ class _LineChartPainter extends CustomPainter {
       padT + h - (v / maxVal) * h,
     );
 
-    // ── Grid lines ────────────────────────────────────────────────────────
     final gridPaint = Paint()
       ..color = const Color(0xFFCDE9DE).withOpacity(0.7)
       ..strokeWidth = 1;
@@ -156,11 +160,9 @@ class _LineChartPainter extends CustomPainter {
       canvas.drawLine(Offset(padL, y), Offset(padL + w, y), gridPaint);
     }
 
-    // ── Helper: draw filled line ─────────────────────────────────────────
     void drawLine(
         List<Offset> pts, Color lineColor, Color fillTop, Color fillBot) {
       if (pts.length < 2) return;
-
       final path = Path()..moveTo(pts.first.dx, pts.first.dy);
       for (int i = 0; i < pts.length - 1; i++) {
         final cp1 = Offset((pts[i].dx + pts[i + 1].dx) / 2, pts[i].dy);
@@ -168,8 +170,6 @@ class _LineChartPainter extends CustomPainter {
         path.cubicTo(
             cp1.dx, cp1.dy, cp2.dx, cp2.dy, pts[i + 1].dx, pts[i + 1].dy);
       }
-
-      // fill
       final fillPath = Path.from(path)
         ..lineTo(pts.last.dx,  padT + h)
         ..lineTo(pts.first.dx, padT + h)
@@ -184,8 +184,6 @@ class _LineChartPainter extends CustomPainter {
           ).createShader(Rect.fromLTWH(0, padT, size.width, h))
           ..style = PaintingStyle.fill,
       );
-
-      // line
       canvas.drawPath(
         path,
         Paint()
@@ -209,10 +207,8 @@ class _LineChartPainter extends CustomPainter {
         const Color(0xFFFF6B8A).withOpacity(0.18),
         const Color(0xFFFF6B8A).withOpacity(0.0));
 
-    // ── Month labels ──────────────────────────────────────────────────────
     final tp = TextPainter(textDirection: TextDirection.ltr);
     for (int i = 0; i < n; i++) {
-      // Only show every other label to avoid crowding
       if (i % 2 != 0) continue;
       tp.text = TextSpan(
         text: points[i].label,
@@ -227,36 +223,27 @@ class _LineChartPainter extends CustomPainter {
           Offset(pt(i, 0).dx - tp.width / 2, size.height - padB + 6));
     }
 
-    // ── Dots + highlight ──────────────────────────────────────────────────
     for (int i = 0; i < n; i++) {
       final isHl = i == highlightIndex;
-
       for (final isB in [true, false]) {
         final o     = isB ? buyPts[i] : sellPts[i];
         final color = isB ? const Color(0xFF34C759) : const Color(0xFFFF6B8A);
-
         if (isHl) {
-          // Outer glow
           canvas.drawCircle(o, 8, Paint()..color = color.withOpacity(0.15));
           canvas.drawCircle(o, 5, Paint()..color = color.withOpacity(0.35));
         }
-        // Inner dot
         canvas.drawCircle(o, isHl ? 4 : 2.5, Paint()..color = color);
         canvas.drawCircle(o, isHl ? 4 : 2.5,
             Paint()
               ..color = Colors.white
               ..style = PaintingStyle.stroke
               ..strokeWidth = 1.5);
-
-        // Value label on highlight
         if (isHl) {
           final val = isB ? points[i].buy : points[i].sell;
           tp.text = TextSpan(
             text: '$val',
             style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontWeight: FontWeight.w900),
+                color: color, fontSize: 10, fontWeight: FontWeight.w900),
           );
           tp.layout();
           tp.paint(canvas,
@@ -265,7 +252,6 @@ class _LineChartPainter extends CustomPainter {
       }
     }
 
-    // ── Highlight vertical rule ───────────────────────────────────────────
     if (highlightIndex >= 0 && highlightIndex < n) {
       final x = pt(highlightIndex, 0).dx;
       canvas.drawLine(
@@ -350,11 +336,9 @@ class _OrdersChartCardState extends State<_OrdersChartCard>
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-        // ── Card header ────────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
           child: Row(children: [
-            // Icon
             Container(
               width: 38, height: 38,
               decoration: BoxDecoration(
@@ -380,12 +364,11 @@ class _OrdersChartCardState extends State<_OrdersChartCard>
                         color: PastelColors.txtHint, fontSize: 11)),
               ]),
             ),
-            // Year selector
             _YearToggle(
-              year:       _year,
-              loading:    _loading,
-              onPrev: () { setState(() => _year--); _load(); },
-              onNext: () {
+              year:    _year,
+              loading: _loading,
+              onPrev:  () { setState(() => _year--); _load(); },
+              onNext:  () {
                 if (_year < DateTime.now().year) {
                   setState(() => _year++);
                   _load();
@@ -397,7 +380,6 @@ class _OrdersChartCardState extends State<_OrdersChartCard>
 
         const SizedBox(height: 16),
 
-        // ── Legend + totals ────────────────────────────────────────────
         if (!_loading && _error == null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -429,7 +411,6 @@ class _OrdersChartCardState extends State<_OrdersChartCard>
 
         const SizedBox(height: 12),
 
-        // ── Chart area ─────────────────────────────────────────────────
         SizedBox(
           height: 180,
           child: Padding(
@@ -441,10 +422,10 @@ class _OrdersChartCardState extends State<_OrdersChartCard>
                 : FadeTransition(
               opacity: _fadeAnim,
               child: GestureDetector(
-                onTapDown: (d) => _onTap(d, context),
+                onTapDown:  (d) => _onTap(d, context),
                 onPanUpdate: (d) => _onPan(d, context),
-                onPanEnd: (_) => setState(() => _hlIndex = -1),
-                onTapUp: (_) =>
+                onPanEnd:   (_) => setState(() => _hlIndex = -1),
+                onTapUp:    (_) =>
                     Future.delayed(const Duration(seconds: 2),
                             () { if (mounted) setState(() => _hlIndex = -1); }),
                 child: CustomPaint(
@@ -458,7 +439,6 @@ class _OrdersChartCardState extends State<_OrdersChartCard>
           ),
         ),
 
-        // ── Highlight tooltip ──────────────────────────────────────────
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
           child: _hlIndex >= 0 && _hlIndex < _points.length
@@ -471,25 +451,23 @@ class _OrdersChartCardState extends State<_OrdersChartCard>
     );
   }
 
-  void _onTap(TapDownDetails d, BuildContext ctx) {
-    _updateHL(d.localPosition.dx, ctx);
-  }
+  void _onTap(TapDownDetails d, BuildContext ctx) =>
+      _updateHL(d.localPosition.dx, ctx);
 
-  void _onPan(DragUpdateDetails d, BuildContext ctx) {
-    _updateHL(d.localPosition.dx, ctx);
-  }
+  void _onPan(DragUpdateDetails d, BuildContext ctx) =>
+      _updateHL(d.localPosition.dx, ctx);
 
   void _updateHL(double dx, BuildContext ctx) {
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null) return;
-    final w = box.size.width - 24; // padL+padR
+    final w    = box.size.width - 24;
     final step = w / (_points.length - 1);
-    final i = ((dx - 12) / step).round().clamp(0, _points.length - 1);
+    final i    = ((dx - 12) / step).round().clamp(0, _points.length - 1);
     if (i != _hlIndex) setState(() => _hlIndex = i);
   }
 }
 
-// ── Year toggle ───────────────────────────────────────────────────────────────
+// ── Year toggle ────────────────────────────────────────────────────────────────
 class _YearToggle extends StatelessWidget {
   final int year; final bool loading;
   final VoidCallback onPrev; final VoidCallback onNext;
@@ -525,40 +503,34 @@ class _Arr extends StatelessWidget {
     onTap: onTap,
     child: Padding(
       padding: const EdgeInsets.all(6),
-      child: Icon(icon,
-          size: 16,
-          color: onTap == null
-              ? PastelColors.txtHint
-              : PastelColors.accent),
+      child: Icon(icon, size: 16,
+          color: onTap == null ? PastelColors.txtHint : PastelColors.accent),
     ),
   );
 }
 
-// ── Legend dot ────────────────────────────────────────────────────────────────
+// ── Legend dot ─────────────────────────────────────────────────────────────────
 class _LegendDot extends StatelessWidget {
   final Color color; final String label; final String value;
   const _LegendDot({required this.color, required this.label, required this.value});
 
   @override
-  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-    Container(
-      width: 10, height: 10,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    ),
-    const SizedBox(width: 6),
-    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label,
-          style: const TextStyle(
+  Widget build(BuildContext context) =>
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 10, height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: const TextStyle(
               color: PastelColors.txtHint, fontSize: 9,
               fontWeight: FontWeight.w600, letterSpacing: 0.3)),
-      Text(value,
-          style: TextStyle(
+          Text(value, style: TextStyle(
               color: color, fontSize: 12, fontWeight: FontWeight.w800)),
-    ]),
-  ]);
+        ]),
+      ]);
 }
 
-// ── Tooltip bar ───────────────────────────────────────────────────────────────
+// ── Tooltip bar ────────────────────────────────────────────────────────────────
 class _Tooltip extends StatelessWidget {
   final _MonthPoint point;
   const _Tooltip({required this.point});
@@ -575,19 +547,17 @@ class _Tooltip extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
     ),
     child: Row(children: [
-      const Icon(Icons.calendar_today_rounded,
-          color: Colors.white70, size: 13),
+      const Icon(Icons.calendar_today_rounded, color: Colors.white70, size: 13),
       const SizedBox(width: 8),
       Text(point.label,
           style: const TextStyle(
               color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
       const Spacer(),
-      _TipStat(label: 'Buy',  value: '${point.buy}',  color: PastelColors.green),
+      _TipStat(label: 'Buy',   value: '${point.buy}',             color: PastelColors.green),
       const SizedBox(width: 16),
-      _TipStat(label: 'Sell', value: '${point.sell}', color: PastelColors.red),
+      _TipStat(label: 'Sell',  value: '${point.sell}',            color: PastelColors.red),
       const SizedBox(width: 16),
-      _TipStat(label: 'Total',
-          value: '${point.buy + point.sell}', color: PastelColors.gold),
+      _TipStat(label: 'Total', value: '${point.buy + point.sell}',color: PastelColors.gold),
     ]),
   );
 }
@@ -600,17 +570,15 @@ class _TipStat extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.center,
     children: [
-      Text(value,
-          style: TextStyle(
-              color: color, fontSize: 14, fontWeight: FontWeight.w900)),
-      Text(label,
-          style: const TextStyle(
-              color: Colors.white60, fontSize: 9, fontWeight: FontWeight.w500)),
+      Text(value, style: TextStyle(
+          color: color, fontSize: 14, fontWeight: FontWeight.w900)),
+      Text(label, style: const TextStyle(
+          color: Colors.white60, fontSize: 9, fontWeight: FontWeight.w500)),
     ],
   );
 }
 
-// ── Chart shimmer ─────────────────────────────────────────────────────────────
+// ── Chart shimmer ──────────────────────────────────────────────────────────────
 class _ChartShimmer extends StatefulWidget {
   const _ChartShimmer();
   @override State<_ChartShimmer> createState() => _ChartShimmerState();
@@ -638,10 +606,8 @@ class _ChartShimmerState extends State<_ChartShimmer>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color.lerp(PastelColors.border,
-                PastelColors.accentLt, _a.value)!,
-            Color.lerp(PastelColors.accentLt,
-                PastelColors.border, _a.value)!,
+            Color.lerp(PastelColors.border,    PastelColors.accentLt, _a.value)!,
+            Color.lerp(PastelColors.accentLt,  PastelColors.border,   _a.value)!,
           ],
         ),
       ),
@@ -650,21 +616,19 @@ class _ChartShimmerState extends State<_ChartShimmer>
           SizedBox(
             width: 24, height: 24,
             child: CircularProgressIndicator(
-                color: PastelColors.accent.withOpacity(0.5),
-                strokeWidth: 2),
+                color: PastelColors.accent.withOpacity(0.5), strokeWidth: 2),
           ),
           const SizedBox(height: 10),
           Text('Loading chart…',
               style: TextStyle(
-                  color: PastelColors.txtHint.withOpacity(0.8),
-                  fontSize: 12)),
+                  color: PastelColors.txtHint.withOpacity(0.8), fontSize: 12)),
         ]),
       ),
     ),
   );
 }
 
-// ── Chart error ───────────────────────────────────────────────────────────────
+// ── Chart error ────────────────────────────────────────────────────────────────
 class _ChartError extends StatelessWidget {
   final VoidCallback onRetry;
   const _ChartError({required this.onRetry});
@@ -675,8 +639,7 @@ class _ChartError extends StatelessWidget {
       const Icon(Icons.wifi_off_rounded, color: PastelColors.red, size: 26),
       const SizedBox(height: 8),
       const Text('Could not load chart',
-          style: TextStyle(
-              color: PastelColors.txtSec, fontSize: 12,
+          style: TextStyle(color: PastelColors.txtSec, fontSize: 12,
               fontWeight: FontWeight.w600)),
       const SizedBox(height: 8),
       GestureDetector(
@@ -686,14 +649,11 @@ class _ChartError extends StatelessWidget {
           decoration: BoxDecoration(
             color: PastelColors.accentLt,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-                color: PastelColors.accent.withOpacity(0.35)),
+            border: Border.all(color: PastelColors.accent.withOpacity(0.35)),
           ),
           child: const Text('Retry',
-              style: TextStyle(
-                  color: PastelColors.accent,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800)),
+              style: TextStyle(color: PastelColors.accent,
+                  fontSize: 11, fontWeight: FontWeight.w800)),
         ),
       ),
     ]),
@@ -777,7 +737,6 @@ class _TradeDashboardState extends State<TradeDashboard>
                   _buildFmsShortcut(),
                   const SizedBox(height: 24),
 
-                  // ── Section header ─────────────────────────────────────
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                     child: Row(children: [
@@ -821,9 +780,7 @@ class _TradeDashboardState extends State<TradeDashboard>
                     ]),
                   ),
 
-                  // ── Interactive line chart ─────────────────────────────
                   const _OrdersChartCard(),
-
                   const SizedBox(height: 40),
                 ]),
               ),
@@ -834,7 +791,7 @@ class _TradeDashboardState extends State<TradeDashboard>
     );
   }
 
-  // ── App bar ────────────────────────────────────────────────────────────────
+  // ── App bar ──────────────────────────────────────────────────────────────────
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       backgroundColor: PastelColors.bg,
@@ -946,13 +903,12 @@ class _TradeDashboardState extends State<TradeDashboard>
                   style: TextStyle(color: Colors.white, fontSize: 34,
                       fontWeight: FontWeight.w900, letterSpacing: -0.5)),
               const SizedBox(height: 4),
-              Row(children: const [
+              const Row(children: [
                 Icon(Icons.trending_up_rounded, size: 16, color: Color(0xFF4ADE80)),
                 SizedBox(width: 4),
                 Text('+TZS 1,160,000 this month',
                     style: TextStyle(color: Color(0xFF4ADE80), fontSize: 13)),
               ]),
-
             ]),
           ),
         ]),
@@ -974,17 +930,6 @@ class _TradeDashboardState extends State<TradeDashboard>
           style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
     ]),
   );
-
-  Widget _miniStat(String label, String value, Color color) => Expanded(
-    child: Column(children: [
-      Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-      const SizedBox(height: 4),
-      Text(value,
-          style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700)),
-    ]),
-  );
-
-  Widget _vDivider() => Container(height: 32, width: 1, color: Colors.white24);
 
   // ── Action grid ────────────────────────────────────────────────────────────
   Widget _buildActionGrid() {
@@ -1078,8 +1023,8 @@ class _TradeDashboardState extends State<TradeDashboard>
           Text(label, style: const TextStyle(color: PastelColors.txtPrim,
               fontSize: 13, fontWeight: FontWeight.w800)),
           const SizedBox(height: 2),
-          Text(sublabel,
-              style: const TextStyle(color: PastelColors.txtHint, fontSize: 11)),
+          Text(sublabel, style: const TextStyle(
+              color: PastelColors.txtHint, fontSize: 11)),
         ])),
         const Icon(Icons.chevron_right_rounded,
             color: PastelColors.txtHint, size: 18),
@@ -1102,7 +1047,8 @@ class _TradeDashboardState extends State<TradeDashboard>
               colors: [Color(0xFFD4EEF9), Color(0xFFE8F5E9), Color(0xFFB8E6D3)],
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: PastelColors.accent.withOpacity(0.25), width: 1.5),
+            border: Border.all(
+                color: PastelColors.accent.withOpacity(0.25), width: 1.5),
             boxShadow: [
               BoxShadow(color: PastelColors.accent.withOpacity(0.12),
                   blurRadius: 20, offset: const Offset(0, 6)),
@@ -1125,7 +1071,8 @@ class _TradeDashboardState extends State<TradeDashboard>
                   color: Colors.white, size: 26),
             ),
             const SizedBox(width: 16),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
                   Text('Fund Management System',
                       style: TextStyle(color: PastelColors.txtPrim,
@@ -1140,7 +1087,8 @@ class _TradeDashboardState extends State<TradeDashboard>
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                border: Border.all(color: PastelColors.accent.withOpacity(0.25)),
+                border: Border.all(
+                    color: PastelColors.accent.withOpacity(0.25)),
               ),
               child: const Icon(Icons.arrow_forward_rounded,
                   color: PastelColors.accent, size: 18),

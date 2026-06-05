@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THEME TOKENS
@@ -46,10 +47,13 @@ class _Security {
 // MARKET WATCH API
 // ─────────────────────────────────────────────────────────────────────────────
 class _MarketWatchApi {
-  static const _url  = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
-  static const _nida = '19931109111010000522';
+  static const _url = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
 
   static Future<List<_Security>> fetch() async {
+    final prefs = await SharedPreferences.getInstance();
+    final nida  = prefs.getString('nida_number') ?? '';
+    if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
+
     final client = HttpClient();
     client.badCertificateCallback =
         (X509Certificate cert, String host, int port) => true;
@@ -61,7 +65,7 @@ class _MarketWatchApi {
         ..set('Accept',       'application/json')
         ..set('Content-Type', 'application/json')
         ..set('User-Agent',   'DSEApp/1.0 (Flutter; Dart)');
-      request.write(jsonEncode({'nidaNumber': _nida, 'signature': ''}));
+      request.write(jsonEncode({'nidaNumber': nida, 'signature': ''}));
 
       final response = await request.close();
       final body     = await response.transform(utf8.decoder).join();
@@ -86,14 +90,17 @@ class _MarketWatchApi {
 // BUY API
 // ─────────────────────────────────────────────────────────────────────────────
 class _BuyApi {
-  static const _url  = 'https://portalprod.tsl.co.tz/DSEAPI/Home/BuyShares';
-  static const _nida = '19931109111010000522';
+  static const _url = 'https://portalprod.tsl.co.tz/DSEAPI/Home/BuyShares';
 
   static Future<Map<String, dynamic>> buyShares({
     required String securityReference,
     required double price,
     required int    shares,
   }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final nida  = prefs.getString('nida_number') ?? '';
+    if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
+
     final client = HttpClient();
     client.badCertificateCallback =
         (X509Certificate cert, String host, int port) => true;
@@ -107,9 +114,9 @@ class _BuyApi {
         ..set('User-Agent',   'DSEApp/1.0 (Flutter; Dart)');
 
       request.write(jsonEncode({
-        'nidaNumber':        _nida,
+        'nidaNumber':        nida,
         'price':             price,
-        'securityReference': securityReference, // ← sends securityRef UUID
+        'securityReference': securityReference,
         'shares':            shares,
         'signature':         '',
       }));
@@ -147,26 +154,20 @@ class BuySharesPage extends StatefulWidget {
 class _BuySharesPageState extends State<BuySharesPage>
     with SingleTickerProviderStateMixin {
 
-  // ── Market watch state ────────────────────────────────────────────────────
   List<_Security> _securities    = [];
   bool            _loadingMarket = true;
   String?         _marketError;
 
-  // ── Selected security ─────────────────────────────────────────────────────
   _Security? _selected;
 
-  // ── Price controller (auto-filled from market price) ──────────────────────
   late TextEditingController _priceCtrl;
 
-  // ── Shares ────────────────────────────────────────────────────────────────
   int _shares = 100;
 
-  // ── Submit state ──────────────────────────────────────────────────────────
   bool    _loading = false;
   String? _error;
   String? _success;
 
-  // ── Animation ─────────────────────────────────────────────────────────────
   late AnimationController _animCtrl;
   late Animation<double>   _fade;
   late Animation<Offset>   _slide;
@@ -193,7 +194,6 @@ class _BuySharesPageState extends State<BuySharesPage>
     super.dispose();
   }
 
-  // ── Fetch securities from market watch ────────────────────────────────────
   Future<void> _loadSecurities() async {
     setState(() { _loadingMarket = true; _marketError = null; });
     try {
@@ -204,23 +204,20 @@ class _BuySharesPageState extends State<BuySharesPage>
     }
   }
 
-  // ── When user picks a security ────────────────────────────────────────────
   void _onSecuritySelected(_Security s) {
     setState(() {
-      _selected  = s;
+      _selected       = s;
       _priceCtrl.text = s.marketPrice.toStringAsFixed(2);
-      _error   = null;
-      _success = null;
+      _error          = null;
+      _success        = null;
     });
   }
 
-  // ── Computed total ────────────────────────────────────────────────────────
   double get _total {
     final p = double.tryParse(_priceCtrl.text) ?? 0;
     return p * _shares;
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────────
   Future<void> _submit() async {
     if (_selected == null) {
       setState(() => _error = 'Please select a security.');
@@ -241,7 +238,7 @@ class _BuySharesPageState extends State<BuySharesPage>
 
     try {
       final result = await _BuyApi.buyShares(
-        securityReference: _selected!.ref, // ← UUID, not name
+        securityReference: _selected!.ref,
         price:  price,
         shares: _shares,
       );
@@ -263,9 +260,6 @@ class _BuySharesPageState extends State<BuySharesPage>
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -278,7 +272,6 @@ class _BuySharesPageState extends State<BuySharesPage>
             physics: const BouncingScrollPhysics(),
             slivers: [
 
-              // ── App Bar ──────────────────────────────────────────────────
               SliverAppBar(
                 backgroundColor: _C.bg,
                 pinned: true,
@@ -317,7 +310,6 @@ class _BuySharesPageState extends State<BuySharesPage>
                   ]),
                 ]),
                 actions: [
-                  // Refresh securities button
                   IconButton(
                     icon: Container(
                       padding: const EdgeInsets.all(8),
@@ -326,14 +318,14 @@ class _BuySharesPageState extends State<BuySharesPage>
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: _C.border),
                       ),
-                      child: const Icon(Icons.refresh_rounded, size: 14, color: _C.blue),
+                      child: const Icon(Icons.refresh_rounded,
+                          size: 14, color: _C.blue),
                     ),
                     onPressed: _loadingMarket ? null : _loadSecurities,
                   ),
                 ],
               ),
 
-              // ── Body ──────────────────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -341,7 +333,6 @@ class _BuySharesPageState extends State<BuySharesPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
 
-                      // ── Hero banner ────────────────────────────────────
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -364,7 +355,8 @@ class _BuySharesPageState extends State<BuySharesPage>
                                 _selected != null ? _selected!.name : 'BUY ORDER',
                                 style: const TextStyle(
                                     color: _C.green, fontSize: 22,
-                                    fontWeight: FontWeight.w900, letterSpacing: -0.8),
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.8),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
@@ -372,7 +364,8 @@ class _BuySharesPageState extends State<BuySharesPage>
                                 _priceCtrl.text.isNotEmpty
                                     ? 'At TZS ${_priceCtrl.text} per share'
                                     : 'Select a security below',
-                                style: const TextStyle(color: _C.txtSec, fontSize: 12),
+                                style: const TextStyle(
+                                    color: _C.txtSec, fontSize: 12),
                               ),
                             ]),
                           ),
@@ -381,7 +374,8 @@ class _BuySharesPageState extends State<BuySharesPage>
                             decoration: BoxDecoration(
                               color: _C.green.withOpacity(0.15),
                               shape: BoxShape.circle,
-                              border: Border.all(color: _C.green.withOpacity(0.3)),
+                              border: Border.all(
+                                  color: _C.green.withOpacity(0.3)),
                             ),
                             child: const Icon(Icons.arrow_upward_rounded,
                                 color: _C.green, size: 26),
@@ -390,21 +384,19 @@ class _BuySharesPageState extends State<BuySharesPage>
                       ),
                       const SizedBox(height: 24),
 
-                      // ── Security dropdown ──────────────────────────────
                       const _SectionLabel(label: 'Security'),
                       const SizedBox(height: 8),
                       _SecurityDropdown(
-                        securities:   _securities,
-                        selected:     _selected,
-                        loading:      _loadingMarket,
-                        error:        _marketError,
-                        color:        _C.green,
-                        onChanged:    _onSecuritySelected,
-                        onRetry:      _loadSecurities,
+                        securities: _securities,
+                        selected:   _selected,
+                        loading:    _loadingMarket,
+                        error:      _marketError,
+                        color:      _C.green,
+                        onChanged:  _onSecuritySelected,
+                        onRetry:    _loadSecurities,
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Price (auto-filled, still editable) ────────────
                       const _SectionLabel(label: 'Price per Share (TZS)'),
                       const SizedBox(height: 8),
                       _PriceInput(
@@ -414,17 +406,15 @@ class _BuySharesPageState extends State<BuySharesPage>
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Shares stepper ─────────────────────────────────
                       const _SectionLabel(label: 'Number of Shares'),
                       const SizedBox(height: 8),
                       _SharesStepper(
-                        value: _shares,
-                        color: _C.green,
+                        value:     _shares,
+                        color:     _C.green,
                         onChanged: (v) => setState(() => _shares = v),
                       ),
                       const SizedBox(height: 24),
 
-                      // ── Total card ─────────────────────────────────────
                       _TotalCard(
                         total:  _total,
                         shares: _shares,
@@ -433,7 +423,6 @@ class _BuySharesPageState extends State<BuySharesPage>
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Banners ────────────────────────────────────────
                       if (_success != null) ...[
                         _StatusBanner(message: _success!, color: _C.green,
                             icon: Icons.check_circle_rounded),
@@ -445,7 +434,6 @@ class _BuySharesPageState extends State<BuySharesPage>
                         const SizedBox(height: 16),
                       ],
 
-                      // ── Submit ─────────────────────────────────────────
                       _SubmitButton(
                         label:   _loading ? 'Placing Order…' : 'Confirm Buy Order',
                         color:   _C.green,
@@ -455,7 +443,6 @@ class _BuySharesPageState extends State<BuySharesPage>
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Disclaimer ─────────────────────────────────────
                       const _Disclaimer(),
                     ],
                   ),
@@ -473,13 +460,13 @@ class _BuySharesPageState extends State<BuySharesPage>
 // SECURITY DROPDOWN WIDGET
 // ─────────────────────────────────────────────────────────────────────────────
 class _SecurityDropdown extends StatelessWidget {
-  final List<_Security>     securities;
-  final _Security?          selected;
-  final bool                loading;
-  final String?             error;
-  final Color               color;
+  final List<_Security>         securities;
+  final _Security?              selected;
+  final bool                    loading;
+  final String?                 error;
+  final Color                   color;
   final ValueChanged<_Security> onChanged;
-  final VoidCallback        onRetry;
+  final VoidCallback            onRetry;
 
   const _SecurityDropdown({
     required this.securities,
@@ -493,7 +480,6 @@ class _SecurityDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── Loading state ────────────────────────────────────────────────────
     if (loading) {
       return Container(
         height: 54,
@@ -503,16 +489,12 @@ class _SecurityDropdown extends StatelessWidget {
           border: Border.all(color: _C.border),
         ),
         child: const Center(
-          child: SizedBox(
-            width: 20, height: 20,
-            child: CircularProgressIndicator(
-                color: _C.blue, strokeWidth: 2),
-          ),
+          child: SizedBox(width: 20, height: 20,
+              child: CircularProgressIndicator(color: _C.blue, strokeWidth: 2)),
         ),
       );
     }
 
-    // ── Error state ───────────────────────────────────────────────────────
     if (error != null) {
       return Container(
         padding: const EdgeInsets.all(14),
@@ -547,14 +529,14 @@ class _SecurityDropdown extends StatelessWidget {
       );
     }
 
-    // ── Dropdown ──────────────────────────────────────────────────────────
     return Container(
       decoration: BoxDecoration(
         color: _C.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: selected != null
-            ? color.withOpacity(0.45)
-            : _C.border, width: selected != null ? 1.5 : 1),
+        border: Border.all(
+            color: selected != null
+                ? color.withOpacity(0.45) : _C.border,
+            width: selected != null ? 1.5 : 1),
         boxShadow: [
           BoxShadow(color: color.withOpacity(0.05),
               blurRadius: 8, offset: const Offset(0, 2)),
@@ -581,7 +563,6 @@ class _SecurityDropdown extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(children: [
-                // Coloured avatar
                 Container(
                   width: 34, height: 34,
                   decoration: BoxDecoration(
@@ -616,7 +597,6 @@ class _SecurityDropdown extends StatelessWidget {
               ]),
             ),
           )).toList(),
-          // What shows in the collapsed field
           selectedItemBuilder: (_) => securities.map((s) => Align(
             alignment: Alignment.centerLeft,
             child: Row(children: [
@@ -640,7 +620,7 @@ class _SecurityDropdown extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PRICE INPUT  (editable, auto-filled)
+// PRICE INPUT
 // ─────────────────────────────────────────────────────────────────────────────
 class _PriceInput extends StatelessWidget {
   final TextEditingController controller;
@@ -704,20 +684,25 @@ class _SharesStepper extends StatelessWidget {
       border: Border.all(color: _C.border),
     ),
     child: Row(children: [
-      _Btn(label: '−100', color: color, onTap: () => onChanged(max(100, value - 100))),
+      _Btn(label: '−100', color: color,
+          onTap: () => onChanged(max(100, value - 100))),
       const SizedBox(width: 6),
-      _Btn(label: '−1',   color: color, onTap: () => onChanged(max(1, value - 1))),
+      _Btn(label: '−1',   color: color,
+          onTap: () => onChanged(max(1, value - 1))),
       const Spacer(),
       Column(children: [
         Text('$value',
             style: TextStyle(color: color, fontSize: 26,
                 fontWeight: FontWeight.w900, letterSpacing: -1)),
-        const Text('shares', style: TextStyle(color: _C.txtHint, fontSize: 10)),
+        const Text('shares',
+            style: TextStyle(color: _C.txtHint, fontSize: 10)),
       ]),
       const Spacer(),
-      _Btn(label: '+1',   color: color, onTap: () => onChanged(value + 1)),
+      _Btn(label: '+1',   color: color,
+          onTap: () => onChanged(value + 1)),
       const SizedBox(width: 6),
-      _Btn(label: '+100', color: color, onTap: () => onChanged(value + 100)),
+      _Btn(label: '+100', color: color,
+          onTap: () => onChanged(value + 100)),
     ]),
   );
 }
@@ -757,7 +742,8 @@ class _Btn extends StatelessWidget {
 }
 
 class _TotalCard extends StatelessWidget {
-  final double total; final int shares; final Color color; final String label;
+  final double total; final int shares;
+  final Color color;  final String label;
   const _TotalCard({required this.total, required this.shares,
     required this.color, required this.label});
 
@@ -808,8 +794,9 @@ class _StatusBanner extends StatelessWidget {
 }
 
 class _SubmitButton extends StatelessWidget {
-  final String label; final Color color; final bool loading;
-  final IconData icon; final VoidCallback? onTap;
+  final String label;   final Color color;
+  final bool loading;   final IconData icon;
+  final VoidCallback?   onTap;
   const _SubmitButton({required this.label, required this.color,
     required this.loading, required this.icon, required this.onTap});
 

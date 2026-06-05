@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../buysell/trade.dart';
 
 class _C {
@@ -70,7 +71,7 @@ class DseStock {
   final int    bestOfferQty;
   final double marketCap;
   final String lastTradeTime;
-  final String securityRef; // ← ADDED
+  final String securityRef;
 
   const DseStock({
     required this.symbol,
@@ -90,7 +91,7 @@ class DseStock {
     required this.bestOfferQty,
     required this.marketCap,
     required this.lastTradeTime,
-    required this.securityRef, // ← ADDED
+    required this.securityRef,
   });
 
   factory DseStock.fromJson(Map<String, dynamic> j) {
@@ -107,7 +108,7 @@ class DseStock {
     final bestOfferQty = (j['bestOfferQuantity'] as num).toInt();
     final marketCap    = (j['marketCap'] as num).toDouble();
     final time         = (j['time'] as String?) ?? '';
-    final securityRef  = (j['securityRef'] as String?) ?? ''; // ← ADDED
+    final securityRef  = (j['securityRef'] as String?) ?? '';
     final pct          = open != 0 ? (change / open) * 100 : 0.0;
 
     return DseStock(
@@ -128,7 +129,7 @@ class DseStock {
       bestOfferQty:   bestOfferQty,
       marketCap:      marketCap,
       lastTradeTime:  time,
-      securityRef:    securityRef, // ← ADDED
+      securityRef:    securityRef,
     );
   }
 
@@ -171,10 +172,16 @@ List<double> _buildSparkline(double open, double high, double low, double close)
 // API SERVICE
 // ─────────────────────────────────────────────────────────────────────────────
 class _DseApi {
-  static const _url           = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
-  static const _hardcodedNida = '19931109111010000522';
+  static const _url = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
 
   static Future<List<DseStock>> fetchMarketWatch() async {
+    // Read NIDA from SharedPreferences — set during login/NIDA verification
+    final prefs = await SharedPreferences.getInstance();
+    final nida  = prefs.getString('nida_number') ?? '';
+    if (nida.isEmpty) {
+      throw Exception('NIDA number not set. Please log in again.');
+    }
+
     final client = HttpClient();
     client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
     client.connectionTimeout = const Duration(seconds: 15);
@@ -184,7 +191,7 @@ class _DseApi {
         ..set('Accept',       'application/json')
         ..set('Content-Type', 'application/json')
         ..set('User-Agent',   'DSEApp/1.0 (Flutter; Dart)');
-      request.write(jsonEncode({'nidaNumber': _hardcodedNida, 'signature': ''}));
+      request.write(jsonEncode({'nidaNumber': nida, 'signature': ''}));
       final response = await request.close();
       final body     = await response.transform(utf8.decoder).join();
       if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
@@ -310,7 +317,7 @@ class _BannerItem {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STOCK CARD  — display only, no trade actions
+// STOCK CARD
 // ─────────────────────────────────────────────────────────────────────────────
 class _StockCard extends StatefulWidget {
   final DseStock stock;
@@ -371,7 +378,7 @@ class _StockCardState extends State<_StockCard> with SingleTickerProviderStateMi
                   lastTradeTime:  s.lastTradeTime,
                   sparkline:      s.sparkline,
                   volume:         s.volume,
-                  securityRef:    s.securityRef, // ← ADDED
+                  securityRef:    s.securityRef,
                 ),
               ),
             );
@@ -385,7 +392,6 @@ class _StockCardState extends State<_StockCard> with SingleTickerProviderStateMi
               boxShadow: [BoxShadow(color: color.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 4))],
             ),
             child: Column(children: [
-              // ── Top row ──────────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -420,7 +426,6 @@ class _StockCardState extends State<_StockCard> with SingleTickerProviderStateMi
                 ]),
               ),
 
-              // ── Full-width sparkline ──────────────────────────────────────
               SizedBox(
                 height: 56, width: double.infinity,
                 child: CustomPaint(painter: SparklinePainter(data: s.sparkline, color: color)),
@@ -428,7 +433,6 @@ class _StockCardState extends State<_StockCard> with SingleTickerProviderStateMi
 
               Container(height: 1, color: _C.border),
 
-              // ── Bottom row ────────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                 child: Row(children: [
@@ -464,8 +468,6 @@ class _StockCardState extends State<_StockCard> with SingleTickerProviderStateMi
                       ]),
                     ]),
                   ])),
-
-                  // High / Low
                   Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                     Row(children: [
                       const Text('H', style: TextStyle(color: _C.txtHint, fontSize: 9, fontWeight: FontWeight.w700)),
@@ -482,8 +484,8 @@ class _StockCardState extends State<_StockCard> with SingleTickerProviderStateMi
                 ]),
               ),
             ]),
-          ), // Container
-        ), // GestureDetector
+          ),
+        ),
       ),
     );
   }
