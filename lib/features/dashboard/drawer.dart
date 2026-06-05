@@ -12,6 +12,7 @@ import '../auth/login/view/login.dart';
 import '../contact_us/contact.dart';
 import '../payments/view/payment.dart';
 import '../trade/dashboad/trade_dashboad.dart';
+import '../trade/landing/dselanding.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────────
 class _TSL {
@@ -240,7 +241,7 @@ class _AppDrawerState extends State<AppDrawer>
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, animation, __) => const ComingSoonPage(),
+        pageBuilder: (_, animation, __) => const DseLandingPage(),
         transitionsBuilder: (_, animation, __, child) {
           final curved =
           CurvedAnimation(parent: animation, curve: Curves.easeInOut);

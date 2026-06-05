@@ -17,6 +17,7 @@ import '../funds/view/fund.dart';
 import '../sma/sma.dart';
 import '../statement /client_statement.dart';
 import '../trade/dashboad/trade_dashboad.dart';
+import '../trade/landing/dselanding.dart';
 import '../withdrawal/view/withdrawal_page.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────────
@@ -810,7 +811,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const ComingSoonPage())),
+          MaterialPageRoute<void>(builder: (_) => const DseLandingPage())),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
