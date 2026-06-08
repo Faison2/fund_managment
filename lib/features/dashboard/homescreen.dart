@@ -811,7 +811,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const DseLandingPage())),
+          MaterialPageRoute<void>(builder: (_) => const ComingSoonPage())),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(

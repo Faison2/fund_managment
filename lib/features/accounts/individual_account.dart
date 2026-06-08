@@ -544,13 +544,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   ];
 
   // ─── Theme ────────────────────────────────────────────────────────────────
-  static const Color _primaryGreen = Color(0xFF2DC98E);
-  static const Color _deepGreen = Color(0xFF1A9B6C);
-  static const Color _softMint = Color(0xFFE8FBF4);
-  static const Color _cardBg = Colors.white;
-  static const Color _textDark = Color(0xFF1A2332);
-  static const Color _textMuted = Color(0xFF8A9BB0);
-  static const Color _errorRed = Color(0xFFE53935);
+  // ─── Theme ─────────────────────────────────────────────────────────────────
+  static const Color _primaryGreen = Color(0xFF00A79D); // was 0xFF2DC98E → TSL teal
+  static const Color _deepGreen    = Color(0xFF1A6FAF); // was 0xFF1A9B6C → TSL deep blue
+  static const Color _softMint     = Color(0xFFE0F5F4); // was 0xFFE8FBF4 → tint of TSL teal
+  static const Color _cardBg       = Colors.white;      // unchanged
+  static const Color _textDark     = Color(0xFF231F20); // was 0xFF1A2332 → TSL black
+  static const Color _textMuted    = Color(0xFF939598); // was 0xFF8A9BB0 → TSL grey
+  static const Color _errorRed     = Color(0xFFE53935); // unchanged
 
   // ════════════════════════════════════════════════════════════════════════════
   //  LIFECYCLE
@@ -1712,9 +1713,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF7FFFD4),
-              Color(0xFF98FB98),
-              Color(0xFFAFEEEE),
+              Color(0xFFB8E6E4),
+              Color(0xFF98D8D4),
+              Color(0xFFB8D8E8),
             ],
           ),
         ),
@@ -1848,7 +1849,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   // ════════════════════════════════════════════════════════════════════════════
 
   Widget _buildIdentitySelection() {
-    final identityTypes = _IdentityType.values;
+    final identityTypes = _IdentityType.values
+        .where((t) => t != _IdentityType.nida)
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),

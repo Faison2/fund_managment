@@ -241,7 +241,7 @@ class _AppDrawerState extends State<AppDrawer>
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, animation, __) => const DseLandingPage(),
+        pageBuilder: (_, animation, __) => const ComingSoonPage(),
         transitionsBuilder: (_, animation, __, child) {
           final curved =
           CurvedAnimation(parent: animation, curve: Curves.easeInOut);

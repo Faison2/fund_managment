@@ -26,11 +26,12 @@ class _RegisterScreenState extends State<RegisterScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  static const Color _primaryGreen = Color(0xFF2DC98E);
-  static const Color _deepGreen = Color(0xFF1A9B6C);
-  static const Color _softMint = Color(0xFFE8FBF4);
-  static const Color _textDark = Color(0xFF1A2332);
-  static const Color _textMuted = Color(0xFF8A9BB0);
+// ── TSL Brand colours (matches home.dart) ─────────────────────────────────────
+  static const Color _primaryGreen = Color(0xFF00A79D); // was 0xFF2DC98E → TSL teal
+  static const Color _deepGreen    = Color(0xFF329AD6); // was 0xFF1A9B6C → TSL blue (unused but kept)
+  static const Color _softMint     = Color(0xFFE0F5F4); // tint of TSL teal (was mint of custom green)
+  static const Color _textDark     = Color(0xFF231F20); // was 0xFF1A2332 → TSL black
+  static const Color _textMuted    = Color(0xFF939598); // was 0xFF8A9BB0 → TSL grey
 
   @override
   void initState() {
@@ -63,10 +64,12 @@ class _RegisterScreenState extends State<RegisterScreen>
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF7FFFD4), Color(0xFF98FB98), Color(0xFFAFEEEE)],
+            colors: [Color(0xFFB8E6E4), Color(0xFF98D8D4), Color(0xFFB8D8E8)],
+            // was: 7FFFD4 / 98FB98 / AFEEEE (generic aqua-green)
+            // now: teal-to-blue tint, matches home.dart light mode gradient feel
           ),
         ),
         child: SafeArea(
@@ -113,10 +116,10 @@ class _RegisterScreenState extends State<RegisterScreen>
 // ─────────────────────────────────────────────────────────────────────────────
 class _ClientTypePicker extends StatelessWidget {
   final void Function(bool isNew) onPick;
-  static const Color _primaryGreen = Color(0xFF2DC98E);
-  static const Color _softMint = Color(0xFFE8FBF4);
-  static const Color _textDark = Color(0xFF1A2332);
-  static const Color _textMuted = Color(0xFF8A9BB0);
+  static const Color _primaryGreen = Color(0xFF00A79D);
+  static const Color _softMint     = Color(0xFFE0F5F4);
+  static const Color _textDark     = Color(0xFF231F20);
+  static const Color _textMuted    = Color(0xFF939598);
 
   const _ClientTypePicker({required this.onPick});
 
@@ -195,10 +198,10 @@ class _PickCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  static const Color _primaryGreen = Color(0xFF2DC98E);
-  static const Color _softMint = Color(0xFFE8FBF4);
-  static const Color _textDark = Color(0xFF1A2332);
-  static const Color _textMuted = Color(0xFF8A9BB0);
+  static const Color _primaryGreen = Color(0xFF00A79D);
+  static const Color _softMint     = Color(0xFFE0F5F4);
+  static const Color _textDark     = Color(0xFF231F20);
+  static const Color _textMuted    = Color(0xFF939598);
 
   const _PickCard(
       {required this.icon,
