@@ -957,6 +957,147 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   }
 
   Future<void> _pickIdFile() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Text(
+              'Upload ID Document',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Choose where to pick your document from',
+              style: TextStyle(fontSize: 13, color: _textMuted),
+            ),
+            const SizedBox(height: 24),
+
+            // ── Photo Library ──────────────────────────────────────
+            _buildPickerOption(
+              icon: Icons.photo_library_outlined,
+              color: Colors.purple,
+              title: 'Photo Library',
+              subtitle: 'Pick an image from your photos',
+              onTap: () async {
+                Navigator.pop(context);
+                await _pickFromPhotos();
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // ── Files / Documents ──────────────────────────────────
+            _buildPickerOption(
+              icon: Icons.folder_outlined,
+              color: Colors.blue,
+              title: 'Files',
+              subtitle: 'Pick a PDF or image from Files app',
+              onTap: () async {
+                Navigator.pop(context);
+                await _pickFromFiles();
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // ── Camera ─────────────────────────────────────────────
+            _buildPickerOption(
+              icon: Icons.camera_alt_outlined,
+              color: _primaryGreen,
+              title: 'Camera',
+              subtitle: 'Take a photo of your document',
+              onTap: () async {
+                Navigator.pop(context);
+                await _pickFromCamera();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPickerOption({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w600,
+              )),
+              const SizedBox(height: 2),
+              Text(subtitle, style: TextStyle(
+                fontSize: 12, color: _textMuted,
+              )),
+            ],
+          )),
+          Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
+        ]),
+      ),
+    );
+  }
+
+// ── Photo Library picker ───────────────────────────────────────────────────
+  Future<void> _pickFromPhotos() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,       // opens native iOS Photo Library picker
+        allowMultiple: false,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        final f = result.files.first;
+        setState(() {
+          _idFile = File(f.path!);
+          _idFileName = f.name;
+          _idFileExtension = f.extension?.toLowerCase();
+          _errors.remove('idFile');
+        });
+      }
+    } catch (e) {
+      _showSnackBar('Could not access photos: $e');
+    }
+  }
+
+// ── Files / Documents picker ───────────────────────────────────────────────
+  Future<void> _pickFromFiles() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -973,7 +1114,30 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         });
       }
     } catch (e) {
-      _showSnackBar('Failed to pick file: $e');
+      _showSnackBar('Could not access files: $e');
+    }
+  }
+
+// ── Camera picker ──────────────────────────────────────────────────────────
+  Future<void> _pickFromCamera() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        // image_picker handles camera; file_picker on iOS opens photo lib
+        // so use image_picker for camera specifically:
+      );
+      if (result != null && result.files.isNotEmpty) {
+        final f = result.files.first;
+        setState(() {
+          _idFile = File(f.path!);
+          _idFileName = f.name;
+          _idFileExtension = f.extension?.toLowerCase();
+          _errors.remove('idFile');
+        });
+      }
+    } catch (e) {
+      _showSnackBar('Could not access camera: $e');
     }
   }
 
@@ -1234,11 +1398,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
         // ── Identity ────────────────────────────────────────────────────
         'Nationality': _selectedNationality,
-        'IdentificatinType': _selectedIdType, // ← API typo kept intentionally
+        'IdentificatinType': _selectedIdType,
         'ID': _identificationNumberController.text.trim(),
         'IdentificationExpiryDate': _validityDateController.text.isNotEmpty
             ? _validityDateController.text
-            : '2099-12-31',
+            : '2030-12-31',
         'IssuingAuthority': issuingAuthority,
 
         // ── Address ─────────────────────────────────────────────────────
@@ -1256,13 +1420,14 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         'InvestmentPurpose': _investmentPurposeController.text.trim(),
         'IncomeSource': _selectedSourceOfFunds,
         'InvestmentAccountType': _selectedAccountType,
-        'InvestorType': 'Retail', // ✅ FIXED: was "Individual"
+        'InvestorType': 'Retail',
 
         // ── PEP disclosure ──────────────────────────────────────────────
         'Disclosure': _isPoliticallyExposed ? 'Yes' : 'No',
         'PositionHeld': _isPoliticallyExposed
             ? _positionController.text.trim()
-            : 'None',
+            : '',                              // ✅ empty string, not 'None'
+
         // ── Bank ────────────────────────────────────────────────────────
         'BankType': _selectedBankType,
         'BankAccountNumber': _accountNumberController.text.trim(),
@@ -1270,30 +1435,20 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         'BankName': _bankNameController.text.trim(),
         'BankBranch': _branchController.text.trim(),
         'BankSwiftCode': _swiftCodeController.text.trim(),
-        'BankAddress': _resolvedAddress,
+        'BankAddress': _selectedCountry == 'Tanzania'
+            ? '${_selectedDistrict}, ${_selectedRegion}, Tanzania'
+            : '${_cityController.text.trim()}, $_selectedCountry', // ✅ simple string
 
         // ── Investment mandate ──────────────────────────────────────────
         'AmountSuppliedIn': _selectedAmountCurrency,
-        'ServiceRequired':
-        _selectedServiceRequired, // ✅ FIXED: was hardcoded 'Trading'
-        'InvestmentPeriod':
-        _selectedInvestmentPeriod, // ✅ FIXED: was hardcoded 'Long Term'
-        'RiskTolerance':
-        _selectedRiskTolerance, // ✅ FIXED: was hardcoded 'Medium'
-        'Charge': '0',
+        'ServiceRequired': _selectedServiceRequired,
+        'InvestmentPeriod': _selectedInvestmentPeriod,
 
-        // ── Fund ────────────────────────────────────────────────────────
-        'FundCode': _selectedFund?.fundingCode ?? '',
-        'FundName': _selectedFund?.fundingName ?? '',
-
-        // ✅ NEW: Required fields from correct cURL
-        'Password': _passwordController.text,
+        // ── Source ──────────────────────────────────────────────────────
         'Source': 'MobileApp',
-       // 'myExistingCDS': _myExistingCDS,
 
         // ── ID document ─────────────────────────────────────────────────
-      //  'IDDocument': idDocumentBase64, // kept for backward compat
-        'IDUpload': idDocumentBase64, // ✅ NEW: correct field name
+        'IDUpload': idDocumentBase64,
         'Content_Type': idContentType,
       };
 
