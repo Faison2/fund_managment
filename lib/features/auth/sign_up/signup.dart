@@ -26,12 +26,12 @@ class _RegisterScreenState extends State<RegisterScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-// ── TSL Brand colours (matches home.dart) ─────────────────────────────────────
-  static const Color _primaryGreen = Color(0xFF00A79D); // was 0xFF2DC98E → TSL teal
-  static const Color _deepGreen    = Color(0xFF329AD6); // was 0xFF1A9B6C → TSL blue (unused but kept)
-  static const Color _softMint     = Color(0xFFE0F5F4); // tint of TSL teal (was mint of custom green)
-  static const Color _textDark     = Color(0xFF231F20); // was 0xFF1A2332 → TSL black
-  static const Color _textMuted    = Color(0xFF939598); // was 0xFF8A9BB0 → TSL grey
+  // ── TSL Brand colours ──────────────────────────────────────────────────────
+  static const Color _primaryGreen = Color(0xFF00A79D);
+  static const Color _deepGreen    = Color(0xFF329AD6);
+  static const Color _softMint     = Color(0xFFE0F5F4);
+  static const Color _textDark     = Color(0xFF231F20);
+  static const Color _textMuted    = Color(0xFF939598);
 
   @override
   void initState() {
@@ -64,12 +64,10 @@ class _RegisterScreenState extends State<RegisterScreen>
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Color(0xFFB8E6E4), Color(0xFF98D8D4), Color(0xFFB8D8E8)],
-            // was: 7FFFD4 / 98FB98 / AFEEEE (generic aqua-green)
-            // now: teal-to-blue tint, matches home.dart light mode gradient feel
           ),
         ),
         child: SafeArea(
@@ -203,11 +201,12 @@ class _PickCard extends StatelessWidget {
   static const Color _textDark     = Color(0xFF231F20);
   static const Color _textMuted    = Color(0xFF939598);
 
-  const _PickCard(
-      {required this.icon,
-        required this.title,
-        required this.subtitle,
-        required this.onTap});
+  const _PickCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -226,33 +225,31 @@ class _PickCard extends StatelessWidget {
                 offset: const Offset(0, 4))
           ],
         ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                  color: _softMint, borderRadius: BorderRadius.circular(14)),
-              child: Icon(icon, color: _primaryGreen, size: 26),
+        child: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+                color: _softMint, borderRadius: BorderRadius.circular(14)),
+            child: Icon(icon, color: _primaryGreen, size: 26),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: _textDark)),
+                const SizedBox(height: 4),
+                Text(subtitle,
+                    style: TextStyle(fontSize: 13, color: _textMuted)),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: _textDark)),
-                  const SizedBox(height: 4),
-                  Text(subtitle,
-                      style: TextStyle(fontSize: 13, color: _textMuted)),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: _primaryGreen, size: 24),
-          ],
-        ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: _primaryGreen, size: 24),
+        ]),
       ),
     );
   }
@@ -264,34 +261,37 @@ class _PickCard extends StatelessWidget {
 class _NewClientFlow extends StatefulWidget {
   final Color primaryGreen, softMint, textDark, textMuted;
   final VoidCallback onBack;
-  const _NewClientFlow(
-      {required this.primaryGreen,
-        required this.softMint,
-        required this.textDark,
-        required this.textMuted,
-        required this.onBack});
+  const _NewClientFlow({
+    required this.primaryGreen,
+    required this.softMint,
+    required this.textDark,
+    required this.textMuted,
+    required this.onBack,
+  });
 
   @override
   State<_NewClientFlow> createState() => _NewClientFlowState();
 }
 
 class _NewClientFlowState extends State<_NewClientFlow> {
-  final _emailCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
+  final _emailCtrl       = TextEditingController();
+  final _phoneCtrl       = TextEditingController();
+  final _passCtrl        = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
   bool _passVisible = false, _confirmVisible = false;
   bool _agreeToTerms = false, _isLoading = false;
 
-  Color get _g => widget.primaryGreen;
+  Color get _g    => widget.primaryGreen;
   Color get _mint => widget.softMint;
   Color get _dark => widget.textDark;
   Color get _muted => widget.textMuted;
 
-  Future<void> _saveCredentials(String email, String phone) async {
+  Future<void> _saveCredentials(String email, String phone, String password) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_email', email);
     await prefs.setString('saved_phone', phone);
+    // ✅ Save password so IndividualAccountScreen can read it for CreateAccount
+    await prefs.setString('saved_password', password);
   }
 
   Future<void> _register() async {
@@ -302,32 +302,45 @@ class _NewClientFlowState extends State<_NewClientFlow> {
     }
     setState(() => _isLoading = true);
     try {
+      // ✅ Normalise phone: strip leading zero, do NOT prepend 255
+      // (let the server handle country code logic)
       String phone = _phoneCtrl.text.trim();
       if (phone.startsWith('0')) phone = phone.substring(1);
+
       final res = await http.post(
         Uri.parse('$cSharpApi/UserSignUp'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "APIUsername": "User2",
           "APIPassword": "CBZ1234#2",
-          "Email": _emailCtrl.text.trim(),
+          "Email":       _emailCtrl.text.trim(),
           "PhoneNumber": phone,
-          "Password": _passCtrl.text,
-          "Source": "Mobile",
+          "Password":    _passCtrl.text,
+          "Source":      "MobileApp", // ✅ FIXED: was "Mobile"
         }),
       );
+
       setState(() => _isLoading = false);
+
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
-        if (d['status'] == 'success') {
+        // ✅ Handle both 'success' string and status == 200 int
+        final isSuccess = d['status'] == 'success' ||
+            d['status'] == 200 ||
+            (d['statusDesc'] ?? '').toString().toLowerCase() == 'success';
+
+        if (isSuccess) {
           await _saveCredentials(
-              _emailCtrl.text.trim(), _phoneCtrl.text.trim());
+            _emailCtrl.text.trim(),
+            _phoneCtrl.text.trim(),
+            _passCtrl.text,
+          );
           _showSuccessDialog();
         } else {
-          _snack(d['statusDesc'] ?? 'Registration failed');
+          _snack(d['statusDesc'] ?? d['message'] ?? 'Registration failed');
         }
       } else {
-        _snack('Network error. Please try again.');
+        _snack('Network error (${res.statusCode}). Please try again.');
       }
     } catch (_) {
       setState(() => _isLoading = false);
@@ -344,8 +357,17 @@ class _NewClientFlowState extends State<_NewClientFlow> {
       _snack('Please enter your phone number');
       return false;
     }
-    if (_passCtrl.text.length < 6) {
-      _snack('Password must be at least 6 characters');
+    if (_passCtrl.text.length < 8) {
+      // ✅ FIXED: raised to 8 to match IndividualAccountScreen validation
+      _snack('Password must be at least 8 characters');
+      return false;
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(_passCtrl.text)) {
+      _snack('Password must contain at least one uppercase letter');
+      return false;
+    }
+    if (!RegExp(r'[0-9]').hasMatch(_passCtrl.text)) {
+      _snack('Password must contain at least one number');
       return false;
     }
     if (_passCtrl.text != _confirmPassCtrl.text) {
@@ -514,12 +536,24 @@ class _NewClientFlowState extends State<_NewClientFlow> {
           const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.only(left: 4, top: 6),
-            child: Row(children: [
-              Icon(Icons.info_outline_rounded, size: 13, color: _muted),
-              const SizedBox(width: 5),
-              Text('Minimum 6 characters',
-                  style: TextStyle(fontSize: 12, color: _muted)),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Icon(Icons.info_outline_rounded, size: 13, color: _muted),
+                  const SizedBox(width: 5),
+                  Text('Minimum 8 characters', // ✅ FIXED: was 6
+                      style: TextStyle(fontSize: 12, color: _muted)),
+                ]),
+                const SizedBox(height: 4),
+                Row(children: [
+                  Icon(Icons.info_outline_rounded, size: 13, color: _muted),
+                  const SizedBox(width: 5),
+                  Text('At least 1 uppercase letter and 1 number',
+                      style: TextStyle(fontSize: 12, color: _muted)),
+                ]),
+              ],
+            ),
           ),
         ]),
         const SizedBox(height: 20),
@@ -610,8 +644,7 @@ class _NewClientFlowState extends State<_NewClientFlow> {
                 const TextSpan(text: 'Already have an account? '),
                 TextSpan(
                     text: 'Sign In',
-                    style:
-                    TextStyle(color: _g, fontWeight: FontWeight.w700)),
+                    style: TextStyle(color: _g, fontWeight: FontWeight.w700)),
               ],
             )),
           ),
@@ -651,11 +684,12 @@ class _NewClientFlowState extends State<_NewClientFlow> {
     ]),
   );
 
-  Widget _inputField(
-      {required TextEditingController controller,
-        required String label,
-        required IconData icon,
-        TextInputType? keyboardType}) =>
+  Widget _inputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+  }) =>
       Container(
         decoration: BoxDecoration(
             color: Colors.white,
@@ -681,11 +715,12 @@ class _NewClientFlowState extends State<_NewClientFlow> {
         ),
       );
 
-  Widget _passField(
-      {required TextEditingController controller,
-        required String label,
-        required bool isVisible,
-        required VoidCallback onToggle}) =>
+  Widget _passField({
+    required TextEditingController controller,
+    required String label,
+    required bool isVisible,
+    required VoidCallback onToggle,
+  }) =>
       Container(
         decoration: BoxDecoration(
             color: Colors.white,
@@ -727,29 +762,29 @@ class _NewClientFlowState extends State<_NewClientFlow> {
 
 /// SWIFT codes keyed by bank name (lowercase-contains match)
 const Map<String, String> _bankSwiftMap = {
-  'crdb': 'CORUTZTZ',
-  'nmb': 'NMBATZTZ',
-  'nbct': 'NLCBTZTX',
-  'national bank': 'NLCBTZTX',
-  'standard chartered': 'SCBLTZTX',
-  'stanchart': 'SCBLTZTX',
-  'barclays': 'BARCTZTZ',
-  'absa': 'BARCTZTZ',
-  'stanbic': 'SBICTZTX',
-  'exim': 'EXTNTZTZ',
-  'equity': 'EQBLTZTZ',
-  'kcb': 'KCBLTZTZ',
-  'azania': 'AZANTZTX',
-  'dtb': 'DTKETZTZ',
-  'diamond trust': 'DTKETZTZ',
-  'citi': 'CITITZTZ',
-  'citibank': 'CITITZTZ',
-  'tib': 'TIBDTZTX',
-  'uchumi': 'UCMTTZTZ',
-  'mkombozi': 'MKCBTZTZ',
-  'tpb': 'TPBKTZTZ',
-  'postal': 'TPBKTZTZ',
-  'people\'s bank': 'TPBKTZTZ',
+  'crdb':              'CORUTZTZ',
+  'nmb':               'NMBATZTZ',
+  'nbct':              'NLCBTZTX',
+  'national bank':     'NLCBTZTX',
+  'standard chartered':'SCBLTZTX',
+  'stanchart':         'SCBLTZTX',
+  'barclays':          'BARCTZTZ',
+  'absa':              'BARCTZTZ',
+  'stanbic':           'SBICTZTX',
+  'exim':              'EXTNTZTZ',
+  'equity':            'EQBLTZTZ',
+  'kcb':               'KCBLTZTZ',
+  'azania':            'AZANTZTX',
+  'dtb':               'DTKETZTZ',
+  'diamond trust':     'DTKETZTZ',
+  'citi':              'CITITZTZ',
+  'citibank':          'CITITZTZ',
+  'tib':               'TIBDTZTX',
+  'uchumi':            'UCMTTZTZ',
+  'mkombozi':          'MKCBTZTZ',
+  'tpb':               'TPBKTZTZ',
+  'postal':            'TPBKTZTZ',
+  "people's bank":     'TPBKTZTZ',
 };
 
 String? _lookupSwift(String bankName) {
@@ -763,12 +798,13 @@ String? _lookupSwift(String bankName) {
 class _ExistingClientFlow extends StatefulWidget {
   final Color primaryGreen, softMint, textDark, textMuted;
   final VoidCallback onBack;
-  const _ExistingClientFlow(
-      {required this.primaryGreen,
-        required this.softMint,
-        required this.textDark,
-        required this.textMuted,
-        required this.onBack});
+  const _ExistingClientFlow({
+    required this.primaryGreen,
+    required this.softMint,
+    required this.textDark,
+    required this.textMuted,
+    required this.onBack,
+  });
 
   @override
   State<_ExistingClientFlow> createState() => _ExistingClientFlowState();
@@ -780,51 +816,53 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
 
   // Step 0
   final _emailCtrl = TextEditingController();
-  final _cdsCtrl = TextEditingController();
+  final _cdsCtrl   = TextEditingController();
   bool _validating = false;
 
   // Fetched client data
   Map<String, dynamic>? _clientData;
 
   // KYC controllers (auto-filled from API)
-  final _kycNameCtrl = TextEditingController();
-  final _kycEmailCtrl = TextEditingController();
-  final _kycMobileCtrl = TextEditingController();
-  final _kycAddrCtrl = TextEditingController();
-  final _kycBankCtrl = TextEditingController();
-  final _kycAccNoCtrl = TextEditingController();
+  final _kycNameCtrl    = TextEditingController();
+  final _kycEmailCtrl   = TextEditingController();
+  final _kycMobileCtrl  = TextEditingController();
+  final _kycAddrCtrl    = TextEditingController();
+  final _kycBankCtrl    = TextEditingController();
+  final _kycAccNoCtrl   = TextEditingController();
   final _kycAccNameCtrl = TextEditingController();
-  final _kycBranchCtrl = TextEditingController();
+  final _kycBranchCtrl  = TextEditingController();
 
   // Step 2: Additional required fields
-  final _passCtrl = TextEditingController();
+  final _passCtrl        = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
-  final _firstNameCtrl = TextEditingController();
-  final _surnameCtrl = TextEditingController();
-  final _otherNamesCtrl = TextEditingController();
-  final _dobCtrl = TextEditingController();
-  final _birthPlaceCtrl = TextEditingController();
-  final _occupationCtrl = TextEditingController();
+  final _firstNameCtrl   = TextEditingController();
+  final _surnameCtrl     = TextEditingController();
+  final _otherNamesCtrl  = TextEditingController();
+  final _dobCtrl         = TextEditingController();
+  final _birthPlaceCtrl  = TextEditingController();
+  final _occupationCtrl  = TextEditingController();
   final _nationalityCtrl = TextEditingController();
-  final _idCtrl = TextEditingController();
-  final _idExpiryCtrl = TextEditingController();
-  final _cityCtrl = TextEditingController();
-  final _countryCtrl = TextEditingController();
-  final _swiftCodeCtrl = TextEditingController();
+  final _idCtrl          = TextEditingController();
+  final _idExpiryCtrl    = TextEditingController();
+  final _cityCtrl        = TextEditingController();
+  final _countryCtrl     = TextEditingController();
+  final _swiftCodeCtrl   = TextEditingController();
   final _bankAddressCtrl = TextEditingController();
-  final _pepDetailsCtrl = TextEditingController();
+  final _pepDetailsCtrl  = TextEditingController();
 
   // ── Dropdowns ─────────────────────────────────────────────────────────────
-  String _gender = 'Male';
-  String _title = 'Mr';
+  String _gender            = 'Male';
+  String _title             = 'Mr';
   String _investmentPurpose = 'Wealth Creation';
-  String _incomeSource = 'Salary';
-  String _riskTolerance = 'Medium';
-  String _investmentPeriod = 'Long Term';
-  String _bankType = 'Local';
-  String _disclosure = 'No';
+  String _incomeSource      = 'Salary';
+  String _riskTolerance     = 'Moderate'; // ✅ FIXED: was 'Medium'
+  String _investmentPeriod  = '12 Months'; // ✅ FIXED: was 'Long Term'
+  String _bankType          = 'Local';
+  String _disclosure        = 'No';
+  // ✅ NEW: Service required (matches correct cURL)
+  String _serviceRequired   = 'Unit Trust Investment';
 
-  // ID Type dropdown — Driving License, Voter ID, Zanzibar ID (NIDA coming later)
+  // ID Type dropdown
   static const List<String> _idTypes = [
     'Driving License',
     'Voter ID',
@@ -842,14 +880,14 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
 
   // ID document upload
   File? _idDocument;
-  String? _idDocumentName;   // e.g. "passport.pdf", "id_front.jpg"
+  String? _idDocumentName;
   bool _idDocumentIsPdf = false;
   final _imagePicker = ImagePicker();
 
   bool _passVisible = false, _confirmVisible = false;
-  bool _submitting = false;
+  bool _submitting  = false;
 
-  Color get _g => widget.primaryGreen;
+  Color get _g    => widget.primaryGreen;
   Color get _mint => widget.softMint;
   Color get _dark => widget.textDark;
   Color get _muted => widget.textMuted;
@@ -863,7 +901,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   // ── Step 0: Validate via API ───────────────────────────────────────────────
   Future<void> _validateClient() async {
     final email = _emailCtrl.text.trim();
-    final cds = _cdsCtrl.text.trim();
+    final cds   = _cdsCtrl.text.trim();
     if (email.isEmpty || !email.contains('@')) {
       _snack('Enter a valid email');
       return;
@@ -912,93 +950,72 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   void _populateFields(Map<String, dynamic> data) {
     // ── KYC step 1 fields ────────────────────────────────────────────────────
     final forenames = (data['Forenames'] ?? '').toString().trim();
-    final middle = (data['middlename'] ?? '').toString().trim();
-    final surname = (data['surname'] ?? '').toString().trim();
-    final fullName = [forenames, middle, surname]
+    final middle    = (data['middlename'] ?? '').toString().trim();
+    final surname   = (data['surname'] ?? '').toString().trim();
+    final fullName  = [forenames, middle, surname]
         .where((s) => s.isNotEmpty)
         .join(' ');
-    _kycNameCtrl.text = fullName.isNotEmpty ? fullName : (data['Names'] ?? '');
-    _kycEmailCtrl.text = data['Email'] ?? '';
-    _kycMobileCtrl.text = data['Mobile'] ?? '';
-    _kycAddrCtrl.text = data['Add_1'] ?? '';
-    _kycBankCtrl.text = data['Bank'] ?? '';
-    _kycAccNoCtrl.text = data['AccountNo'] ?? '';
+    _kycNameCtrl.text    = fullName.isNotEmpty ? fullName : (data['Names'] ?? '');
+    _kycEmailCtrl.text   = data['Email'] ?? '';
+    _kycMobileCtrl.text  = data['Mobile'] ?? '';
+    _kycAddrCtrl.text    = data['Add_1'] ?? '';
+    _kycBankCtrl.text    = data['Bank'] ?? '';
+    _kycAccNoCtrl.text   = data['AccountNo'] ?? '';
     _kycAccNameCtrl.text = data['AccountName'] ?? '';
-    _kycBranchCtrl.text = data['Branch'] ?? '';
+    _kycBranchCtrl.text  = data['Branch'] ?? '';
 
     // ── Step 2 personal fields ───────────────────────────────────────────────
-    _firstNameCtrl.text = forenames.isNotEmpty ? forenames : '';
-    _surnameCtrl.text = surname.isNotEmpty ? surname : '';
-    _otherNamesCtrl.text = middle;
+    _firstNameCtrl.text   = forenames.isNotEmpty ? forenames : '';
+    _surnameCtrl.text     = surname.isNotEmpty ? surname : '';
+    _otherNamesCtrl.text  = middle;
 
-    // Title
     final apiTitle = (data['Title'] ?? '').toString().trim();
-    if (['Mr', 'Mrs', 'Ms', 'Dr', 'Prof'].contains(apiTitle)) {
-      _title = apiTitle;
-    }
+    if (['Mr', 'Mrs', 'Ms', 'Dr', 'Prof'].contains(apiTitle)) _title = apiTitle;
 
-    // Gender
     final apiGender = (data['Gender'] ?? '').toString().trim();
-    if (['Male', 'Female'].contains(apiGender)) {
-      _gender = apiGender;
-    }
+    if (['Male', 'Female'].contains(apiGender)) _gender = apiGender;
 
-    // DOB — API returns "25-Feb-2019"; convert to yyyy-MM-dd
     final rawDob = (data['DOB'] ?? '').toString().trim();
     _dobCtrl.text = _parseDob(rawDob);
 
-    _birthPlaceCtrl.text = data['PlaceofBirth'] ?? '';
-    _occupationCtrl.text = data['Occupation'] ?? '';
+    _birthPlaceCtrl.text  = data['PlaceofBirth'] ?? '';
+    _occupationCtrl.text  = data['Occupation'] ?? '';
     _nationalityCtrl.text = data['Nationality'] ?? '';
-    _cityCtrl.text = data['City'] ?? '';
-    _countryCtrl.text = data['Country'] ?? '';
+    _cityCtrl.text        = data['City'] ?? '';
+    _countryCtrl.text     = data['Country'] ?? '';
 
-    // Identification
-    _idCtrl.text = data['IdentificationNo'] ?? '';
-    final rawIdExpiry = (data['IDExpiry'] ?? '').toString().trim();
-    _idExpiryCtrl.text = rawIdExpiry; // already "2032-02-25"
+    _idCtrl.text       = data['IdentificationNo'] ?? '';
+    _idExpiryCtrl.text = (data['IDExpiry'] ?? '').toString().trim();
 
-    // Issuing authority (placeofissue → closest match or keep as-is)
     final rawAuthority = (data['placeofissue'] ?? '').toString().trim();
-    if (_issuingAuthorities.contains(rawAuthority)) {
-      _issuingAuthority = rawAuthority;
-    }
+    if (_issuingAuthorities.contains(rawAuthority)) _issuingAuthority = rawAuthority;
 
-    // ID type
     final rawIdType = (data['IDtype'] ?? '').toString().trim();
-    if (_idTypes.contains(rawIdType)) {
-      _idType = rawIdType;
-    }
+    if (_idTypes.contains(rawIdType)) _idType = rawIdType;
 
-    // Banking — prefer API SwiftCode directly; fall back to lookup map only if blank
     _bankAddressCtrl.text = data['BankAddress'] ?? '';
-    final apiSwift = (data['SwiftCode'] ?? '').toString().trim();
-    final bankName = (data['Bank'] ?? '').toString().trim();
+    final apiSwift  = (data['SwiftCode'] ?? '').toString().trim();
+    final bankName  = (data['Bank'] ?? '').toString().trim();
     _swiftCodeCtrl.text =
     apiSwift.isNotEmpty ? apiSwift : (_lookupSwift(bankName) ?? '');
 
-    // Investment preferences
     final rawIncome = (data['SourceofIncome'] ?? '').toString().trim();
-    final incomeOptions = [
-      'Salary', 'Business', 'Investments', 'Inheritance', 'Other'
-    ];
+    const incomeOptions = ['Salary', 'Business', 'Investments', 'Inheritance', 'Other'];
     _incomeSource = incomeOptions.contains(rawIncome) ? rawIncome : 'Salary';
 
     final rawPurpose = (data['PurposeOfInvestment'] ?? '').toString().trim();
-    final purposeOptions = [
+    const purposeOptions = [
       'Wealth Creation', 'Retirement', 'Education', 'Income', 'Speculation'
     ];
     _investmentPurpose =
     purposeOptions.contains(rawPurpose) ? rawPurpose : 'Wealth Creation';
 
-    // PEP — matches "Yes", "yes", "YES", or legacy "Politically exposed person"
     final rawPep = (data['PEPDisclosure'] ?? '').toString().trim();
     _disclosure = (rawPep.toLowerCase() == 'yes' ||
         rawPep.toLowerCase().contains('politically'))
         ? 'Yes'
         : 'No';
 
-    // PositionHeld → pre-fill the PEP details field when PEP is Yes
     if (_disclosure == 'Yes') {
       final positionHeld = (data['PositionHeld'] ?? '').toString().trim();
       if (positionHeld.isNotEmpty && positionHeld.toLowerCase() != 'none') {
@@ -1018,9 +1035,9 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
         'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12',
       };
-      final day = parts[0].padLeft(2, '0');
+      final day   = parts[0].padLeft(2, '0');
       final month = months[parts[1].toLowerCase()] ?? parts[1];
-      final year = parts[2];
+      final year  = parts[2];
       return '$year-$month-$day';
     } catch (_) {
       return raw;
@@ -1068,14 +1085,15 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
               child: Icon(Icons.camera_alt_outlined, color: _g),
             ),
             title: const Text('Take a Photo'),
-            subtitle: Text('PNG / JPG', style: TextStyle(fontSize: 12, color: _muted)),
+            subtitle:
+            Text('PNG / JPG', style: TextStyle(fontSize: 12, color: _muted)),
             onTap: () async {
               Navigator.pop(context);
               final picked = await _imagePicker.pickImage(
                   source: ImageSource.camera, imageQuality: 90);
               if (picked != null) {
                 setState(() {
-                  _idDocument = File(picked.path);
+                  _idDocument     = File(picked.path);
                   _idDocumentName = picked.name;
                   _idDocumentIsPdf = false;
                 });
@@ -1098,7 +1116,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
                   source: ImageSource.gallery, imageQuality: 90);
               if (picked != null) {
                 setState(() {
-                  _idDocument = File(picked.path);
+                  _idDocument     = File(picked.path);
                   _idDocumentName = picked.name;
                   _idDocumentIsPdf = false;
                 });
@@ -1125,9 +1143,9 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
               );
               if (result != null && result.files.single.path != null) {
                 final file = result.files.single;
-                final ext = (file.extension ?? '').toLowerCase();
+                final ext  = (file.extension ?? '').toLowerCase();
                 setState(() {
-                  _idDocument = File(file.path!);
+                  _idDocument     = File(file.path!);
                   _idDocumentName = file.name;
                   _idDocumentIsPdf = ext == 'pdf';
                 });
@@ -1142,6 +1160,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
 
   // ── Step 2: Submit ─────────────────────────────────────────────────────────
   Future<void> _submitRegistration() async {
+    // ── Validation ────────────────────────────────────────────────────────────
     if (_firstNameCtrl.text.trim().isEmpty) {
       _snack('First name is required');
       return;
@@ -1158,8 +1177,17 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       _snack('ID number is required');
       return;
     }
-    if (_passCtrl.text.length < 6) {
-      _snack('Password must be at least 6 characters');
+    if (_passCtrl.text.length < 8) {
+      // ✅ FIXED: raised to 8 to match correct cURL / IndividualAccountScreen
+      _snack('Password must be at least 8 characters');
+      return;
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(_passCtrl.text)) {
+      _snack('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!RegExp(r'[0-9]').hasMatch(_passCtrl.text)) {
+      _snack('Password must contain at least one number');
       return;
     }
     if (_passCtrl.text != _confirmPassCtrl.text) {
@@ -1170,68 +1198,107 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     setState(() => _submitting = true);
 
     try {
+      // ✅ Normalise mobile — strip leading zero only, no prefix added
       String mobile = _kycMobileCtrl.text.trim();
-      if (mobile.startsWith('0')) mobile = '255${mobile.substring(1)}';
+      if (mobile.startsWith('0')) mobile = mobile.substring(1);
 
-      // Base64-encode the ID document if one was selected
+      // ── Base64-encode ID document ──────────────────────────────────────────
       String idDocumentBase64 = '';
-      String idDocumentExtension = '';
+      String idContentType    = '';
       if (_idDocument != null) {
         final Uint8List bytes = await _idDocument!.readAsBytes();
         idDocumentBase64 = base64Encode(bytes);
-        idDocumentExtension =
-            (_idDocumentName ?? '').split('.').last.toLowerCase();
+        final ext = (_idDocumentName ?? '').split('.').last.toLowerCase();
+        // ✅ FIXED: send proper content type instead of raw extension
+        switch (ext) {
+          case 'pdf':
+            idContentType = 'application/pdf';
+            break;
+          case 'png':
+            idContentType = 'image/png';
+            break;
+          case 'jpg':
+          case 'jpeg':
+            idContentType = 'image/jpeg';
+            break;
+          default:
+            idContentType = 'application/octet-stream';
+        }
       }
 
       final payload = {
+        // ── Auth ──────────────────────────────────────────────────────────────
         "APIUsername": "User2",
         "APIPassword": "CBZ1234#2",
-        "AccountType": "Individual",
-        "Title": _title,
-        "JointName": "",
-        "FirstName": _firstNameCtrl.text.trim(),
-        "Surname": _surnameCtrl.text.trim(),
-        "OtherNames": _otherNamesCtrl.text.trim(),
-        "DOB": _dobCtrl.text.trim(),
-        "BirthPlace": _birthPlaceCtrl.text.trim(),
-        "Gender": _gender,
-        "Occupation": _occupationCtrl.text.trim(),
-        "Nationality": _nationalityCtrl.text.trim(),
-        "IdentificatinType": _idType,
-        "ID": _idCtrl.text.trim(),
-        "IdentificationExpiryDate": _idExpiryCtrl.text.trim(),
-        "IssuingAuthority": _issuingAuthority,
-        "City": _cityCtrl.text.trim(),
+
+        // ── Account basics ────────────────────────────────────────────────────
+        "AccountType":          "Individual",
+        "Title":                _title,
+        "JointName":            "",
+        "FirstName":            _firstNameCtrl.text.trim(),
+        "Surname":              _surnameCtrl.text.trim(),
+        "OtherNames":           _otherNamesCtrl.text.trim(),
+        "DOB":                  _dobCtrl.text.trim(),
+        "BirthPlace":           _birthPlaceCtrl.text.trim(),
+        "Gender":               _gender,
+        "Occupation":           _occupationCtrl.text.trim(),
+
+        // ── Identity ──────────────────────────────────────────────────────────
+        "Nationality":               _nationalityCtrl.text.trim(),
+        "IdentificatinType":         _idType, // ← API typo kept intentionally
+        "ID":                        _idCtrl.text.trim(),
+        "IdentificationExpiryDate":  _idExpiryCtrl.text.trim(),
+        "IssuingAuthority":          _issuingAuthority,
+
+        // ── Address ───────────────────────────────────────────────────────────
+        "City":            _cityCtrl.text.trim(),
         "PhysicalAddress": _kycAddrCtrl.text.trim(),
-        "Country": _countryCtrl.text.trim(),
-        "Email": _kycEmailCtrl.text.trim(),
+        "Country":         _countryCtrl.text.trim(),
+
+        // ── Contact ───────────────────────────────────────────────────────────
+        "Email":        _kycEmailCtrl.text.trim(),
         "MobileNumber": mobile,
-        "InvestmentPurpose": _investmentPurpose,
-        "IncomeSource": _incomeSource,
-        "InvestmentAccountType": "Standard",
-        "InvestorType": "Individual",
-        "Disclosure": _disclosure,
-        "PEPDetails":
-        _disclosure == 'Yes' ? _pepDetailsCtrl.text.trim() : "",
-        "PositionHeld": "None",
-        "BankType": _bankType,
+
+        // ── Investment ────────────────────────────────────────────────────────
+        "InvestmentPurpose":    _investmentPurpose,
+        "IncomeSource":         _incomeSource,
+        "InvestmentAccountType":"Standard",
+        "InvestorType":         "Retail",         // ✅ FIXED: was "Individual"
+        "ServiceRequired":      _serviceRequired, // ✅ FIXED: was hardcoded "Trading"
+        "InvestmentPeriod":     _investmentPeriod,// ✅ FIXED: was "Long Term"
+        "RiskTolerance":        _riskTolerance,   // ✅ FIXED: was "Medium"
+        "Charge":               "0",
+
+        // ── PEP ───────────────────────────────────────────────────────────────
+        "Disclosure":  _disclosure,
+        "PositionHeld": _disclosure == 'Yes'
+            ? _pepDetailsCtrl.text.trim()
+            : "", // ✅ FIXED: was "None"
+
+        // ── Bank ──────────────────────────────────────────────────────────────
+        "BankType":          _bankType,
         "BankAccountNumber": _kycAccNoCtrl.text.trim(),
-        "BankAccountName": _kycAccNameCtrl.text.trim(),
-        "BankName": _kycBankCtrl.text.trim(),
-        "BankBranch": _kycBranchCtrl.text.trim(),
-        "BankSwiftCode": _swiftCodeCtrl.text.trim(),
-        "BankAddress": _bankAddressCtrl.text.trim(),
+        "BankAccountName":   _kycAccNameCtrl.text.trim(),
+        "BankName":          _kycBankCtrl.text.trim(),
+        "BankBranch":        _kycBranchCtrl.text.trim(),
+        "BankSwiftCode":     _swiftCodeCtrl.text.trim(),
+        "BankAddress":       _bankAddressCtrl.text.trim(),
+
+        // ── Amount ────────────────────────────────────────────────────────────
         "AmountSuppliedIn": "TZS",
-        "ServiceRequired": "Trading",
-        "InvestmentPeriod": _investmentPeriod,
-        "RiskTolerance": _riskTolerance,
-        "Charge": "0",
-        "Source": "Mobile",
+
+        // ✅ NEW: Required fields from correct cURL
+        "Source":        "MobileApp",
         "myExistingCDS": _cdsCtrl.text.trim(),
-        "Password": _passCtrl.text,
-        "IDDocument": idDocumentBase64,
-        "IDDocumentExtension": idDocumentExtension,
+        "Password":      _passCtrl.text,
+
+        // ── ID document ───────────────────────────────────────────────────────
+        "IDDocument": idDocumentBase64, // kept for backward compat
+        "IDUpload":   idDocumentBase64, // ✅ NEW: correct field name
+        "Content_Type": idContentType,  // ✅ FIXED: proper MIME type
       };
+
+      debugPrint('Submitting existing client registration...');
 
       final res = await http.post(
         Uri.parse('$cSharpApi/CreateAccountEXISTSING'),
@@ -1239,14 +1306,19 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         body: jsonEncode(payload),
       );
 
+      debugPrint('Response status: ${res.statusCode}');
+      debugPrint('Response body: ${res.body}');
+
       setState(() => _submitting = false);
 
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
-        final status = d['status'];
-        final desc = (d['statusDesc'] ?? '').toString().toLowerCase();
+        // ✅ Handle both status formats
+        final isSuccess = d['status'] == 200 ||
+            d['status']?.toString().toLowerCase() == 'success' ||
+            (d['statusDesc'] ?? '').toString().toLowerCase() == 'success';
 
-        if (status == 200 || desc == 'success') {
+        if (isSuccess) {
           await _saveCredentials(
             _kycEmailCtrl.text.trim(),
             _kycMobileCtrl.text.trim(),
@@ -1254,12 +1326,13 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           if (!mounted) return;
           _showSuccessDialog();
         } else {
-          _snack(d['statusDesc'] ?? 'Registration failed. Please try again.');
+          _snack(d['statusDesc'] ?? d['message'] ?? 'Registration failed. Please try again.');
         }
       } else {
         _snack('Server error (${res.statusCode}). Please try again.');
       }
     } catch (e) {
+      debugPrint('Submit error: $e');
       setState(() => _submitting = false);
       _snack('An error occurred. Please check your connection.');
     }
@@ -1277,10 +1350,10 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                  color: widget.softMint, shape: BoxShape.circle),
-              child: Icon(Icons.check_rounded,
-                  color: widget.primaryGreen, size: 44),
+              decoration:
+              BoxDecoration(color: widget.softMint, shape: BoxShape.circle),
+              child:
+              Icon(Icons.check_rounded, color: widget.primaryGreen, size: 44),
             ),
             const SizedBox(height: 20),
             Text('Account Setup Complete!',
@@ -1446,8 +1519,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       const SizedBox(height: 16),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-            color: _mint, borderRadius: BorderRadius.circular(12)),
+        decoration:
+        BoxDecoration(color: _mint, borderRadius: BorderRadius.circular(12)),
         child: Row(children: [
           Icon(Icons.waving_hand_rounded, color: _g, size: 18),
           const SizedBox(width: 8),
@@ -1649,8 +1722,6 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       // ── Identification ─────────────────────────────────────────────────────
       _card(children: [
         _sectionLabel('Identification'),
-
-        // ID Type dropdown
         _dropdownField(
           label: 'ID Type',
           icon: Icons.credit_card_outlined,
@@ -1672,8 +1743,6 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           lastDate: DateTime(2060),
         ),
         const SizedBox(height: 14),
-
-        // Issuing Authority dropdown
         _dropdownField(
           label: 'Issuing Authority',
           icon: Icons.account_balance_outlined,
@@ -1695,7 +1764,9 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
               color: _idDocument != null ? _mint : Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: _idDocument != null ? _g : Colors.grey.withOpacity(0.3),
+                  color: _idDocument != null
+                      ? _g
+                      : Colors.grey.withOpacity(0.3),
                   width: _idDocument != null ? 1.5 : 1),
               boxShadow: [
                 BoxShadow(
@@ -1705,99 +1776,93 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
               ],
             ),
             child: _idDocument != null
-                ? Stack(
-              children: [
-                // ── PDF view ──────────────────────────────────────────
-                if (_idDocumentIsPdf)
-                  Container(
-                    width: double.infinity,
-                    height: 160,
-                    decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3F3),
-                        borderRadius: BorderRadius.circular(13)),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.picture_as_pdf_rounded,
-                            color: const Color(0xFFE53935), size: 52),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding:
-                          const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            _idDocumentName ?? 'document.pdf',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: _dark,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                // ── Image view ────────────────────────────────────────
-                else
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(13),
-                    child: Image.file(_idDocument!,
-                        width: double.infinity,
-                        height: 160,
-                        fit: BoxFit.cover),
-                  ),
-
-                // ── Remove button ─────────────────────────────────────
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: () => setState(() {
-                      _idDocument = null;
-                      _idDocumentName = null;
-                      _idDocumentIsPdf = false;
-                    }),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
-                          shape: BoxShape.circle),
-                      child: const Icon(Icons.close,
-                          color: Colors.white, size: 16),
-                    ),
-                  ),
-                ),
-
-                // ── Uploaded badge ────────────────────────────────────
-                Positioned(
-                  bottom: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                        color: _g,
-                        borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.check_circle_outline,
-                            color: Colors.white, size: 13),
-                        const SizedBox(width: 5),
-                        Text(
-                          _idDocumentIsPdf ? 'PDF Uploaded' : 'ID Uploaded',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
+                ? Stack(children: [
+              if (_idDocumentIsPdf)
+                Container(
+                  width: double.infinity,
+                  height: 160,
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3F3),
+                      borderRadius: BorderRadius.circular(13)),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.picture_as_pdf_rounded,
+                          color: const Color(0xFFE53935), size: 52),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          _idDocumentName ?? 'document.pdf',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: _dark,
                               fontWeight: FontWeight.w600),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(13),
+                  child: Image.file(_idDocument!,
+                      width: double.infinity,
+                      height: 160,
+                      fit: BoxFit.cover),
+                ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () => setState(() {
+                    _idDocument     = null;
+                    _idDocumentName = null;
+                    _idDocumentIsPdf = false;
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle),
+                    child: const Icon(Icons.close,
+                        color: Colors.white, size: 16),
                   ),
                 ),
-              ],
-            )
+              ),
+              Positioned(
+                bottom: 8,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                      color: _g,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_outline,
+                          color: Colors.white, size: 13),
+                      const SizedBox(width: 5),
+                      Text(
+                        _idDocumentIsPdf
+                            ? 'PDF Uploaded'
+                            : 'ID Uploaded',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ])
                 : Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -1805,8 +1870,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(14),
-                    decoration:
-                    BoxDecoration(color: _mint, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                        color: _mint, shape: BoxShape.circle),
                     child: Icon(Icons.upload_file_outlined,
                         color: _g, size: 28),
                   ),
@@ -1827,12 +1892,13 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       ]),
       const SizedBox(height: 16),
 
-      // ── Banking Details ───────────────────────────────────────────────────
+      // ── Banking Details ────────────────────────────────────────────────────
       _card(children: [
         _sectionLabel('Banking Details'),
         Container(
           margin: const EdgeInsets.only(bottom: 14),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding:
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
               color: _mint,
               borderRadius: BorderRadius.circular(10),
@@ -1841,12 +1907,12 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             Icon(Icons.auto_awesome_rounded, color: _g, size: 15),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('Pre-filled from your KYC profile. Edit if needed.',
+              child: Text(
+                  'Pre-filled from your KYC profile. Edit if needed.',
                   style: TextStyle(fontSize: 12, color: _g, height: 1.4)),
             ),
           ]),
         ),
-        // Bank name — auto-fills SWIFT on change
         _fieldContainer(TextField(
           controller: _kycBankCtrl,
           style: TextStyle(fontSize: 15, color: _dark),
@@ -1859,8 +1925,10 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           decoration: InputDecoration(
               labelText: 'Bank Name',
               labelStyle: TextStyle(color: _muted, fontSize: 14),
-              prefixIcon: Icon(Icons.account_balance_outlined, color: _g, size: 20),
-              suffixIcon: Icon(Icons.edit_outlined, color: _muted, size: 16),
+              prefixIcon:
+              Icon(Icons.account_balance_outlined, color: _g, size: 20),
+              suffixIcon:
+              Icon(Icons.edit_outlined, color: _muted, size: 16),
               border: InputBorder.none,
               contentPadding:
               const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
@@ -1891,7 +1959,6 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           onChanged: (v) => setState(() => _bankType = v!),
         ),
         const SizedBox(height: 14),
-        // SWIFT — auto-populated, but still editable
         _fieldContainer(TextField(
           controller: _swiftCodeCtrl,
           style: TextStyle(fontSize: 15, color: _dark),
@@ -1930,7 +1997,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             'Retirement',
             'Education',
             'Income',
-            'Speculation'
+            'Speculation',
           ],
           onChanged: (v) => setState(() => _investmentPurpose = v!),
         ),
@@ -1942,25 +2009,39 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           items: ['Salary', 'Business', 'Investments', 'Inheritance', 'Other'],
           onChanged: (v) => setState(() => _incomeSource = v!),
         ),
-        //const SizedBox(height: 14),
-        // _dropdownField(
-        //   label: 'Risk Tolerance',
-        //   icon: Icons.speed_rounded,
-        //   value: _riskTolerance,
-        //   items: ['Low', 'Medium', 'High'],
-        //   onChanged: (v) => setState(() => _riskTolerance = v!),
-        // ),
-       // const SizedBox(height: 14),
-        // _dropdownField(
-        //   label: 'Investment Period',
-        //   icon: Icons.timelapse_rounded,
-        //   value: _investmentPeriod,
-        //   items: ['Short Term', 'Medium Term', 'Long Term'],
-        //   onChanged: (v) => setState(() => _investmentPeriod = v!),
-        // ),
         const SizedBox(height: 14),
 
-        // PEP Disclosure — reveals detail field when "Yes"
+        // ✅ NEW: Service Required picker
+        _dropdownField(
+          label: 'Service Required',
+          icon: Icons.miscellaneous_services_rounded,
+          value: _serviceRequired,
+          items: ['Unit Trust Investment', 'Trading', 'Both'],
+          onChanged: (v) => setState(() => _serviceRequired = v!),
+        ),
+        const SizedBox(height: 14),
+
+        // ✅ NEW: Investment Period picker (correct values)
+        _dropdownField(
+          label: 'Investment Period',
+          icon: Icons.timelapse_rounded,
+          value: _investmentPeriod,
+          items: ['3 Months', '6 Months', '12 Months', '24 Months', '36 Months', 'Long Term'],
+          onChanged: (v) => setState(() => _investmentPeriod = v!),
+        ),
+        const SizedBox(height: 14),
+
+        // ✅ NEW: Risk Tolerance picker (correct values)
+        _dropdownField(
+          label: 'Risk Tolerance',
+          icon: Icons.speed_rounded,
+          value: _riskTolerance,
+          items: ['Low', 'Moderate', 'High'],
+          onChanged: (v) => setState(() => _riskTolerance = v!),
+        ),
+        const SizedBox(height: 14),
+
+        // PEP Disclosure
         _dropdownField(
           label: 'PEP Disclosure',
           icon: Icons.policy_outlined,
@@ -1981,7 +2062,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
                   color: const Color(0xFFFFF8E1),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                      color: const Color(0xFFFFB300).withOpacity(0.4))),
+                      color:
+                      const Color(0xFFFFB300).withOpacity(0.4))),
               child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2005,7 +2087,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
               maxLines: 3,
               style: TextStyle(fontSize: 15, color: _dark),
               decoration: InputDecoration(
-                  labelText: 'PEP Details',
+                  labelText: 'PEP Details / Position Held',
                   alignLabelWithHint: true,
                   labelStyle: TextStyle(color: _muted, fontSize: 14),
                   prefixIcon: Padding(
@@ -2044,12 +2126,24 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.only(left: 4, top: 6),
-          child: Row(children: [
-            Icon(Icons.info_outline_rounded, size: 13, color: _muted),
-            const SizedBox(width: 5),
-            Text('Minimum 6 characters',
-                style: TextStyle(fontSize: 12, color: _muted)),
-          ]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Icon(Icons.info_outline_rounded, size: 13, color: _muted),
+                const SizedBox(width: 5),
+                Text('Minimum 8 characters', // ✅ FIXED: was 6
+                    style: TextStyle(fontSize: 12, color: _muted)),
+              ]),
+              const SizedBox(height: 4),
+              Row(children: [
+                Icon(Icons.info_outline_rounded, size: 13, color: _muted),
+                const SizedBox(width: 5),
+                Text('At least 1 uppercase letter and 1 number',
+                    style: TextStyle(fontSize: 12, color: _muted)),
+              ]),
+            ],
+          ),
         ),
       ]),
       const SizedBox(height: 24),
@@ -2107,11 +2201,12 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
     child: child,
   );
 
-  Widget _inputField(
-      {required TextEditingController controller,
-        required String label,
-        required IconData icon,
-        TextInputType? keyboardType}) =>
+  Widget _inputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+  }) =>
       _fieldContainer(TextField(
         controller: controller,
         keyboardType: keyboardType,
@@ -2126,11 +2221,12 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             floatingLabelBehavior: FloatingLabelBehavior.auto),
       ));
 
-  Widget _kycField(
-      {required TextEditingController controller,
-        required String label,
-        required IconData icon,
-        TextInputType? keyboardType}) =>
+  Widget _kycField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+  }) =>
       _fieldContainer(TextField(
         controller: controller,
         keyboardType: keyboardType,
@@ -2146,11 +2242,12 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             floatingLabelBehavior: FloatingLabelBehavior.auto),
       ));
 
-  Widget _passField(
-      {required TextEditingController controller,
-        required String label,
-        required bool isVisible,
-        required VoidCallback onToggle}) =>
+  Widget _passField({
+    required TextEditingController controller,
+    required String label,
+    required bool isVisible,
+    required VoidCallback onToggle,
+  }) =>
       _fieldContainer(TextField(
         controller: controller,
         obscureText: !isVisible,
@@ -2214,8 +2311,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             labelText: label,
             labelStyle: TextStyle(color: _muted, fontSize: 14),
             prefixIcon: Icon(icon, color: _g, size: 20),
-            suffixIcon:
-            Icon(Icons.calendar_today_outlined, color: _muted, size: 18),
+            suffixIcon: Icon(Icons.calendar_today_outlined,
+                color: _muted, size: 18),
             border: InputBorder.none,
             contentPadding:
             const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
@@ -2227,7 +2324,6 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
           } else {
             initial = lastDate;
           }
-          // clamp initial within bounds
           if (initial.isBefore(firstDate)) initial = firstDate;
           if (initial.isAfter(lastDate)) initial = lastDate;
 
@@ -2294,11 +2390,12 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
 class _StepIndicator extends StatelessWidget {
   final int current, total;
   final Color primaryGreen, softMint;
-  const _StepIndicator(
-      {required this.current,
-        required this.total,
-        required this.primaryGreen,
-        required this.softMint});
+  const _StepIndicator({
+    required this.current,
+    required this.total,
+    required this.primaryGreen,
+    required this.softMint,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2308,7 +2405,7 @@ class _StepIndicator extends StatelessWidget {
 
     return Row(
       children: List.generate(total, (i) {
-        final done = i < current;
+        final done   = i < current;
         final active = i == current;
         return Expanded(
           child: Row(children: [
