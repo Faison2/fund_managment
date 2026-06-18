@@ -14,8 +14,8 @@ class FundsRepository {
         Uri.parse(url),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "APIUsername": "User2",
-          "APIPassword": "CBZ1234#2",
+          "APIUsername": apiUsername,
+          "APIPassword": apiPassword,
         }),
       );
 
@@ -57,8 +57,8 @@ class FundsRepository {
         Uri.parse(url),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "APIUsername": "User2",
-          "APIPassword": "CBZ1234#2",
+          "APIUsername": apiUsername,
+          "APIPassword": apiPassword,
           "cdsNo": cdsNo,
           "SubAccountsList": subAccounts.map((e) => e.toJson()).toList(),
         }),

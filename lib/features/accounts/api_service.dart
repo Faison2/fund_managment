@@ -3,8 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:tsl/constants/constants.dart';
 
 class ApiService {
-  static const String _apiUsername = 'User2';
-  static const String _apiPassword = 'CBZ1234#2';
   static const String _createAccountUrl = '$cSharpApi/CreateAccount';
 
   /// Create an Individual Account.
@@ -58,8 +56,8 @@ class ApiService {
         Uri.parse(_createAccountUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          "APIUsername": _apiUsername,
-          "APIPassword": _apiPassword,
+          "APIUsername": apiUsername,
+          "APIPassword": apiPassword,
           "AccountType": "Individual",
           "Title": title,
           "JointName": "",

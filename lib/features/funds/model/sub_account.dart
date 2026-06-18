@@ -9,10 +9,8 @@ class SubAccount {
 
   factory SubAccount.fromJson(Map<String, dynamic> json) {
     // Debug — remove after confirming
-    print("SubAccount.fromJson input: $json");
 
     final dynamic data = json['data'];
-    print("data field: $data (${data.runtimeType})");
 
     List<String> numbers = [];
 
@@ -24,8 +22,6 @@ class SubAccount {
     } else if (data is String && data.isNotEmpty) {
       numbers = [data];
     }
-
-    print("Parsed accountNumbers: $numbers");
 
     return SubAccount(
       accountNumbers: numbers,

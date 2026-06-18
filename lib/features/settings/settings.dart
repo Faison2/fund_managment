@@ -289,8 +289,8 @@ class _SettingsPageState extends State<SettingsPage> {
               final response = await http.post(url,
                   headers: {'Content-Type': 'application/json'},
                   body: json.encode({
-                    'APIUsername':     'User2',
-                    'APIPassword':     'CBZ1234#2',
+                    'APIUsername':     apiUsername,
+                    'APIPassword':     apiPassword,
                     'Email':           userEmail,
                     'CurrentPassword': current,
                     'NewPassword':     newPw,

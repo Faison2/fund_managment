@@ -9,8 +9,8 @@ import '../bloc/state.dart';
 import '../model/model.dart';
 import '../model/sub_account.dart';
 import '../repository/repository.dart';
-import '../../../../provider/locale_provider.dart';
-import '../../../../provider/theme_provider.dart';
+import '../../../provider/locale_provider.dart';
+import '../../../provider/theme_provider.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────────
 class _TSL {

@@ -311,8 +311,8 @@ class _NewClientFlowState extends State<_NewClientFlow> {
         Uri.parse('$cSharpApi/UserSignUp'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          "APIUsername": "User2",
-          "APIPassword": "CBZ1234#2",
+          "APIUsername": apiUsername,
+          "APIPassword": apiPassword,
           "Email":       _emailCtrl.text.trim(),
           "PhoneNumber": phone,
           "Password":    _passCtrl.text,
@@ -1228,8 +1228,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
 
       final payload = {
         // ── Auth ──────────────────────────────────────────────────────────────
-        "APIUsername": "User2",
-        "APIPassword": "CBZ1234#2",
+        "APIUsername": apiUsername,
+        "APIPassword": apiPassword,
 
         // ── Account basics ────────────────────────────────────────────────────
         "AccountType":          "Individual",

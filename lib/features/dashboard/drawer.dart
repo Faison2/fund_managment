@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/features/trade/auth/account_creation.dart';
 import 'package:tsl/features/trade/comingsoon.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:tsl/features/settings/settings.dart';
-import 'package:tsl/features/statement /client_statement.dart';
+import 'package:tsl/features/statement/client_statement.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../auth/login/view/login.dart';
 import '../contact_us/contact.dart';
 import '../payments/view/payment.dart';
-import '../trade/dashboad/trade_dashboad.dart';
+import '../trade/dashboard/trade_dashboard.dart';
 import '../trade/landing/dselanding.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────────
@@ -241,7 +242,7 @@ class _AppDrawerState extends State<AppDrawer>
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, animation, __) => const ComingSoonPage(),
+        pageBuilder: (_, animation, __) => const DseOpenAccountPage(),
         transitionsBuilder: (_, animation, __, child) {
           final curved =
           CurvedAnimation(parent: animation, curve: Curves.easeInOut);

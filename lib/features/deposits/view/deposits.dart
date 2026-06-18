@@ -8,8 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../constants/constants.dart';
 import '../../funds/model/model.dart';
 import '../../funds/repository/repository.dart';
-import '../../../../provider/locale_provider.dart';
-import '../../../../provider/theme_provider.dart';
+import '../../../provider/locale_provider.dart';
+import '../../../provider/theme_provider.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────────
 class _TSL {
@@ -280,7 +280,7 @@ class _DepositPageState extends State<DepositPage> {
         Uri.parse('$cSharpApi/Deposit'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername':    'User2', 'APIPassword': 'CBZ1234#2',
+          'APIUsername':    apiUsername, 'APIPassword': apiPassword,
           'cdsNumber':      _cdsNumber,
           'PhoneNumber':    _mobileController.text.trim(),
           'Fund':           _selectedFund!.fundingName ?? '',

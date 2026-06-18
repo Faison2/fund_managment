@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../auth/account_creation.dart';
-import '../dashboad/trade_dashboad.dart';
+import '../dashboard/trade_dashboard.dart';
 
 
 // ── Brand palette (matches AppColors in open-account page) ──────────────────
@@ -70,7 +70,6 @@ class _DseLandingPageState extends State<DseLandingPage>
     super.dispose();
   }
 
-  // ── Verify NIDA ──────────────────────────────────────────────────────────
   Future<void> _verifyNida() async {
     final nida = _nidaCtrl.text.trim();
     if (nida.isEmpty) {
@@ -85,22 +84,25 @@ class _DseLandingPageState extends State<DseLandingPage>
     setState(() { _isVerifying = true; _nidaError = ''; _nidaSuccess = false; });
 
     try {
-      final uri = Uri.parse(
-        'https://portaluat.tsl.co.tz/DSEAPI/Home/CheckAccountExists'
-            '?nat_id=$nida',
-      );
-      final res = await http.get(uri).timeout(const Duration(seconds: 15));
+      final uri = Uri.parse('https://portaluat.tsl.co.tz/DSEAPI/Home/GetAccountDetails');
+      final res = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'payload': {'nidaNumber': nida},
+          'signature': '',
+        }),
+      ).timeout(const Duration(seconds: 15));
 
       if (!mounted) return;
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
-        if (body['status'] == 'success') {
+        if (body['code'] == 9000) {
           final data = body['data'] as Map<String, dynamic>;
-          await _saveToPrefs(data);
+          await _saveToPrefs(data, nida);
           setState(() { _nidaSuccess = true; _isVerifying = false; });
 
-          // brief success flash then navigate
           await Future.delayed(const Duration(milliseconds: 600));
           if (mounted) {
             Navigator.pushReplacement(
@@ -110,7 +112,7 @@ class _DseLandingPageState extends State<DseLandingPage>
           }
         } else {
           setState(() {
-            _nidaError   = body['statusDesc'] ?? 'Account not found';
+            _nidaError   = body['message'] ?? 'Account not found';
             _isVerifying = false;
           });
         }
@@ -130,20 +132,39 @@ class _DseLandingPageState extends State<DseLandingPage>
     }
   }
 
-  Future<void> _saveToPrefs(Map<String, dynamic> data) async {
+  Future<void> _saveToPrefs(Map<String, dynamic> data, String nida) async {
     final prefs = await SharedPreferences.getInstance();
+    final fullName = [
+      data['firstName']  ?? '',
+      data['middleName'] ?? '',
+      data['lastName']   ?? '',
+    ].where((s) => s.isNotEmpty).join(' ');
+
     await Future.wait([
-      prefs.setString('dse_id',          '${data['id'] ?? ''}'),
-      prefs.setString('client_type',     data['client_type']  ?? ''),
-      prefs.setString('broker_ref',      data['broker_ref']   ?? ''),
-      prefs.setString('cdsNumber',       data['cds_number']   ?? ''),
-      prefs.setString('user_names',
-          '${data['first_name'] ?? ''} ${data['last_name'] ?? ''}'.trim()),
-      prefs.setString('first_name',      data['first_name']   ?? ''),
-      prefs.setString('last_name',       data['last_name']    ?? ''),
-      prefs.setString('nida_number',     data['nida_number']  ?? ''),
-      prefs.setString('user_email',      data['email']        ?? ''),
-      prefs.setString('user_mobile',     data['phone_number'] ?? ''),
+      prefs.setString('nida_number',      nida),
+      prefs.setString('user_names',       fullName),
+      prefs.setString('first_name',       data['firstName']      ?? ''),
+      prefs.setString('middle_name',      data['middleName']     ?? ''),
+      prefs.setString('last_name',        data['lastName']       ?? ''),
+      prefs.setString('user_mobile',      data['phoneNumber']    ?? ''),
+      prefs.setString('user_email',       data['email']          ?? ''),
+      prefs.setString('broker_ref',       data['brokerRef']      ?? ''),
+      prefs.setString('broker_name',      data['brokerName']     ?? ''),
+      prefs.setString('cdsNumber',        data['csdAccount']     ?? ''),
+      prefs.setString('gender',           data['gender']         ?? ''),
+      prefs.setString('nationality',      data['nationality']    ?? ''),
+      prefs.setString('dob',              data['dob']            ?? ''),
+      prefs.setString('physical_address', data['physicalAddress'] ?? ''),
+      prefs.setString('region',           data['region']         ?? ''),
+      prefs.setString('country',          data['country']        ?? ''),
+      prefs.setString('bank_name',        data['bankName']       ?? ''),
+      prefs.setString('bank_account_no',  data['bankAccountNo']  ?? ''),
+      prefs.setString('bank_branch_name', data['bankBranchName'] ?? ''),
+      prefs.setString('resident_district',data['residentDistrict'] ?? ''),
+      prefs.setString('resident_region',  data['residentRegion'] ?? ''),
+      prefs.setString('resident_village', data['residentVillage'] ?? ''),
+      prefs.setString('resident_postcode',data['residentPostCode'] ?? ''),
+      prefs.setString('resident_house_no',data['residentHouseNo'] ?? ''),
     ]);
   }
 
@@ -228,33 +249,33 @@ class _DseLandingPageState extends State<DseLandingPage>
                           letterSpacing: 1.5)),
                 ),
               ]),
-              const SizedBox(height: 32),
+            //  const SizedBox(height: 32),
 
               // icon
-              Container(
-                width: 64, height: 64,
-                decoration: BoxDecoration(
-                  color: _C.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                      color: _C.white.withOpacity(0.3), width: 1.5),
-                ),
-                child: const Icon(Icons.candlestick_chart_outlined,
-                    color: _C.white, size: 32),
-              ),
+              // Container(
+              //   width: 64, height: 64,
+              //   decoration: BoxDecoration(
+              //     color: _C.white.withOpacity(0.15),
+              //     borderRadius: BorderRadius.circular(18),
+              //     border: Border.all(
+              //         color: _C.white.withOpacity(0.3), width: 1.5),
+              //   ),
+              //   child: const Icon(Icons.candlestick_chart_outlined,
+              //       color: _C.white, size: 32),
+              // ),
               const SizedBox(height: 20),
 
-              const Text(
-                'Welcome to\nDSE Trading',
-                style: TextStyle(
-                  color: _C.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  height: 1.15,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 10),
+              // const Text(
+              //   'Welcome to\nDSE Trading',
+              //   style: TextStyle(
+              //     color: _C.white,
+              //     fontSize: 30,
+              //     fontWeight: FontWeight.w900,
+              //     height: 1.15,
+              //     letterSpacing: -0.5,
+              //   ),
+              // ),
+              // const SizedBox(height: 10),
               Text(
                 'Dar es Salaam Stock Exchange — trade shares,\nbonds, and funds directly from your phone.',
                 style: TextStyle(

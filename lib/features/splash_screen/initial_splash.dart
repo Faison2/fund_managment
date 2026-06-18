@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsl/features/splash%20screen/splash.dart';
+import 'package:tsl/features/splash_screen/splash.dart';
 import '../auth/login/view/login.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────────

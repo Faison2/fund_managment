@@ -15,8 +15,8 @@ import '../funds/repository/repository.dart';
 import '../funds/model/sub_account.dart';
 import '../funds/view/fund.dart';
 import '../sma/sma.dart';
-import '../statement /client_statement.dart';
-import '../trade/dashboad/trade_dashboad.dart';
+import '../statement/client_statement.dart';
+import '../trade/dashboard/trade_dashboard.dart';
 import '../trade/landing/dselanding.dart';
 import '../withdrawal/view/withdrawal_page.dart';
 
@@ -271,8 +271,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Uri.parse('$cSharpApi/GetFundsDetailed'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername': 'User2',
-          'APIPassword': 'CBZ1234#2',
+          'APIUsername': apiUsername,
+          'APIPassword': apiPassword,
           'cdsNumber':   _cdsNumber,
         }),
       ).timeout(const Duration(seconds: 15));
@@ -306,8 +306,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Uri.parse('$cSharpApi/GetTransactions'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername': 'User2',
-          'APIPassword': 'CBZ1234#2',
+          'APIUsername': apiUsername,
+          'APIPassword': apiPassword,
           'cdsNumber':   _cdsNumber,
           'Fund':        fundName,
         }),
@@ -354,17 +354,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final results = await Future.wait([
         http.post(Uri.parse('$cSharpApi/GetSMAPortfolios'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+          body: jsonEncode({'APIUsername': apiUsername, 'APIPassword': apiPassword,
             'cdsNumber': _cdsNumber}),
         ).timeout(const Duration(seconds: 15)),
         http.post(Uri.parse('$cSharpApi/GetSMAInvestments'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+          body: jsonEncode({'APIUsername': apiUsername, 'APIPassword': apiPassword,
             'cdsNumber': _cdsNumber}),
         ).timeout(const Duration(seconds: 15)),
         http.post(Uri.parse('$cSharpApi/GetSMACashTransactions'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+          body: jsonEncode({'APIUsername': apiUsername, 'APIPassword': apiPassword,
             'cdsNumber': _cdsNumber}),
         ).timeout(const Duration(seconds: 15)),
       ]);
@@ -811,7 +811,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const ComingSoonPage())),
+          MaterialPageRoute<void>(builder: (_) => const DseLandingPage())),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(

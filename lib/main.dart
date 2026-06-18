@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:tsl/features/splash%20screen/initial_splash.dart';
+import 'package:tsl/features/splash_screen/initial_splash.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:tsl/provider/locale_provider.dart';
 import 'package:tsl/provider/theme_provider.dart';

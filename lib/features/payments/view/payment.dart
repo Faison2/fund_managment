@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../provider/locale_provider.dart';
-import '../../../../provider/theme_provider.dart';
+import '../../../provider/locale_provider.dart';
+import '../../../provider/theme_provider.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────────
 class _TSL {

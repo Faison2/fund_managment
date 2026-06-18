@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../constants/constants.dart';
 import '../market_watch/market_watch.dart';
-import 'trade_dashboad.dart'; // for PastelColors
+import 'trade_dashboard.dart'; // for PastelColors
 
 // ─────────────────────────────────────────────────────────────────────────────
 // USER MODEL

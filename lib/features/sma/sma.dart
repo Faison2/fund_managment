@@ -6,8 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../provider/locale_provider.dart';
-import '../../../../provider/theme_provider.dart';
+import '../../provider/locale_provider.dart';
+import '../../provider/theme_provider.dart';
 import '../../constants/constants.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────────
@@ -193,12 +193,12 @@ class _SMAPageState extends State<SMAPage>
       final results = await Future.wait([
         http.post(Uri.parse('$cSharpApi/GetSMAInvestments'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+          body: jsonEncode({'APIUsername': apiUsername, 'APIPassword': apiPassword,
             'cdsNumber': _cdsNumber}),
         ).timeout(const Duration(seconds: 15)),
         http.post(Uri.parse('$cSharpApi/GetSMACashTransactions'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+          body: jsonEncode({'APIUsername': apiUsername, 'APIPassword': apiPassword,
             'cdsNumber': _cdsNumber}),
         ).timeout(const Duration(seconds: 15)),
       ]);

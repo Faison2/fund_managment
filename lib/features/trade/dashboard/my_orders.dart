@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:tsl/features/trade/dashboad/trade_dashboad.dart';
+import 'package:tsl/features/trade/dashboard/trade_dashboard.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ORDER MODEL  (matches real API response)

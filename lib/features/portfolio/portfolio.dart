@@ -188,8 +188,8 @@ class _PortfolioScreenState extends State<PortfolioScreen>
         Uri.parse('$cSharpApi/GetFundsDetailed'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername': 'User2',
-          'APIPassword': 'CBZ1234#2',
+          'APIUsername': apiUsername,
+          'APIPassword': apiPassword,
           'cdsNumber': _cdsNumber,
         }),
       ).timeout(const Duration(seconds: 15));

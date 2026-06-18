@@ -25,8 +25,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool _isLoading = false;
 
-  static const String _apiUsername = 'User2';
-  static const String _apiPassword = 'CBZ1234#2';
   static const String _requestResetUrl = '$cSharpApi/RequestReset';
 
   Future<void> _sendOTP() async {
@@ -43,8 +41,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         Uri.parse(_requestResetUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername': _apiUsername,
-          'APIPassword': _apiPassword,
+          'APIUsername': apiUsername,
+          'APIPassword': apiPassword,
           'Email': email,
         }),
       );
@@ -59,8 +57,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             MaterialPageRoute(
               builder: (_) => _ResetPasswordScreen(
                 email: _emailController.text.trim(),
-                apiUsername: _apiUsername,
-                apiPassword: _apiPassword,
+                apiUsername: apiUsername,
+                apiPassword: apiPassword,
               ),
             ),
           );

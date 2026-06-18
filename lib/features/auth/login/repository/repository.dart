@@ -5,8 +5,6 @@ import 'package:tsl/constants/constants.dart';
 
 class LoginRepository {
   static const String apiUrl = '$cSharpApi/Userlogin';
-  static const String apiUsername = 'User2';
-  static const String apiPassword = 'CBZ1234#2';
 
   Future<Map<String, dynamic>> login({
     required String username,

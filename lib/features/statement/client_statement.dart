@@ -178,7 +178,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
         Uri.parse('$cSharpApi/GetFundsDetailed'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+          'APIUsername': apiUsername, 'APIPassword': apiPassword,
           'cdsNumber': _cdsNumber,
         }),
       ).timeout(const Duration(seconds: 15));
@@ -214,7 +214,7 @@ class _ClientStatementPageState extends State<ClientStatementPage>
         Uri.parse('$cSharpApi/GetTransactions'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'APIUsername': 'User2', 'APIPassword': 'CBZ1234#2',
+          'APIUsername': apiUsername, 'APIPassword': apiPassword,
           'cdsNumber': _cdsNumber, 'Fund': _selectedFund!.fundingName ?? '',
         }),
       ).timeout(const Duration(seconds: 15));

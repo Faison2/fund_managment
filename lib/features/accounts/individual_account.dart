@@ -131,8 +131,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
   final String _createSubAccountsUrl =
       "https://portaluat.tsl.co.tz/FMSAPI/Home/CreateSubAccounts";
   final String _nidaBase = "https://portalprod.tsl.co.tz/NIDAAPI/";
-  final String _apiUsername = "User2";
-  final String _apiPassword = "CBZ1234#2";
+
 
   // ── Animation ──────────────────────────────────────────────────────────────
   late AnimationController _animCtrl;
@@ -874,8 +873,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     try {
       await _bankController.loadBanks(
           apiUrl: _getBanksUrl,
-          username: _apiUsername,
-          password: _apiPassword);
+          username: apiUsername,
+          password: apiPassword);
       setState(() {});
     } catch (_) {
       _showSnackBar('Failed to load banks. Please try again.');
@@ -891,8 +890,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         Uri.parse(_getFundsUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'APIUsername': _apiUsername,
-          'APIPassword': _apiPassword,
+          'APIUsername': apiUsername,
+          'APIPassword': apiPassword,
         }),
       );
       if (res.statusCode == 200) {
@@ -1324,8 +1323,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
     try {
       final subBody = {
-        'APIUsername': _apiUsername,
-        'APIPassword': _apiPassword,
+        'APIUsername': apiUsername,
+        'APIPassword': apiPassword,
         'cdsNo': cdsNo,
         'SubAccountsList': [
           {
@@ -1381,8 +1380,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
       final body = {
         // ── Auth ────────────────────────────────────────────────────────
-        'APIUsername': _apiUsername,
-        'APIPassword': _apiPassword,
+        'APIUsername': apiUsername,
+        'APIPassword': apiPassword,
 
         // ── Account basics ──────────────────────────────────────────────
         'AccountType': _selectedAccountType,
