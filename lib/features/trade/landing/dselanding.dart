@@ -7,8 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/account_creation.dart';
 import '../dashboard/trade_dashboard.dart';
 
-
-// ── Brand palette (matches AppColors in open-account page) ──────────────────
+// ── Brand palette ────────────────────────────────────────────────────────────
 class _C {
   static const Color blue      = Color(0xFF329AD6);
   static const Color teal      = Color(0xFF00A79D);
@@ -37,9 +36,10 @@ class _DseLandingPageState extends State<DseLandingPage>
 
   // ── NIDA verification state ──────────────────────────────────────────────
   final TextEditingController _nidaCtrl = TextEditingController();
-  bool   _isVerifying  = false;
-  String _nidaError    = '';
-  bool   _nidaSuccess  = false;
+  bool   _isVerifying      = false;
+  bool   _isSilentChecking = true; // true while auto-verify is running
+  String _nidaError        = '';
+  bool   _nidaSuccess      = false;
 
   @override
   void initState() {
@@ -55,11 +55,8 @@ class _DseLandingPageState extends State<DseLandingPage>
       begin: const Offset(0, 0.12), end: Offset.zero,
     ).animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
 
-    // staggered entry
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _fadeCtrl.forward();
-      _slideCtrl.forward();
-    });
+    // Try silent auto-verify first; show page only if it fails
+    _autoVerifyFromPrefs();
   }
 
   @override
@@ -70,6 +67,68 @@ class _DseLandingPageState extends State<DseLandingPage>
     super.dispose();
   }
 
+  // ── Auto-verify using saved NIDA from login ──────────────────────────────
+  Future<void> _autoVerifyFromPrefs() async {
+    final prefs     = await SharedPreferences.getInstance();
+    final savedNida = prefs.getString('userNIDA') ?? '';
+
+    if (savedNida.isEmpty) {
+      _showPage();
+      return;
+    }
+
+    // Pre-fill the field (visible if the page ends up showing)
+    _nidaCtrl.text = savedNida;
+
+    try {
+      final uri = Uri.parse(
+          'https://portaluat.tsl.co.tz/DSEAPI/Home/GetAccountDetails');
+      final res = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'payload': {'nidaNumber': savedNida},
+          'signature': '',
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (!mounted) return;
+
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        if (body['code'] == 9000) {
+          final data = body['data'] as Map<String, dynamic>;
+          await _saveToPrefs(data, savedNida);
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const TradeDashboard()),
+            );
+          }
+          return;
+        }
+      }
+
+      // 9051 USER NOT FOUND or any other response — show the page
+      _showPage();
+    } catch (_) {
+      if (mounted) _showPage();
+    }
+  }
+
+  // ── Show page with animations ────────────────────────────────────────────
+  void _showPage() {
+    if (!mounted) return;
+    setState(() => _isSilentChecking = false);
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _fadeCtrl.forward();
+        _slideCtrl.forward();
+      }
+    });
+  }
+
+  // ── Manual verify (button tap) ───────────────────────────────────────────
   Future<void> _verifyNida() async {
     final nida = _nidaCtrl.text.trim();
     if (nida.isEmpty) {
@@ -81,10 +140,15 @@ class _DseLandingPageState extends State<DseLandingPage>
       return;
     }
 
-    setState(() { _isVerifying = true; _nidaError = ''; _nidaSuccess = false; });
+    setState(() {
+      _isVerifying = true;
+      _nidaError   = '';
+      _nidaSuccess = false;
+    });
 
     try {
-      final uri = Uri.parse('https://portaluat.tsl.co.tz/DSEAPI/Home/GetAccountDetails');
+      final uri = Uri.parse(
+          'https://portaluat.tsl.co.tz/DSEAPI/Home/GetAccountDetails');
       final res = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
@@ -132,8 +196,9 @@ class _DseLandingPageState extends State<DseLandingPage>
     }
   }
 
+  // ── Save to SharedPreferences ────────────────────────────────────────────
   Future<void> _saveToPrefs(Map<String, dynamic> data, String nida) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs    = await SharedPreferences.getInstance();
     final fullName = [
       data['firstName']  ?? '',
       data['middleName'] ?? '',
@@ -141,36 +206,47 @@ class _DseLandingPageState extends State<DseLandingPage>
     ].where((s) => s.isNotEmpty).join(' ');
 
     await Future.wait([
-      prefs.setString('nida_number',      nida),
-      prefs.setString('user_names',       fullName),
-      prefs.setString('first_name',       data['firstName']      ?? ''),
-      prefs.setString('middle_name',      data['middleName']     ?? ''),
-      prefs.setString('last_name',        data['lastName']       ?? ''),
-      prefs.setString('user_mobile',      data['phoneNumber']    ?? ''),
-      prefs.setString('user_email',       data['email']          ?? ''),
-      prefs.setString('broker_ref',       data['brokerRef']      ?? ''),
-      prefs.setString('broker_name',      data['brokerName']     ?? ''),
-      prefs.setString('cdsNumber',        data['csdAccount']     ?? ''),
-      prefs.setString('gender',           data['gender']         ?? ''),
-      prefs.setString('nationality',      data['nationality']    ?? ''),
-      prefs.setString('dob',              data['dob']            ?? ''),
-      prefs.setString('physical_address', data['physicalAddress'] ?? ''),
-      prefs.setString('region',           data['region']         ?? ''),
-      prefs.setString('country',          data['country']        ?? ''),
-      prefs.setString('bank_name',        data['bankName']       ?? ''),
-      prefs.setString('bank_account_no',  data['bankAccountNo']  ?? ''),
-      prefs.setString('bank_branch_name', data['bankBranchName'] ?? ''),
-      prefs.setString('resident_district',data['residentDistrict'] ?? ''),
-      prefs.setString('resident_region',  data['residentRegion'] ?? ''),
-      prefs.setString('resident_village', data['residentVillage'] ?? ''),
-      prefs.setString('resident_postcode',data['residentPostCode'] ?? ''),
-      prefs.setString('resident_house_no',data['residentHouseNo'] ?? ''),
+      prefs.setString('nida_number',       nida),
+      prefs.setString('user_names',        fullName),
+      prefs.setString('first_name',        data['firstName']       ?? ''),
+      prefs.setString('middle_name',       data['middleName']      ?? ''),
+      prefs.setString('last_name',         data['lastName']        ?? ''),
+      prefs.setString('user_mobile',       data['phoneNumber']     ?? ''),
+      prefs.setString('user_email',        data['email']           ?? ''),
+      prefs.setString('broker_ref',        data['brokerRef']       ?? ''),
+      prefs.setString('broker_name',       data['brokerName']      ?? ''),
+      prefs.setString('cdsNumber',         data['csdAccount']      ?? ''),
+      prefs.setString('gender',            data['gender']          ?? ''),
+      prefs.setString('nationality',       data['nationality']     ?? ''),
+      prefs.setString('dob',               data['dob']             ?? ''),
+      prefs.setString('physical_address',  data['physicalAddress'] ?? ''),
+      prefs.setString('region',            data['region']          ?? ''),
+      prefs.setString('country',           data['country']         ?? ''),
+      prefs.setString('bank_name',         data['bankName']        ?? ''),
+      prefs.setString('bank_account_no',   data['bankAccountNo']   ?? ''),
+      prefs.setString('bank_branch_name',  data['bankBranchName']  ?? ''),
+      prefs.setString('resident_district', data['residentDistrict']?? ''),
+      prefs.setString('resident_region',   data['residentRegion']  ?? ''),
+      prefs.setString('resident_village',  data['residentVillage'] ?? ''),
+      prefs.setString('resident_postcode', data['residentPostCode']?? ''),
+      prefs.setString('resident_house_no', data['residentHouseNo'] ?? ''),
     ]);
   }
 
   // ── UI ───────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    // Silent auto-verify in progress — show blank loading screen
+    if (_isSilentChecking) {
+      return const Scaffold(
+        backgroundColor: _C.white,
+        body: Center(
+          child: CircularProgressIndicator(
+              color: _C.teal, strokeWidth: 2.5),
+        ),
+      );
+    }
+
     final bottom = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
@@ -224,7 +300,6 @@ class _DseLandingPageState extends State<DseLandingPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // top bar
               Row(children: [
                 IconButton(
                   padding: EdgeInsets.zero,
@@ -233,7 +308,6 @@ class _DseLandingPageState extends State<DseLandingPage>
                   onPressed: () => Navigator.pop(context),
                 ),
                 const Spacer(),
-                // DSE logo badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 6),
@@ -249,33 +323,7 @@ class _DseLandingPageState extends State<DseLandingPage>
                           letterSpacing: 1.5)),
                 ),
               ]),
-            //  const SizedBox(height: 32),
-
-              // icon
-              // Container(
-              //   width: 64, height: 64,
-              //   decoration: BoxDecoration(
-              //     color: _C.white.withOpacity(0.15),
-              //     borderRadius: BorderRadius.circular(18),
-              //     border: Border.all(
-              //         color: _C.white.withOpacity(0.3), width: 1.5),
-              //   ),
-              //   child: const Icon(Icons.candlestick_chart_outlined,
-              //       color: _C.white, size: 32),
-              // ),
               const SizedBox(height: 20),
-
-              // const Text(
-              //   'Welcome to\nDSE Trading',
-              //   style: TextStyle(
-              //     color: _C.white,
-              //     fontSize: 30,
-              //     fontWeight: FontWeight.w900,
-              //     height: 1.15,
-              //     letterSpacing: -0.5,
-              //   ),
-              // ),
-              // const SizedBox(height: 10),
               Text(
                 'Dar es Salaam Stock Exchange — trade shares,\nbonds, and funds directly from your phone.',
                 style: TextStyle(
@@ -284,10 +332,7 @@ class _DseLandingPageState extends State<DseLandingPage>
                   height: 1.55,
                 ),
               ),
-
               const SizedBox(height: 28),
-
-              // stats row
               Row(children: [
                 _heroStat('Listed\nCompanies', '28+'),
                 _heroStatDivider(),
@@ -304,7 +349,7 @@ class _DseLandingPageState extends State<DseLandingPage>
 
   Widget _heroStat(String label, String value) => Expanded(
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(value, style: TextStyle(
+      Text(value, style: const TextStyle(
           color: _C.white, fontSize: 18, fontWeight: FontWeight.w800)),
       const SizedBox(height: 2),
       Text(label, style: TextStyle(
@@ -318,9 +363,9 @@ class _DseLandingPageState extends State<DseLandingPage>
     color: _C.white.withOpacity(0.2),
   );
 
-  // ── NIDA verification card ─────────────────────────────────────────────────
+  // ── NIDA verification card ────────────────────────────────────────────────
   Widget _buildNidaCard() {
-    final hasError   = _nidaError.isNotEmpty;
+    final hasError    = _nidaError.isNotEmpty;
     final borderColor = _nidaSuccess
         ? _C.teal
         : hasError
@@ -335,7 +380,6 @@ class _DseLandingPageState extends State<DseLandingPage>
         border: Border.all(color: borderColor, width: 1.5),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // header
         Row(children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -361,7 +405,6 @@ class _DseLandingPageState extends State<DseLandingPage>
 
         const SizedBox(height: 18),
 
-        // NIDA input
         TextFormField(
           controller: _nidaCtrl,
           keyboardType: TextInputType.number,
@@ -405,7 +448,6 @@ class _DseLandingPageState extends State<DseLandingPage>
           ),
         ),
 
-        // error message
         if (hasError) ...[
           const SizedBox(height: 8),
           Row(children: [
@@ -419,7 +461,6 @@ class _DseLandingPageState extends State<DseLandingPage>
 
         const SizedBox(height: 16),
 
-        // verify button
         SizedBox(
           width: double.infinity,
           height: 48,
@@ -445,7 +486,7 @@ class _DseLandingPageState extends State<DseLandingPage>
     );
   }
 
-  // ── Divider ────────────────────────────────────────────────────────────────
+  // ── Divider ───────────────────────────────────────────────────────────────
   Widget _buildDivider() {
     return Row(children: [
       Expanded(child: Divider(color: _C.grey.withOpacity(0.2), height: 1)),
@@ -461,7 +502,7 @@ class _DseLandingPageState extends State<DseLandingPage>
     ]);
   }
 
-  // ── Open account card ──────────────────────────────────────────────────────
+  // ── Open account card ─────────────────────────────────────────────────────
   Widget _buildOpenAccountCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -471,13 +512,11 @@ class _DseLandingPageState extends State<DseLandingPage>
         border: Border.all(color: _C.grey.withOpacity(0.15), width: 1.5),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // header
         Row(children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                  colors: [_C.teal, _C.blue]),
+              gradient: const LinearGradient(colors: [_C.teal, _C.blue]),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.account_balance_outlined,
@@ -499,15 +538,13 @@ class _DseLandingPageState extends State<DseLandingPage>
 
         const SizedBox(height: 16),
 
-        // benefits list
-        _benefit(Icons.speed_outlined,      'Fast 4-step registration'),
-        _benefit(Icons.security_outlined,   'NIDA-verified & secure'),
-        _benefit(Icons.payments_outlined,   'Linked to your bank account'),
-        _benefit(Icons.bar_chart_outlined,  'Access all DSE-listed stocks'),
+        _benefit(Icons.speed_outlined,     'Fast 4-step registration'),
+        _benefit(Icons.security_outlined,  'NIDA-verified & secure'),
+        _benefit(Icons.payments_outlined,  'Linked to your bank account'),
+        _benefit(Icons.bar_chart_outlined, 'Access all DSE-listed stocks'),
 
         const SizedBox(height: 18),
 
-        // open account button
         SizedBox(
           width: double.infinity,
           height: 48,
@@ -524,8 +561,7 @@ class _DseLandingPageState extends State<DseLandingPage>
                   borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text('Open DSE Account',
-                style: TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 14)),
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
           ),
         ),
       ]),

@@ -1,11 +1,12 @@
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/constants/constants.dart';
 
 class LoginRepository {
-  static const String apiUrl = '$cSharpApi/Userlogin';
-
+  // ── Login ──────────────────────────────────────────────────────────────────
   Future<Map<String, dynamic>> login({
     required String username,
     required String password,
@@ -18,8 +19,12 @@ class LoginRepository {
         'Password': password,
       };
 
-      final response = await http.post(
-        Uri.parse(apiUrl),
+      final ioClient = HttpClient()
+        ..badCertificateCallback = (cert, host, port) => true;
+      final client = IOClient(ioClient);
+
+      final response = await client.post(
+        Uri.parse('$cSharpApi/Userlogin'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -27,31 +32,23 @@ class LoginRepository {
         body: json.encode(requestBody),
       );
 
+      client.close();
+
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body) as Map<String, dynamic>;
 
-        // Check for new response format
-        if (responseData['status'] == 'success' && responseData['statusDesc'] == 'Logged in') {
+        if (responseData['status'] == 'success' &&
+            responseData['statusDesc'] == 'Logged in') {
           final data = responseData['data'] as Map<String, dynamic>?;
           if (data != null) {
             return {
-              'success': true,
-              'cdsNumber': data['CDSNumber'] as String? ?? '',
+              'success':       true,
+              'cdsNumber':     data['CDSNumber']     as String? ?? '',
               'accountStatus': data['accountStatus'] as String? ?? '',
-              'email': data['Email'] as String? ?? username,
-              'nida': data['NIDA'] as String? ?? '', // ✅ Added NIDA
+              'email':         data['Email']         as String? ?? username,
+              'nida':          data['NIDA']          as String? ?? '',
             };
           }
-        }
-        // Check for old response format
-        else if (responseData['status'] == 200 && responseData['statusDesc'] == 'success') {
-          return {
-            'success': true,
-            'cdsNumber': '',
-            'accountStatus': 'Active',
-            'email': username,
-            'nida': '', // ✅ Not available in old format
-          };
         }
 
         return {
@@ -72,28 +69,26 @@ class LoginRepository {
     }
   }
 
+  // ── Save user data ─────────────────────────────────────────────────────────
   Future<void> saveUserData({
     required String cdsNumber,
     required String accountStatus,
     required String username,
     required bool rememberMe,
     String? email,
-    String? nida, // ✅ Added NIDA parameter
+    String? nida,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      await prefs.setString('cdsNumber', cdsNumber);
+      await prefs.setString('cdsNumber',     cdsNumber);
       await prefs.setString('accountStatus', accountStatus);
-      await prefs.setString('username', username);
-      await prefs.setBool('isLoggedIn', true);
+      await prefs.setString('username',      username);
+      await prefs.setBool('isLoggedIn',      true);
 
-      // Save email to shared preferences for password change flow
       if (email != null && email.isNotEmpty) {
         await prefs.setString('userEmail', email);
       }
-
-      // ✅ Save NIDA to shared preferences
       if (nida != null && nida.isNotEmpty) {
         await prefs.setString('userNIDA', nida);
       }
@@ -110,46 +105,46 @@ class LoginRepository {
     }
   }
 
+  // ── Load saved credentials ─────────────────────────────────────────────────
   Future<Map<String, dynamic>> loadSavedCredentials() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final rememberMe = prefs.getBool('rememberMe') ?? false;
-      final savedUsername = prefs.getString('savedUsername');
-
       return {
-        'rememberMe': rememberMe,
-        'savedUsername': savedUsername,
+        'rememberMe':    prefs.getBool('rememberMe')       ?? false,
+        'savedUsername': prefs.getString('savedUsername'),
       };
     } catch (e) {
       return {
-        'rememberMe': false,
+        'rememberMe':    false,
         'savedUsername': null,
       };
     }
   }
 
+  // ── Get user data ──────────────────────────────────────────────────────────
   static Future<Map<String, String?>> getUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       return {
-        'cdsNumber': prefs.getString('cdsNumber'),
+        'cdsNumber':     prefs.getString('cdsNumber'),
         'accountStatus': prefs.getString('accountStatus'),
-        'username': prefs.getString('username'),
-        'isLoggedIn': prefs.getBool('isLoggedIn')?.toString(),
-        'nida': prefs.getString('userNIDA'), // ✅ Added NIDA to getUserData
+        'username':      prefs.getString('username'),
+        'isLoggedIn':    prefs.getBool('isLoggedIn')?.toString(),
+        'nida':          prefs.getString('userNIDA'),
       };
     } catch (e) {
       return {};
     }
   }
 
+  // ── Clear user data ────────────────────────────────────────────────────────
   static Future<void> clearUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cdsNumber');
       await prefs.remove('accountStatus');
       await prefs.remove('username');
-      await prefs.remove('userNIDA'); // ✅ Clear NIDA on logout
+      await prefs.remove('userNIDA');
       await prefs.setBool('isLoggedIn', false);
     } catch (e) {
       throw Exception('Error clearing user data: $e');
