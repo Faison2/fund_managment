@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TSL BRAND PALETTE
@@ -39,7 +40,6 @@ class _C {
   static const List<Color> buyGrad  = [Color(0xFF34C759), Color(0xFF1E8E3E)];
   static const List<Color> sellGrad = [Color(0xFFFF8AA8), Color(0xFFFF6B8A)];
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ORDER MODEL
@@ -103,14 +103,21 @@ class Order {
 class _OrdersApi {
   static const _buyUrl  = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetBuyOrders';
   static const _sellUrl = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetSellOrders';
-  static const _nida    = '19931109111010000522';
 
   static String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+  static Future<String> _getNida() async {
+    final prefs = await SharedPreferences.getInstance();
+    final nida  = prefs.getString('nida_number') ?? '';
+    if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
+    return nida;
+  }
+
   static Future<List<Order>> _fetch({
     required String   url,
     required String   type,
+    required String   nida,
     required DateTime startDate,
     required DateTime endDate,
     String orderStatus = '',
@@ -128,7 +135,7 @@ class _OrdersApi {
         ..set('User-Agent',   'DSEApp/1.0 (Flutter; Dart)');
 
       request.write(jsonEncode({
-        'nidaNumber':  _nida,
+        'nidaNumber':  nida,
         'startDate':   _fmt(startDate),
         'endDate':     _fmt(endDate),
         'orderStatus': orderStatus,
@@ -154,9 +161,10 @@ class _OrdersApi {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
+    final nida = await _getNida();
     final results = await Future.wait([
-      _fetch(url: _buyUrl,  type: 'BUY',  startDate: startDate, endDate: endDate),
-      _fetch(url: _sellUrl, type: 'SELL', startDate: startDate, endDate: endDate),
+      _fetch(url: _buyUrl,  type: 'BUY',  nida: nida, startDate: startDate, endDate: endDate),
+      _fetch(url: _sellUrl, type: 'SELL', nida: nida, startDate: startDate, endDate: endDate),
     ]);
     final all = [...results[0], ...results[1]];
     all.sort((a, b) => b.orderDate.compareTo(a.orderDate));
