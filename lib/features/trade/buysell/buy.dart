@@ -6,20 +6,19 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// THEME TOKENS
+// TSL BRAND PALETTE  (official colors only)
 // ─────────────────────────────────────────────────────────────────────────────
 class _C {
-  static const bg      = Color(0xFFE8F4EF);
-  static const surface = Color(0xFFF2FAF6);
-  static const card    = Color(0xFFFFFFFF);
-  static const border  = Color(0xFFD0E8DF);
-  static const blue    = Color(0xFF1A7A65);
-  static const green   = Color(0xFF27AE72);
-  static const red     = Color(0xFFE05C7A);
-  static const gray    = Color(0xFF9E9E9E);
-  static const txtPrim = Color(0xFF1A2B28);
-  static const txtSec  = Color(0xFF7A9990);
-  static const txtHint = Color(0xFFAAC9C0);
+  static const Color blue  = Color(0xFF329AD6);
+  static const Color teal  = Color(0xFF00A79D);
+  static const Color grey  = Color(0xFF939598);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF231F20);
+
+  // Status colors
+  static const Color green = Color(0xFF34C759);
+  static const Color red   = Color(0xFFFF3B30);
+  static const Color gold  = Color(0xFFF5A623);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,8 +54,7 @@ class _MarketWatchApi {
     if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
 
     final client = HttpClient();
-    client.badCertificateCallback =
-        (X509Certificate cert, String host, int port) => true;
+    client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
     client.connectionTimeout = const Duration(seconds: 15);
 
     try {
@@ -73,9 +71,7 @@ class _MarketWatchApi {
       if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
 
       final json = jsonDecode(body) as Map<String, dynamic>;
-      if ((json['code'] as int) != 9000) {
-        throw Exception('API error: ${json['message']}');
-      }
+      if ((json['code'] as int) != 9000) throw Exception('API error: ${json['message']}');
 
       final data = (json['data'] as List<dynamic>).cast<Map<String, dynamic>>();
       return data.map(_Security.fromJson).toList()
@@ -102,8 +98,7 @@ class _BuyApi {
     if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
 
     final client = HttpClient();
-    client.badCertificateCallback =
-        (X509Certificate cert, String host, int port) => true;
+    client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
     client.connectionTimeout = const Duration(seconds: 15);
 
     try {
@@ -263,7 +258,7 @@ class _BuySharesPageState extends State<BuySharesPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _C.bg,
+      backgroundColor: const Color(0xFFF5F6F7),
       body: FadeTransition(
         opacity: _fade,
         child: SlideTransition(
@@ -272,20 +267,21 @@ class _BuySharesPageState extends State<BuySharesPage>
             physics: const BouncingScrollPhysics(),
             slivers: [
 
+              // ── App bar ─────────────────────────────────────────────────
               SliverAppBar(
-                backgroundColor: _C.bg,
+                backgroundColor: const Color(0xFFF5F6F7),
                 pinned: true,
                 elevation: 0,
                 leading: IconButton(
                   icon: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _C.surface,
+                      color: _C.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _C.border),
+                      border: Border.all(color: _C.grey.withOpacity(0.3)),
                     ),
                     child: const Icon(Icons.arrow_back_ios_new_rounded,
-                        size: 14, color: _C.txtPrim),
+                        size: 14, color: _C.black),
                   ),
                   onPressed: () => Navigator.pop(context),
                 ),
@@ -293,20 +289,20 @@ class _BuySharesPageState extends State<BuySharesPage>
                   Container(
                     width: 34, height: 34,
                     decoration: BoxDecoration(
-                      color: _C.green.withOpacity(0.12),
+                      color: _C.teal.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _C.green.withOpacity(0.35)),
+                      border: Border.all(color: _C.teal.withOpacity(0.35)),
                     ),
                     child: const Icon(Icons.trending_up_rounded,
-                        color: _C.green, size: 18),
+                        color: _C.teal, size: 18),
                   ),
                   const SizedBox(width: 10),
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
-                    Text('Buy Shares',
-                        style: TextStyle(color: _C.txtPrim, fontSize: 17,
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Buy Shares',
+                        style: TextStyle(color: _C.black, fontSize: 17,
                             fontWeight: FontWeight.w900, letterSpacing: -0.3)),
                     Text('DSE — Dar es Salaam Stock Exchange',
-                        style: TextStyle(color: _C.txtSec, fontSize: 9)),
+                        style: TextStyle(color: _C.grey, fontSize: 9)),
                   ]),
                 ]),
                 actions: [
@@ -314,12 +310,12 @@ class _BuySharesPageState extends State<BuySharesPage>
                     icon: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _C.surface,
+                        color: _C.white,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _C.border),
+                        border: Border.all(color: _C.grey.withOpacity(0.3)),
                       ),
                       child: const Icon(Icons.refresh_rounded,
-                          size: 14, color: _C.blue),
+                          size: 14, color: _C.teal),
                     ),
                     onPressed: _loadingMarket ? null : _loadSecurities,
                   ),
@@ -333,6 +329,7 @@ class _BuySharesPageState extends State<BuySharesPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
 
+                      // ── Hero banner ────────────────────────────────────
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -340,13 +337,13 @@ class _BuySharesPageState extends State<BuySharesPage>
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [
-                              _C.green.withOpacity(0.18),
-                              _C.blue.withOpacity(0.10),
-                            ],
+                            colors: [_C.teal, _C.blue],
                           ),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _C.green.withOpacity(0.25)),
+                          boxShadow: [
+                            BoxShadow(color: _C.teal.withOpacity(0.30),
+                                blurRadius: 20, offset: const Offset(0, 8)),
+                          ],
                         ),
                         child: Row(children: [
                           Expanded(
@@ -354,7 +351,7 @@ class _BuySharesPageState extends State<BuySharesPage>
                               Text(
                                 _selected != null ? _selected!.name : 'BUY ORDER',
                                 style: const TextStyle(
-                                    color: _C.green, fontSize: 22,
+                                    color: _C.white, fontSize: 22,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: -0.8),
                                 overflow: TextOverflow.ellipsis,
@@ -364,21 +361,19 @@ class _BuySharesPageState extends State<BuySharesPage>
                                 _priceCtrl.text.isNotEmpty
                                     ? 'At TZS ${_priceCtrl.text} per share'
                                     : 'Select a security below',
-                                style: const TextStyle(
-                                    color: _C.txtSec, fontSize: 12),
+                                style: TextStyle(color: _C.white.withOpacity(0.75), fontSize: 12),
                               ),
                             ]),
                           ),
                           Container(
                             width: 56, height: 56,
                             decoration: BoxDecoration(
-                              color: _C.green.withOpacity(0.15),
+                              color: _C.white.withOpacity(0.18),
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: _C.green.withOpacity(0.3)),
+                              border: Border.all(color: _C.white.withOpacity(0.3)),
                             ),
                             child: const Icon(Icons.arrow_upward_rounded,
-                                color: _C.green, size: 26),
+                                color: _C.white, size: 26),
                           ),
                         ]),
                       ),
@@ -391,7 +386,7 @@ class _BuySharesPageState extends State<BuySharesPage>
                         selected:   _selected,
                         loading:    _loadingMarket,
                         error:      _marketError,
-                        color:      _C.green,
+                        color:      _C.teal,
                         onChanged:  _onSecuritySelected,
                         onRetry:    _loadSecurities,
                       ),
@@ -401,7 +396,7 @@ class _BuySharesPageState extends State<BuySharesPage>
                       const SizedBox(height: 8),
                       _PriceInput(
                         controller: _priceCtrl,
-                        color:      _C.green,
+                        color:      _C.teal,
                         onChanged:  (_) => setState(() {}),
                       ),
                       const SizedBox(height: 16),
@@ -410,7 +405,7 @@ class _BuySharesPageState extends State<BuySharesPage>
                       const SizedBox(height: 8),
                       _SharesStepper(
                         value:     _shares,
-                        color:     _C.green,
+                        color:     _C.teal,
                         onChanged: (v) => setState(() => _shares = v),
                       ),
                       const SizedBox(height: 24),
@@ -418,7 +413,7 @@ class _BuySharesPageState extends State<BuySharesPage>
                       _TotalCard(
                         total:  _total,
                         shares: _shares,
-                        color:  _C.green,
+                        color:  _C.teal,
                         label:  'Estimated Buy Total',
                       ),
                       const SizedBox(height: 16),
@@ -436,7 +431,7 @@ class _BuySharesPageState extends State<BuySharesPage>
 
                       _SubmitButton(
                         label:   _loading ? 'Placing Order…' : 'Confirm Buy Order',
-                        color:   _C.green,
+                        color:   _C.teal,
                         loading: _loading,
                         icon:    Icons.trending_up_rounded,
                         onTap:   _loading ? null : _submit,
@@ -457,7 +452,7 @@ class _BuySharesPageState extends State<BuySharesPage>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECURITY DROPDOWN WIDGET
+// SECURITY DROPDOWN
 // ─────────────────────────────────────────────────────────────────────────────
 class _SecurityDropdown extends StatelessWidget {
   final List<_Security>         securities;
@@ -484,13 +479,13 @@ class _SecurityDropdown extends StatelessWidget {
       return Container(
         height: 54,
         decoration: BoxDecoration(
-          color: _C.card,
+          color: _C.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _C.border),
+          border: Border.all(color: _C.grey.withOpacity(0.3)),
         ),
         child: const Center(
           child: SizedBox(width: 20, height: 20,
-              child: CircularProgressIndicator(color: _C.blue, strokeWidth: 2)),
+              child: CircularProgressIndicator(color: _C.teal, strokeWidth: 2)),
         ),
       );
     }
@@ -531,14 +526,13 @@ class _SecurityDropdown extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: _C.card,
+        color: _C.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-            color: selected != null
-                ? color.withOpacity(0.45) : _C.border,
+            color: selected != null ? color.withOpacity(0.45) : _C.grey.withOpacity(0.3),
             width: selected != null ? 1.5 : 1),
         boxShadow: [
-          BoxShadow(color: color.withOpacity(0.05),
+          BoxShadow(color: _C.grey.withOpacity(0.08),
               blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
@@ -547,10 +541,10 @@ class _SecurityDropdown extends StatelessWidget {
         child: DropdownButton<_Security>(
           value: selected,
           isExpanded: true,
-          hint: const Text('Select a security…',
-              style: TextStyle(color: _C.txtHint, fontSize: 14)),
+          hint: Text('Select a security…',
+              style: TextStyle(color: _C.grey, fontSize: 14)),
           icon: Icon(Icons.keyboard_arrow_down_rounded, color: color),
-          dropdownColor: _C.card,
+          dropdownColor: _C.white,
           borderRadius: BorderRadius.circular(14),
           onChanged: (s) {
             if (s != null) {
@@ -585,7 +579,7 @@ class _SecurityDropdown extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(s.name,
-                          style: const TextStyle(color: _C.txtPrim,
+                          style: const TextStyle(color: _C.black,
                               fontSize: 13, fontWeight: FontWeight.w800),
                           overflow: TextOverflow.ellipsis),
                       Text('TZS ${s.marketPrice.toStringAsFixed(2)}',
@@ -636,26 +630,23 @@ class _PriceInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      color: _C.card,
+      color: _C.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: _C.border),
+      border: Border.all(color: _C.grey.withOpacity(0.3)),
     ),
     child: TextField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: onChanged,
-      style: const TextStyle(color: _C.txtPrim, fontSize: 15,
-          fontWeight: FontWeight.w700),
+      style: const TextStyle(color: _C.black, fontSize: 15, fontWeight: FontWeight.w700),
       decoration: InputDecoration(
         hintText: 'e.g. 1000.00',
-        hintStyle: const TextStyle(color: _C.txtHint, fontSize: 14),
+        hintStyle: TextStyle(color: _C.grey, fontSize: 14),
         prefixIcon: Icon(Icons.attach_money_rounded, color: color, size: 18),
         border: InputBorder.none,
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         suffixText: 'TZS',
-        suffixStyle: TextStyle(color: color.withOpacity(0.6), fontSize: 12,
-            fontWeight: FontWeight.w700),
+        suffixStyle: TextStyle(color: color.withOpacity(0.6), fontSize: 12, fontWeight: FontWeight.w700),
       ),
     ),
   );
@@ -679,30 +670,25 @@ class _SharesStepper extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     decoration: BoxDecoration(
-      color: _C.card,
+      color: _C.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: _C.border),
+      border: Border.all(color: _C.grey.withOpacity(0.3)),
     ),
     child: Row(children: [
-      _Btn(label: '−100', color: color,
-          onTap: () => onChanged(max(100, value - 100))),
+      _Btn(label: '−100', color: color, onTap: () => onChanged(max(100, value - 100))),
       const SizedBox(width: 6),
-      _Btn(label: '−1',   color: color,
-          onTap: () => onChanged(max(1, value - 1))),
+      _Btn(label: '−1',   color: color, onTap: () => onChanged(max(1, value - 1))),
       const Spacer(),
       Column(children: [
         Text('$value',
             style: TextStyle(color: color, fontSize: 26,
                 fontWeight: FontWeight.w900, letterSpacing: -1)),
-        const Text('shares',
-            style: TextStyle(color: _C.txtHint, fontSize: 10)),
+        Text('shares', style: TextStyle(color: _C.grey, fontSize: 10)),
       ]),
       const Spacer(),
-      _Btn(label: '+1',   color: color,
-          onTap: () => onChanged(value + 1)),
+      _Btn(label: '+1',   color: color, onTap: () => onChanged(value + 1)),
       const SizedBox(width: 6),
-      _Btn(label: '+100', color: color,
-          onTap: () => onChanged(value + 100)),
+      _Btn(label: '+100', color: color, onTap: () => onChanged(value + 100)),
     ]),
   );
 }
@@ -716,7 +702,7 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(label,
-      style: const TextStyle(color: _C.txtSec, fontSize: 11,
+      style: TextStyle(color: _C.grey, fontSize: 11,
           fontWeight: FontWeight.w700, letterSpacing: 0.4));
 }
 
@@ -734,9 +720,7 @@ class _Btn extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withOpacity(0.25)),
       ),
-      child: Text(label,
-          style: TextStyle(color: color, fontSize: 11,
-              fontWeight: FontWeight.w800)),
+      child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
     ),
   );
 }
@@ -757,11 +741,9 @@ class _TotalCard extends StatelessWidget {
     ),
     child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(color: _C.txtSec, fontSize: 11,
-            fontWeight: FontWeight.w600)),
+        Text(label, style: TextStyle(color: _C.grey, fontSize: 11, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text('$shares shares',
-            style: const TextStyle(color: _C.txtHint, fontSize: 10)),
+        Text('$shares shares', style: TextStyle(color: _C.grey.withOpacity(0.7), fontSize: 10)),
       ]),
       Text(_fmtMoney(total),
           style: TextStyle(color: color, fontSize: 20,
@@ -772,8 +754,7 @@ class _TotalCard extends StatelessWidget {
 
 class _StatusBanner extends StatelessWidget {
   final String message; final Color color; final IconData icon;
-  const _StatusBanner({required this.message, required this.color,
-    required this.icon});
+  const _StatusBanner({required this.message, required this.color, required this.icon});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -787,8 +768,7 @@ class _StatusBanner extends StatelessWidget {
       Icon(icon, color: color, size: 18),
       const SizedBox(width: 10),
       Expanded(child: Text(message,
-          style: TextStyle(color: color, fontSize: 12,
-              fontWeight: FontWeight.w600))),
+          style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600))),
     ]),
   );
 }
@@ -811,25 +791,22 @@ class _SubmitButton extends StatelessWidget {
           begin: Alignment.topLeft, end: Alignment.bottomRight,
           colors: loading
               ? [color.withOpacity(0.4), color.withOpacity(0.3)]
-              : [color, color.withOpacity(0.75)],
+              : [_C.teal, _C.blue],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: loading ? [] : [
-          BoxShadow(color: color.withOpacity(0.35),
-              blurRadius: 18, offset: const Offset(0, 6)),
+          BoxShadow(color: _C.teal.withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 6)),
         ],
       ),
       child: Center(
         child: loading
             ? const SizedBox(width: 22, height: 22,
-            child: CircularProgressIndicator(
-                color: Colors.white, strokeWidth: 2.5))
+            child: CircularProgressIndicator(color: _C.white, strokeWidth: 2.5))
             : Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: Colors.white, size: 18),
+          Icon(icon, color: _C.white, size: 18),
           const SizedBox(width: 8),
-          Text(label, style: const TextStyle(color: Colors.white,
-              fontSize: 15, fontWeight: FontWeight.w900,
-              letterSpacing: 0.3)),
+          Text(label, style: const TextStyle(color: _C.white,
+              fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 0.3)),
         ]),
       ),
     ),
@@ -843,18 +820,18 @@ class _Disclaimer extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: _C.surface,
+      color: _C.white,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: _C.border),
+      border: Border.all(color: _C.grey.withOpacity(0.25)),
     ),
-    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: const [
-      Icon(Icons.info_outline_rounded, size: 14, color: _C.txtHint),
-      SizedBox(width: 8),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(Icons.info_outline_rounded, size: 14, color: _C.grey),
+      const SizedBox(width: 8),
       Expanded(child: Text(
         'Orders are subject to market conditions and DSE regulations. '
             'Prices may differ from execution price. '
             'This is a UAT environment — no real trades are placed.',
-        style: TextStyle(color: _C.txtHint, fontSize: 10, height: 1.5),
+        style: TextStyle(color: _C.grey, fontSize: 10, height: 1.5),
       )),
     ]),
   );

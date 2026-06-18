@@ -3,10 +3,46 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:tsl/features/trade/dashboard/trade_dashboard.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ORDER MODEL  (matches real API response)
+// TSL BRAND PALETTE
+// ─────────────────────────────────────────────────────────────────────────────
+class _C {
+  static const Color blue      = Color(0xFF329AD6);
+  static const Color teal      = Color(0xFF00A79D);
+  static const Color grey      = Color(0xFF939598);
+  static const Color white     = Color(0xFFFFFFFF);
+  static const Color black     = Color(0xFF231F20);
+  static const Color lightGrey = Color(0xFFF5F6F7);
+  static const Color errorRed  = Color(0xFFD32F2F);
+
+  static const Color bg        = Color(0xFFF0F8FA);
+  static const Color surface   = Color(0xFFFFFFFF);
+  static const Color border    = Color(0xFFB8DDE8);
+
+  static const Color green     = Color(0xFF34C759);
+  static const Color greenLt   = Color(0xFFEBFBF2);
+  static const Color red       = Color(0xFFFF6B8A);
+  static const Color redLt     = Color(0xFFFFEEF2);
+  static const Color gold      = Color(0xFFF5A623);
+  static const Color goldLt    = Color(0xFFFFF8EC);
+
+  static const Color tealLt    = Color(0xFFE0F5F4);
+  static const Color blueLt    = Color(0xFFE6F3FB);
+
+  static const Color txtPrim   = Color(0xFF0D2B2A);
+  static const Color txtSec    = Color(0xFF4A8080);
+  static const Color txtHint   = Color(0xFF93BFC0);
+
+  static const List<Color> heroGrad = [Color(0xFF00A79D), Color(0xFF1A7BAF), Color(0xFF329AD6)];
+  static const List<Color> fabGrad  = [Color(0xFF00A79D), Color(0xFF1A7BAF)];
+  static const List<Color> buyGrad  = [Color(0xFF34C759), Color(0xFF1E8E3E)];
+  static const List<Color> sellGrad = [Color(0xFFFF8AA8), Color(0xFFFF6B8A)];
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDER MODEL
 // ─────────────────────────────────────────────────────────────────────────────
 class Order {
   final String  orderDate;
@@ -14,10 +50,10 @@ class Order {
   final String  orderStatus;
   final double  price;
   final String  securityId;
-  final String  securityName;   // display symbol e.g. "CRDB"
+  final String  securityName;
   final String? controlNumber;
   final int     shares;
-  final String  type;           // 'BUY' or 'SELL' — injected at parse time
+  final String  type;
 
   const Order({
     required this.orderDate,
@@ -43,7 +79,6 @@ class Order {
     type:           type,
   );
 
-  /// e.g. "06 Dec 2024, 10:58"
   String get displayDate {
     try {
       final dt = DateTime.parse(orderDate);
@@ -103,14 +138,10 @@ class _OrdersApi {
       final response = await request.close();
       final body     = await response.transform(utf8.decoder).join();
 
-      if (response.statusCode != 200) {
-        throw Exception('HTTP ${response.statusCode}');
-      }
+      if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
 
       final json = jsonDecode(body) as Map<String, dynamic>;
-      if ((json['code'] as int) != 9000) {
-        throw Exception('API: ${json['message']}');
-      }
+      if ((json['code'] as int) != 9000) throw Exception('API: ${json['message']}');
 
       final data = (json['data'] as List<dynamic>).cast<Map<String, dynamic>>();
       return data.map((j) => Order.fromJson(j, type: type)).toList();
@@ -119,7 +150,6 @@ class _OrdersApi {
     }
   }
 
-  /// Fetches buy + sell orders in parallel and returns them merged, newest first.
   static Future<List<Order>> fetchAll({
     required DateTime startDate,
     required DateTime endDate,
@@ -145,17 +175,13 @@ class OrdersPage extends StatefulWidget {
 }
 
 class _OrdersPageState extends State<OrdersPage> {
-  // ── Date range (defaults to current year) ─────────────────────────────────
   late DateTime _startDate;
   late DateTime _endDate;
 
-  // ── Data ──────────────────────────────────────────────────────────────────
   List<Order> _orders  = [];
   bool        _loading = true;
   String?     _error;
-
-  // ── Filter tab: 0=All 1=Buy 2=Sell ────────────────────────────────────────
-  int _filterIndex = 0;
+  int         _filterIndex = 0;
 
   @override
   void initState() {
@@ -185,7 +211,6 @@ class _OrdersPageState extends State<OrdersPage> {
     }
   }
 
-  // ── Date picker ───────────────────────────────────────────────────────────
   String _fmtDisplay(DateTime d) {
     const months = [
       '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -203,9 +228,9 @@ class _OrdersPageState extends State<OrdersPage> {
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: const ColorScheme.light(
-            primary: PastelColors.accent,
+            primary:   _C.teal,
             onPrimary: Colors.white,
-            surface: PastelColors.surface,
+            surface:   _C.surface,
           ),
         ),
         child: child!,
@@ -224,9 +249,6 @@ class _OrdersPageState extends State<OrdersPage> {
     _fetch();
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final filled  = _orders.where((o) => o.orderStatus == 'Full Filled').length;
@@ -236,19 +258,19 @@ class _OrdersPageState extends State<OrdersPage> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: PastelColors.bg,
+        backgroundColor: _C.bg,
         body: RefreshIndicator(
-          color: PastelColors.accent,
-          backgroundColor: PastelColors.surface,
+          color: _C.teal,
+          backgroundColor: _C.surface,
           onRefresh: _fetch,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics()),
             slivers: [
 
-              // ── App bar ─────────────────────────────────────────────────
+              // ── App bar ──────────────────────────────────────────────────
               SliverAppBar(
-                backgroundColor: PastelColors.bg,
+                backgroundColor: _C.bg,
                 elevation: 0,
                 floating: true,
                 pinned: true,
@@ -259,20 +281,21 @@ class _OrdersPageState extends State<OrdersPage> {
                     padding: const EdgeInsets.all(10),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: PastelColors.surface,
+                        color: _C.surface,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: PastelColors.border),
+                        border: Border.all(color: _C.border),
                       ),
                       child: const Icon(Icons.arrow_back_rounded,
-                          size: 18, color: PastelColors.txtPrim),
+                          size: 18, color: _C.txtPrim),
                     ),
                   ),
                 ),
                 title: Row(children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: PastelColors.fabGrad),
+                      gradient: const LinearGradient(colors: _C.fabGrad),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text('TRADE',
@@ -283,7 +306,7 @@ class _OrdersPageState extends State<OrdersPage> {
                   const SizedBox(width: 10),
                   const Text('My Orders',
                       style: TextStyle(
-                          color: PastelColors.txtPrim,
+                          color: _C.txtPrim,
                           fontSize: 18,
                           fontWeight: FontWeight.w800)),
                 ]),
@@ -292,16 +315,17 @@ class _OrdersPageState extends State<OrdersPage> {
                     icon: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: PastelColors.surface,
+                        color: _C.surface,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: PastelColors.border),
+                        border: Border.all(color: _C.border),
                       ),
                       child: _loading
-                          ? const SizedBox(width: 14, height: 14,
+                          ? SizedBox(
+                          width: 14, height: 14,
                           child: CircularProgressIndicator(
-                              color: PastelColors.accent, strokeWidth: 2))
+                              color: _C.teal, strokeWidth: 2))
                           : const Icon(Icons.refresh_rounded,
-                          size: 14, color: PastelColors.accent),
+                          size: 14, color: _C.teal),
                     ),
                     onPressed: _loading ? null : _fetch,
                   ),
@@ -315,7 +339,7 @@ class _OrdersPageState extends State<OrdersPage> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Column(children: [
 
-                    // ── Date range row ─────────────────────────────────────
+                    // Date range row
                     Row(children: [
                       Expanded(child: _DatePill(
                         label: 'From',
@@ -325,9 +349,10 @@ class _OrdersPageState extends State<OrdersPage> {
                       )),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Container(width: 24, height: 2,
+                        child: Container(
+                          width: 24, height: 2,
                           decoration: BoxDecoration(
-                            color: PastelColors.txtHint,
+                            color: _C.txtHint,
                             borderRadius: BorderRadius.circular(1),
                           ),
                         ),
@@ -341,9 +366,9 @@ class _OrdersPageState extends State<OrdersPage> {
                     ]),
                     const SizedBox(height: 14),
 
-                    // ── Summary card ───────────────────────────────────────
+                    // Summary card
                     if (_loading)
-                      _SummaryShimmer()
+                      const _SummaryShimmer()
                     else if (_error == null)
                       _SummaryCard(
                         total:   _orders.length,
@@ -354,7 +379,7 @@ class _OrdersPageState extends State<OrdersPage> {
 
                     const SizedBox(height: 14),
 
-                    // ── Filter chips ───────────────────────────────────────
+                    // Filter chips
                     _FilterChips(
                       selected:  _filterIndex,
                       onChanged: (i) {
@@ -373,9 +398,8 @@ class _OrdersPageState extends State<OrdersPage> {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
-                          (_, __) => const _SkeletonCard(),
-                      childCount: 5,
-                    ),
+                            (_, __) => const _SkeletonCard(),
+                        childCount: 5),
                   ),
                 )
               else if (_error != null)
@@ -390,19 +414,21 @@ class _OrdersPageState extends State<OrdersPage> {
                         Container(
                           width: 64, height: 64,
                           decoration: BoxDecoration(
-                            color: PastelColors.accentLt,
+                            color: _C.tealLt,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.receipt_long_rounded,
-                              color: PastelColors.accent, size: 28),
+                              color: _C.teal, size: 28),
                         ),
                         const SizedBox(height: 16),
                         const Text('No orders found',
-                            style: TextStyle(color: PastelColors.txtPrim,
-                                fontSize: 16, fontWeight: FontWeight.w800)),
+                            style: TextStyle(
+                                color: _C.txtPrim,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800)),
                         const SizedBox(height: 6),
                         const Text('Try adjusting the date range or filter.',
-                            style: TextStyle(color: PastelColors.txtSec, fontSize: 13),
+                            style: TextStyle(color: _C.txtSec, fontSize: 13),
                             textAlign: TextAlign.center),
                       ]),
                     ),
@@ -412,9 +438,8 @@ class _OrdersPageState extends State<OrdersPage> {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                            (_, i) => OrderCard(order: _filtered[i]),
-                        childCount: _filtered.length,
-                      ),
+                              (_, i) => OrderCard(order: _filtered[i]),
+                          childCount: _filtered.length),
                     ),
                   ),
             ],
@@ -447,11 +472,11 @@ class _DatePill extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: PastelColors.surface,
+        color: _C.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: PastelColors.border, width: 1.5),
+        border: Border.all(color: _C.border, width: 1.5),
         boxShadow: [
-          BoxShadow(color: PastelColors.accent.withOpacity(0.06),
+          BoxShadow(color: _C.teal.withOpacity(0.06),
               blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
@@ -459,28 +484,29 @@ class _DatePill extends StatelessWidget {
         Container(
           width: 30, height: 30,
           decoration: BoxDecoration(
-            color: PastelColors.accentLt,
+            color: _C.tealLt,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: PastelColors.accent, size: 14),
+          child: const Icon(Icons.calendar_today_rounded,
+              color: _C.teal, size: 14),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(label,
                 style: const TextStyle(
-                    color: PastelColors.txtHint, fontSize: 9,
+                    color: _C.txtHint, fontSize: 9,
                     fontWeight: FontWeight.w600, letterSpacing: 0.5)),
             const SizedBox(height: 2),
             Text(value,
                 style: const TextStyle(
-                    color: PastelColors.txtPrim, fontSize: 11,
+                    color: _C.txtPrim, fontSize: 11,
                     fontWeight: FontWeight.w800),
                 overflow: TextOverflow.ellipsis),
           ]),
         ),
-        const Icon(Icons.expand_more_rounded,
-            color: PastelColors.txtHint, size: 16),
+        const Icon(Icons.expand_more_rounded, color: _C.txtHint, size: 16),
       ]),
     ),
   );
@@ -504,11 +530,11 @@ class _SummaryCard extends StatelessWidget {
     decoration: BoxDecoration(
       gradient: const LinearGradient(
           begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: PastelColors.heroGrad),
+          end:   Alignment.bottomRight,
+          colors: _C.heroGrad),
       borderRadius: BorderRadius.circular(20),
       boxShadow: [
-        BoxShadow(color: PastelColors.accent.withOpacity(0.28),
+        BoxShadow(color: _C.teal.withOpacity(0.28),
             blurRadius: 24, offset: const Offset(0, 8)),
       ],
     ),
@@ -517,15 +543,16 @@ class _SummaryCard extends StatelessWidget {
       _d(),
       _s('$filled',  'Full Filled', const Color(0xFF4ADE80)),
       _d(),
-      _s('$pending', 'Pending',     PastelColors.gold),
+      _s('$pending', 'Pending',     _C.gold),
       _d(),
-      _s('$expired', 'Expired',     PastelColors.red),
+      _s('$expired', 'Expired',     _C.red),
     ]),
   );
 
   Widget _s(String v, String l, Color c) => Expanded(
     child: Column(children: [
-      Text(v, style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
+      Text(v, style: TextStyle(
+          color: c, fontSize: 20, fontWeight: FontWeight.w900)),
       const SizedBox(height: 2),
       Text(l, style: const TextStyle(color: Colors.white60, fontSize: 9),
           textAlign: TextAlign.center),
@@ -539,6 +566,7 @@ class _SummaryCard extends StatelessWidget {
 // SUMMARY SHIMMER
 // ─────────────────────────────────────────────────────────────────────────────
 class _SummaryShimmer extends StatefulWidget {
+  const _SummaryShimmer();
   @override
   State<_SummaryShimmer> createState() => _SummaryShimmerState();
 }
@@ -561,8 +589,8 @@ class _SummaryShimmerState extends State<_SummaryShimmer>
     builder: (_, __) => Container(
       height: 72,
       decoration: BoxDecoration(
-        color: Color.lerp(PastelColors.accent.withOpacity(0.18),
-            PastelColors.accent.withOpacity(0.32), _anim.value),
+        color: Color.lerp(_C.teal.withOpacity(0.18),
+            _C.teal.withOpacity(0.32), _anim.value),
         borderRadius: BorderRadius.circular(20),
       ),
     ),
@@ -580,7 +608,7 @@ class _FilterChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const labels = ['All', 'Buy', 'Sell'];
-    const colors = [PastelColors.accent, PastelColors.accent2, PastelColors.red];
+    const colors = [_C.teal, _C.blue, _C.red];
     return Row(
       children: List.generate(labels.length, (i) {
         final sel = selected == i;
@@ -589,12 +617,13 @@ class _FilterChips extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             margin: const EdgeInsets.only(right: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 22, vertical: 10),
             decoration: BoxDecoration(
-              color: sel ? colors[i] : PastelColors.surface,
+              color: sel ? colors[i] : _C.surface,
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
-                  color: sel ? colors[i] : PastelColors.border, width: 1.5),
+                  color: sel ? colors[i] : _C.border, width: 1.5),
               boxShadow: sel
                   ? [BoxShadow(color: colors[i].withOpacity(0.30),
                   blurRadius: 10, offset: const Offset(0, 4))]
@@ -602,9 +631,10 @@ class _FilterChips extends StatelessWidget {
             ),
             child: Text(labels[i],
                 style: TextStyle(
-                    color: sel ? Colors.white : PastelColors.txtSec,
+                    color: sel ? Colors.white : _C.txtSec,
                     fontSize: 13,
-                    fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+                    fontWeight:
+                    sel ? FontWeight.w700 : FontWeight.w500)),
           ),
         );
       }),
@@ -627,18 +657,20 @@ class _ErrorState extends StatelessWidget {
       Container(
         width: 64, height: 64,
         decoration: BoxDecoration(
-          color: PastelColors.red.withOpacity(0.10),
+          color: _C.red.withOpacity(0.10),
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.wifi_off_rounded, color: PastelColors.red, size: 28),
+        child: const Icon(Icons.wifi_off_rounded, color: _C.red, size: 28),
       ),
       const SizedBox(height: 16),
       const Text('Unable to load orders',
-          style: TextStyle(color: PastelColors.txtPrim,
-              fontSize: 16, fontWeight: FontWeight.w800)),
+          style: TextStyle(
+              color: _C.txtPrim,
+              fontSize: 16,
+              fontWeight: FontWeight.w800)),
       const SizedBox(height: 8),
       Text(message,
-          style: const TextStyle(color: PastelColors.txtSec, fontSize: 12),
+          style: const TextStyle(color: _C.txtSec, fontSize: 12),
           textAlign: TextAlign.center),
       const SizedBox(height: 24),
       GestureDetector(
@@ -646,13 +678,15 @@ class _ErrorState extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
           decoration: BoxDecoration(
-            color: PastelColors.accent.withOpacity(0.12),
+            color: _C.teal.withOpacity(0.12),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: PastelColors.accent.withOpacity(0.35)),
+            border: Border.all(color: _C.teal.withOpacity(0.35)),
           ),
           child: const Text('Retry',
-              style: TextStyle(color: PastelColors.accent,
-                  fontSize: 13, fontWeight: FontWeight.w800)),
+              style: TextStyle(
+                  color: _C.teal,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800)),
         ),
       ),
     ]),
@@ -683,24 +717,26 @@ class _SkeletonCardState extends State<_SkeletonCard>
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _anim,
     builder: (_, __) {
-      final s = Color.lerp(PastelColors.border, PastelColors.accentLt, _anim.value)!;
+      final s = Color.lerp(_C.border, _C.tealLt, _anim.value)!;
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         height: 96,
         decoration: BoxDecoration(
-          color: PastelColors.card,
+          color: _C.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: PastelColors.border),
+          border: Border.all(color: _C.border),
         ),
         child: Row(children: [
           Container(width: 40, height: 40,
-              decoration: BoxDecoration(color: s,
-                  borderRadius: BorderRadius.circular(10))),
+              decoration: BoxDecoration(
+                  color: s, borderRadius: BorderRadius.circular(10))),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center, children: [
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                   Container(height: 12, width: 100, color: s),
                   const SizedBox(height: 8),
                   Container(height: 10, width: 160, color: s),
@@ -724,9 +760,9 @@ class OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isBuy     = order.type == 'BUY';
-    final grad      = isBuy ? PastelColors.buyGrad  : PastelColors.sellGrad;
-    final typeBg    = isBuy ? PastelColors.greenLt  : PastelColors.redLt;
-    final typeColor = isBuy ? PastelColors.accent2   : PastelColors.red;
+    final grad      = isBuy ? _C.buyGrad  : _C.sellGrad;
+    final typeBg    = isBuy ? _C.greenLt  : _C.redLt;
+    final typeColor = isBuy ? _C.green     : _C.red;
 
     Color    statusColor;
     Color    statusBg;
@@ -734,23 +770,23 @@ class OrderCard extends StatelessWidget {
 
     switch (order.orderStatus) {
       case 'Full Filled':
-        statusColor = PastelColors.green;
-        statusBg    = PastelColors.greenLt;
+        statusColor = _C.green;
+        statusBg    = _C.greenLt;
         statusIcon  = Icons.check_circle_rounded;
         break;
       case 'Pending':
-        statusColor = PastelColors.gold;
-        statusBg    = PastelColors.goldLt;
+        statusColor = _C.gold;
+        statusBg    = _C.goldLt;
         statusIcon  = Icons.schedule_rounded;
         break;
       case 'Expired':
-        statusColor = PastelColors.txtHint;
-        statusBg    = PastelColors.border;
+        statusColor = _C.txtHint;
+        statusBg    = _C.border;
         statusIcon  = Icons.timer_off_rounded;
         break;
       default:
-        statusColor = PastelColors.txtHint;
-        statusBg    = PastelColors.border;
+        statusColor = _C.txtHint;
+        statusBg    = _C.border;
         statusIcon  = Icons.cancel_rounded;
     }
 
@@ -762,135 +798,141 @@ class OrderCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: PastelColors.card,
+        color: _C.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: PastelColors.border),
+        border: Border.all(color: _C.border),
         boxShadow: [
-          BoxShadow(color: PastelColors.accent.withOpacity(0.06),
+          BoxShadow(color: _C.teal.withOpacity(0.06),
               blurRadius: 14, offset: const Offset(0, 4)),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
         child: IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
 
-            // ── Coloured left bar ─────────────────────────────────────────
-            Container(
-              width: 5,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: grad,
-                    begin: Alignment.topCenter, end: Alignment.bottomCenter),
-              ),
-            ),
+                // Coloured left bar
+                Container(
+                  width: 5,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: grad,
+                        begin: Alignment.topCenter,
+                        end:   Alignment.bottomCenter),
+                  ),
+                ),
 
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
 
-                      // ── Row 1: symbol · securityId · status ────────────────
-                      Row(children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: grad),
-                              borderRadius: BorderRadius.circular(8)),
-                          child: Text(order.securityName,
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 12,
-                                  fontWeight: FontWeight.w800, letterSpacing: 0.5)),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(order.securityId,
-                              style: const TextStyle(
-                                  color: PastelColors.txtSec,
-                                  fontSize: 12, fontWeight: FontWeight.w600),
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 9, vertical: 4),
-                          decoration: BoxDecoration(
-                              color: statusBg,
-                              borderRadius: BorderRadius.circular(20)),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(statusIcon, size: 11, color: statusColor),
-                            const SizedBox(width: 3),
-                            Text(order.orderStatus,
-                                style: TextStyle(
-                                    color: statusColor, fontSize: 10,
-                                    fontWeight: FontWeight.w700)),
+                          // Row 1: symbol · securityId · status
+                          Row(children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: grad),
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: Text(order.securityName,
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5)),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(order.securityId,
+                                  style: const TextStyle(
+                                      color: _C.txtSec,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                  color: statusBg,
+                                  borderRadius: BorderRadius.circular(20)),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(statusIcon, size: 11, color: statusColor),
+                                const SizedBox(width: 3),
+                                Text(order.orderStatus,
+                                    style: TextStyle(
+                                        color: statusColor, fontSize: 10,
+                                        fontWeight: FontWeight.w700)),
+                              ]),
+                            ),
                           ]),
-                        ),
-                      ]),
-                      const SizedBox(height: 10),
+                          const SizedBox(height: 10),
 
-                      // ── Row 2: type chip · shares · price ──────────────────
-                      Row(children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                              color: typeBg,
-                              borderRadius: BorderRadius.circular(6)),
-                          child: Text(order.type,
-                              style: TextStyle(
-                                  color: typeColor, fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8)),
-                        ),
-                        const SizedBox(width: 8),
-                        Text('${order.shares} shares',
-                            style: const TextStyle(
-                                color: PastelColors.txtSec, fontSize: 12)),
-                        const Spacer(),
-                        Text('TZS ${order.price.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                                color: PastelColors.txtPrim, fontSize: 14,
-                                fontWeight: FontWeight.w800)),
-                      ]),
-                      const SizedBox(height: 6),
-
-                      // ── Row 3: date · total ────────────────────────────────
-                      Row(children: [
-                        const Icon(Icons.access_time_rounded,
-                            size: 11, color: PastelColors.txtHint),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(order.displayDate,
-                              style: const TextStyle(
-                                  color: PastelColors.txtHint, fontSize: 11)),
-                        ),
-                        Text('Total: TZS $totalStr',
-                            style: const TextStyle(
-                                color: PastelColors.txtSec, fontSize: 11,
-                                fontWeight: FontWeight.w600)),
-                      ]),
-
-                      // ── Row 4: control number (optional) ───────────────────
-                      if (order.controlNumber != null) ...[
-                        const SizedBox(height: 6),
-                        Row(children: [
-                          const Icon(Icons.confirmation_number_rounded,
-                              size: 11, color: PastelColors.txtHint),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text('Ctrl: ${order.controlNumber}',
+                          // Row 2: type chip · shares · price
+                          Row(children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                  color: typeBg,
+                                  borderRadius: BorderRadius.circular(6)),
+                              child: Text(order.type,
+                                  style: TextStyle(
+                                      color: typeColor, fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.8)),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('${order.shares} shares',
                                 style: const TextStyle(
-                                    color: PastelColors.txtHint,
-                                    fontSize: 10, fontWeight: FontWeight.w500),
-                                overflow: TextOverflow.ellipsis),
-                          ),
+                                    color: _C.txtSec, fontSize: 12)),
+                            const Spacer(),
+                            Text('TZS ${order.price.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                    color: _C.txtPrim, fontSize: 14,
+                                    fontWeight: FontWeight.w800)),
+                          ]),
+                          const SizedBox(height: 6),
+
+                          // Row 3: date · total
+                          Row(children: [
+                            const Icon(Icons.access_time_rounded,
+                                size: 11, color: _C.txtHint),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(order.displayDate,
+                                  style: const TextStyle(
+                                      color: _C.txtHint, fontSize: 11)),
+                            ),
+                            Text('Total: TZS $totalStr',
+                                style: const TextStyle(
+                                    color: _C.txtSec, fontSize: 11,
+                                    fontWeight: FontWeight.w600)),
+                          ]),
+
+                          // Row 4: control number (optional)
+                          if (order.controlNumber != null) ...[
+                            const SizedBox(height: 6),
+                            Row(children: [
+                              const Icon(Icons.confirmation_number_rounded,
+                                  size: 11, color: _C.txtHint),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text('Ctrl: ${order.controlNumber}',
+                                    style: const TextStyle(
+                                        color: _C.txtHint,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500),
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                            ]),
+                          ],
                         ]),
-                      ],
-                    ]),
-              ),
-            ),
-          ]),
+                  ),
+                ),
+              ]),
         ),
       ),
     );
