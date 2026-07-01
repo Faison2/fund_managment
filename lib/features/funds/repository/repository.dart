@@ -7,7 +7,7 @@ import '../model/sub_account.dart';
 
 class FundsRepository {
   Future<List<Fund>> fetchFunds() async {
-    const url = "$cSharpApi/GetFunds";
+    final url = "$cSharpApi/GetFunds";
 
     try {
       final response = await http.post(
@@ -50,7 +50,7 @@ class FundsRepository {
     required String cdsNo,
     required List<SubAccountEntry> subAccounts,
   }) async {
-    const url = "$cSharpApi/CreateSubAccounts";
+    final url = "$cSharpApi/CreateSubAccounts";
 
     try {
       final response = await http.post(

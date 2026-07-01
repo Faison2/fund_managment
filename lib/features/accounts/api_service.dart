@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:tsl/constants/constants.dart';
 
 class ApiService {
-  static const String _createAccountUrl = '$cSharpApi/CreateAccount';
+  static final String _createAccountUrl = '$cSharpApi/CreateAccount';
 
   /// Create an Individual Account.
   /// All fields now match the live API body exactly.

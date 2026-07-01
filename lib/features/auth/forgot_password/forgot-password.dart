@@ -25,7 +25,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool _isLoading = false;
 
-  static const String _requestResetUrl = '$cSharpApi/RequestReset';
+  static final String _requestResetUrl = '$cSharpApi/RequestReset';
 
   Future<void> _sendOTP() async {
     final email = _emailController.text.trim();
@@ -273,7 +273,7 @@ class _ResetPasswordScreen extends StatefulWidget {
   final String apiUsername;
   final String apiPassword;
 
-  static const String _confirmResetUrl = '$cSharpApi/ConfirmReset';
+  static final String _confirmResetUrl = '$cSharpApi/ConfirmReset';
 
   const _ResetPasswordScreen({
     required this.email,

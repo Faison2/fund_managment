@@ -112,7 +112,7 @@ class _TradeDrawerState extends State<TradeDrawer>
   bool   _loadingUser = true;
   bool   _shimmerTick = false;
 
-  static const _apiUrl = '$cSharpApi/UserBasicDetails';
+  static final _apiUrl = '$cSharpApi/UserBasicDetails';
 
   @override
   void initState() {
