@@ -5,6 +5,9 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../constants/constants.dart';
+import '../../constants/secure_storage.dart';
+import '../../constants/password_policy.dart';
+import '../../constants/app_logger.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 
@@ -271,13 +274,17 @@ class _SettingsPageState extends State<SettingsPage> {
               setDialogState(() => dialogError = s.passwordsDoNotMatch);
               return;
             }
+            final pwError = PasswordPolicy.validate(newPw);
+            if (pwError != null) {
+              setDialogState(() => dialogError = pwError);
+              return;
+            }
             setDialogState(() { isSubmitting = true; dialogError = null; });
 
             try {
-              final prefs     = await SharedPreferences.getInstance();
-              final userEmail = (prefs.getString('userEmail') ?? '').trim();
+              final userEmail = await SecureStorage.read('userEmail');
 
-              if (userEmail.isEmpty) {
+              if (userEmail == null || userEmail.isEmpty) {
                 setDialogState(() {
                   dialogError  = s.emailNotFound;
                   isSubmitting = false;
@@ -325,6 +332,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 setDialogState(() => dialogError = statusDesc);
               }
             } catch (e) {
+              AppLogger.error('ChangePassword failed', e);
               setDialogState(() {
                 dialogError  = 'Network error. Please try again.';
                 isSubmitting = false;

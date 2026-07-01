@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:tsl/constants/app_logger.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -29,7 +30,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform, // ← FIXED
   );
-  debugPrint('Background message: ${message.messageId}');
+  AppLogger.info('Background message: ${message.messageId}');
 }
 
 // ── Notification service ──────────────────────────────────────────────────────
@@ -45,10 +46,10 @@ class NotificationService {
       provisional: false,
     );
 
-    debugPrint('Permission status: ${settings.authorizationStatus}');
+    AppLogger.info('Permission status: ${settings.authorizationStatus}');
 
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
-      debugPrint('Notification permission denied.');
+      AppLogger.warn('Notification permission denied.');
       return;
     }
 
@@ -81,12 +82,12 @@ class NotificationService {
         for (int i = 0; i < 10; i++) {
           apnsToken = await messaging.getAPNSToken();
           if (apnsToken != null) break;
-          debugPrint('Waiting for APNS token... (${i + 1}/10)');
+          AppLogger.debug('Waiting for APNS token... (${i + 1}/10)');
           await Future.delayed(const Duration(milliseconds: 500));
         }
 
         if (apnsToken == null) {
-          debugPrint('APNS token not available — skipping FCM token fetch.');
+          AppLogger.warn('APNS token not available — skipping FCM token fetch.');
           return;
         }
 
@@ -95,9 +96,9 @@ class NotificationService {
         token = await messaging.getToken();
       }
 
-      debugPrint('FCM Token: $token');
+      AppLogger.info('FCM Token obtained');
     } catch (e) {
-      debugPrint('Failed to get FCM token: $e');
+      AppLogger.error('Failed to get FCM token', e);
     }
   }
 
@@ -114,7 +115,7 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.initialize(
       settings: initSettings,
       onDidReceiveNotificationResponse: (details) {
-        debugPrint('Notification tapped: ${details.payload}');
+        AppLogger.debug('Notification tapped: ${details.payload}');
       },
     );
 
@@ -163,7 +164,7 @@ class NotificationService {
   }
 
   static void _handleMessageOpenedApp(RemoteMessage message) {
-    debugPrint('App opened from notification: ${message.data}');
+    AppLogger.debug('App opened from notification: ${message.data}');
   }
 }
 

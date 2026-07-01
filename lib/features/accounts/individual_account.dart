@@ -6,9 +6,12 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/constants/constants.dart';
+import 'package:tsl/constants/password_policy.dart';
+import 'package:tsl/constants/app_logger.dart';
 
 import '../accounts/api_service/bank_controller.dart';
 import '../auth/login/view/login.dart';
+import '../auth/email_verification/email_verification.dart';
 
 // ─── Comma-separator formatter ────────────────────────────────────────────────
 class _ThousandsInputFormatter extends TextInputFormatter {
@@ -853,7 +856,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         if (phone.isNotEmpty) _phoneController.text = phone;
       });
     } catch (e) {
-      debugPrint('Error loading saved credentials: $e');
+      AppLogger.error('Error loading saved credentials', e);
     }
   }
 
@@ -905,7 +908,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         }
       }
     } catch (_) {
-      debugPrint('Failed to load funds');
+      AppLogger.error('Failed to load funds');
     } finally {
       setState(() => _isLoadingFunds = false);
     }
@@ -920,16 +923,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
     return null;
   }
 
-  // ✅ NEW: Password validation
-  // String? _validatePassword(String value) {
-  //   if (value.trim().isEmpty) return 'Password is required';
-  //   if (value.length < 8) return 'Password must be at least 8 characters';
-  //   if (!RegExp(r'[A-Z]').hasMatch(value))
-  //     return 'Must contain at least one uppercase letter';
-  //   if (!RegExp(r'[0-9]').hasMatch(value))
-  //     return 'Must contain at least one number';
-  //   return null;
-  // }
+  String? _validatePassword(String value) {
+    return PasswordPolicy.validate(value.trim());
+  }
 
   Future<void> _selectDate(TextEditingController ctrl,
       {DateTime? firstDate, DateTime? lastDate}) async {
@@ -1265,9 +1261,9 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
           e['sourceOfFunds'] = 'Please select a source of funds';
         if (_isPoliticallyExposed && _positionController.text.trim().isEmpty)
           e['position'] = 'Please specify the position held';
-        // ✅ NEW: Validate password
-       // final pe = _validatePassword(_passwordController.text);
-       // if (pe != null) e['password'] = pe;
+        // ✅ Validate password
+        final pe = _validatePassword(_passwordController.text);
+        if (pe != null) e['password'] = pe;
         break;
     }
 
@@ -1344,17 +1340,17 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         final rd = json.decode(res.body);
         final status = rd['status']?.toString().toLowerCase() ?? '';
         if (status == 'success') {
-          debugPrint(
+          AppLogger.info(
               'Fund subscription successful — CDS: $cdsNo, Fund: ${_selectedFund!.fundingName}');
         } else {
-          debugPrint(
+          AppLogger.info(
               'Fund subscription note [${rd['status']}]: ${rd['statusDesc']}');
         }
       } else {
-        debugPrint('Fund subscription HTTP error: ${res.statusCode}');
+        AppLogger.warn('Fund subscription HTTP error: ${res.statusCode}');
       }
     } catch (e) {
-      debugPrint('Fund subscription error (non-critical): $e');
+      AppLogger.error('Fund subscription error (non-critical)', e);
     }
   }
 
@@ -1451,7 +1447,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         'Content_Type': idContentType,
       };
 
-      debugPrint('Submitting account creation to: $_apiUrl');
+      AppLogger.info('Submitting account creation');
 
       final res = await http.post(
         Uri.parse(_apiUrl),
@@ -1459,8 +1455,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         body: json.encode(body),
       );
 
-      debugPrint('Response status: ${res.statusCode}');
-      debugPrint('Response body: ${res.body}');
+      AppLogger.info('Response status: ${res.statusCode}');
+      AppLogger.debug('Response body: ${res.body}');
 
       if (res.statusCode == 200) {
         final rd = json.decode(res.body);
@@ -1486,7 +1482,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
         _showSnackBar('HTTP Error ${res.statusCode}: ${res.reasonPhrase}');
       }
     } catch (e) {
-      debugPrint('Submit error: $e');
+      AppLogger.error('Submit error', e);
       _showSnackBar('Failed to submit application: $e');
     } finally {
       setState(() => _isLoading = false);
@@ -1520,7 +1516,7 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                     color: _textDark)),
             const SizedBox(height: 12),
             const Text(
-                'Your individual account has been created. You can now log in to access your account.',
+                'Your individual account has been created. Please verify your email to activate your account.',
                 textAlign: TextAlign.center,
                 style:
                 TextStyle(color: _textMuted, fontSize: 14, height: 1.5)),
@@ -1538,9 +1534,10 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
                 onPressed: () {
                   Navigator.of(context).pop();
                   Navigator.pushReplacement(context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()));
+                      MaterialPageRoute(builder: (_) => EmailVerificationScreen(
+                          email: _emailController.text.trim())));
                 },
-                child: const Text('Continue to Login',
+                child: const Text('Continue to Email Verification',
                     style:
                     TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),

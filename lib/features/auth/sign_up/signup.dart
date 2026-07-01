@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/constants/constants.dart';
+import 'package:tsl/constants/secure_storage.dart';
+import 'package:tsl/constants/password_policy.dart';
+import 'package:tsl/constants/app_logger.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import '../../accounts/individual_account.dart';
 import '../login/view/login.dart';
+import '../email_verification/email_verification.dart';
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
 class RegisterScreen extends StatefulWidget {
@@ -357,20 +361,13 @@ class _NewClientFlowState extends State<_NewClientFlow> {
       _snack('Please enter your phone number');
       return false;
     }
-    if (_passCtrl.text.length < 8) {
-      // ✅ FIXED: raised to 8 to match IndividualAccountScreen validation
-      _snack('Password must be at least 8 characters');
+    final pwd = _passCtrl.text;
+    final pwError = PasswordPolicy.validate(pwd);
+    if (pwError != null) {
+      _snack(pwError);
       return false;
     }
-    if (!RegExp(r'[A-Z]').hasMatch(_passCtrl.text)) {
-      _snack('Password must contain at least one uppercase letter');
-      return false;
-    }
-    if (!RegExp(r'[0-9]').hasMatch(_passCtrl.text)) {
-      _snack('Password must contain at least one number');
-      return false;
-    }
-    if (_passCtrl.text != _confirmPassCtrl.text) {
+    if (pwd != _confirmPassCtrl.text) {
       _snack('Passwords do not match');
       return false;
     }
@@ -549,7 +546,7 @@ class _NewClientFlowState extends State<_NewClientFlow> {
                 Row(children: [
                   Icon(Icons.info_outline_rounded, size: 13, color: _muted),
                   const SizedBox(width: 5),
-                  Text('At least 1 uppercase letter and 1 number',
+                  Text('Uppercase, lowercase, number & special character',
                       style: TextStyle(fontSize: 12, color: _muted)),
                 ]),
               ],
@@ -1177,17 +1174,9 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
       _snack('ID number is required');
       return;
     }
-    if (_passCtrl.text.length < 8) {
-      // ✅ FIXED: raised to 8 to match correct cURL / IndividualAccountScreen
-      _snack('Password must be at least 8 characters');
-      return;
-    }
-    if (!RegExp(r'[A-Z]').hasMatch(_passCtrl.text)) {
-      _snack('Password must contain at least one uppercase letter');
-      return;
-    }
-    if (!RegExp(r'[0-9]').hasMatch(_passCtrl.text)) {
-      _snack('Password must contain at least one number');
+    final pwError = PasswordPolicy.validate(_passCtrl.text);
+    if (pwError != null) {
+      _snack(pwError);
       return;
     }
     if (_passCtrl.text != _confirmPassCtrl.text) {
@@ -1298,7 +1287,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         "Content_Type": idContentType,  // ✅ FIXED: proper MIME type
       };
 
-      debugPrint('Submitting existing client registration...');
+      AppLogger.info('Submitting existing client registration');
 
       final res = await http.post(
         Uri.parse('$cSharpApi/CreateAccountEXISTSING'),
@@ -1306,8 +1295,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         body: jsonEncode(payload),
       );
 
-      debugPrint('Response status: ${res.statusCode}');
-      debugPrint('Response body: ${res.body}');
+      AppLogger.info('Response status: ${res.statusCode}');
+      AppLogger.debug('Response body: ${res.body}');
 
       setState(() => _submitting = false);
 
@@ -1332,7 +1321,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
         _snack('Server error (${res.statusCode}). Please try again.');
       }
     } catch (e) {
-      debugPrint('Submit error: $e');
+      AppLogger.error('Submit error', e);
       setState(() => _submitting = false);
       _snack('An error occurred. Please check your connection.');
     }
@@ -1370,22 +1359,23 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.login_rounded,
-                    size: 18, color: Colors.white),
-                label: const Text('Go to Login',
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: widget.primaryGreen,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14))),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.pushReplacement(context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()));
-                },
+              icon: const Icon(Icons.mail_outline_rounded,
+                  size: 18, color: Colors.white),
+              label: const Text('Verify Email',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: widget.primaryGreen,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14))),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushReplacement(context,
+                    MaterialPageRoute(builder: (_) => EmailVerificationScreen(
+                        email: _emailCtrl.text.trim())));
+              },
               ),
             ),
           ]),
@@ -2139,7 +2129,7 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
               Row(children: [
                 Icon(Icons.info_outline_rounded, size: 13, color: _muted),
                 const SizedBox(width: 5),
-                Text('At least 1 uppercase letter and 1 number',
+                Text('Uppercase, lowercase, number & special character',
                     style: TextStyle(fontSize: 12, color: _muted)),
               ]),
             ],
