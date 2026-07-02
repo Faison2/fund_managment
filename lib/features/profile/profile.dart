@@ -238,7 +238,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         if (data['status'] == 'success' && data['data'] != null) {
           final userData = Map<String, dynamic>.from(data['data']);
           final email = (userData['Email'] as String? ?? '').trim();
-          if (email.isNotEmpty) await prefs.setString('userEmail', email);
+          if (email.isNotEmpty) {
+            await SecureStorage.write('userEmail', email);
+            await SecureStorage.write('user_email', email);
+          }
           setState(() { _userData = userData; _isLoading = false; });
           _fadeController.forward();
         } else {

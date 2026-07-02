@@ -57,7 +57,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         emit(LoginFailure(message: result['message'] as String));
       }
     } catch (e) {
-      emit(LoginFailure(message: 'An unexpected error occurred'));
+      // Include error message to aid debugging; this can be sanitized later.
+      emit(LoginFailure(message: 'An unexpected error occurred: ${e.toString()}'));
     }
   }
 

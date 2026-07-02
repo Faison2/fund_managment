@@ -4,6 +4,7 @@ import 'package:http/io_client.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/constants/constants.dart';
+import 'package:tsl/constants/secure_storage.dart';
 
 class LoginRepository {
   // ── Login ──────────────────────────────────────────────────────────────────
@@ -83,11 +84,15 @@ class LoginRepository {
 
       await prefs.setString('cdsNumber',     cdsNumber);
       await prefs.setString('accountStatus', accountStatus);
-      await prefs.setString('username',      username);
+      // username is considered sensitive; store it in secure storage.
+      await SecureStorage.write('username', username);
       await prefs.setBool('isLoggedIn',      true);
 
       if (email != null && email.isNotEmpty) {
-        await prefs.setString('userEmail', email);
+        // Write both variants to preserve compatibility with other code that
+        // expects 'user_email' in SharedPreferences.
+        await SecureStorage.write('userEmail', email);
+        await SecureStorage.write('user_email', email);
       }
       if (nida != null && nida.isNotEmpty) {
         await prefs.setString('userNIDA', nida);
@@ -125,10 +130,11 @@ class LoginRepository {
   static Future<Map<String, String?>> getUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final username = await SecureStorage.read('username');
       return {
         'cdsNumber':     prefs.getString('cdsNumber'),
         'accountStatus': prefs.getString('accountStatus'),
-        'username':      prefs.getString('username'),
+        'username':      username,
         'isLoggedIn':    prefs.getBool('isLoggedIn')?.toString(),
         'nida':          prefs.getString('userNIDA'),
       };
@@ -143,7 +149,7 @@ class LoginRepository {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cdsNumber');
       await prefs.remove('accountStatus');
-      await prefs.remove('username');
+      await SecureStorage.remove('username');
       await prefs.remove('userNIDA');
       await prefs.setBool('isLoggedIn', false);
     } catch (e) {
