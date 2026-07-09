@@ -290,12 +290,9 @@ class _NewClientFlowState extends State<_NewClientFlow> {
   Color get _dark => widget.textDark;
   Color get _muted => widget.textMuted;
 
-  Future<void> _saveCredentials(String email, String phone, String password) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('saved_email', email);
-    await prefs.setString('saved_phone', phone);
-    // ✅ Save password so IndividualAccountScreen can read it for CreateAccount
-    await prefs.setString('saved_password', password);
+  Future<void> _saveCredentials(String email, String phone) async {
+    await SecureStorage.write('saved_email', email);
+    await SecureStorage.write('saved_phone', phone);
   }
 
   Future<void> _register() async {
@@ -337,7 +334,6 @@ class _NewClientFlowState extends State<_NewClientFlow> {
           await _saveCredentials(
             _emailCtrl.text.trim(),
             _phoneCtrl.text.trim(),
-            _passCtrl.text,
           );
           _showSuccessDialog();
         } else {
@@ -890,9 +886,8 @@ class _ExistingClientFlowState extends State<_ExistingClientFlow> {
   Color get _muted => widget.textMuted;
 
   Future<void> _saveCredentials(String email, String phone) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('saved_email', email);
-    await prefs.setString('saved_phone', phone);
+    await SecureStorage.write('saved_email', email);
+    await SecureStorage.write('saved_phone', phone);
   }
 
   // ── Step 0: Validate via API ───────────────────────────────────────────────

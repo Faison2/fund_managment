@@ -80,29 +80,26 @@ class LoginRepository {
     String? nida,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      await prefs.setString('cdsNumber',     cdsNumber);
-      await prefs.setString('accountStatus', accountStatus);
-      // username is considered sensitive; store it in secure storage.
+      await SecureStorage.write('cdsNumber',     cdsNumber);
+      await SecureStorage.write('accountStatus', accountStatus);
       await SecureStorage.write('username', username);
-      await prefs.setBool('isLoggedIn',      true);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
 
       if (email != null && email.isNotEmpty) {
-        // Write both variants to preserve compatibility with other code that
-        // expects 'user_email' in SharedPreferences.
         await SecureStorage.write('userEmail', email);
         await SecureStorage.write('user_email', email);
       }
       if (nida != null && nida.isNotEmpty) {
-        await prefs.setString('userNIDA', nida);
+        await SecureStorage.write('userNIDA', nida);
       }
 
       if (rememberMe) {
-        await prefs.setString('savedUsername', username);
+        await SecureStorage.write('savedUsername', username);
         await prefs.setBool('rememberMe', true);
       } else {
-        await prefs.remove('savedUsername');
+        await SecureStorage.remove('savedUsername');
         await prefs.setBool('rememberMe', false);
       }
     } catch (e) {
@@ -115,8 +112,8 @@ class LoginRepository {
     try {
       final prefs = await SharedPreferences.getInstance();
       return {
-        'rememberMe':    prefs.getBool('rememberMe')       ?? false,
-        'savedUsername': prefs.getString('savedUsername'),
+        'rememberMe':    prefs.getBool('rememberMe') ?? false,
+        'savedUsername': await SecureStorage.read('savedUsername'),
       };
     } catch (e) {
       return {
@@ -130,13 +127,12 @@ class LoginRepository {
   static Future<Map<String, String?>> getUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final username = await SecureStorage.read('username');
       return {
-        'cdsNumber':     prefs.getString('cdsNumber'),
-        'accountStatus': prefs.getString('accountStatus'),
-        'username':      username,
+        'cdsNumber':     await SecureStorage.read('cdsNumber'),
+        'accountStatus': await SecureStorage.read('accountStatus'),
+        'username':      await SecureStorage.read('username'),
         'isLoggedIn':    prefs.getBool('isLoggedIn')?.toString(),
-        'nida':          prefs.getString('userNIDA'),
+        'nida':          await SecureStorage.read('userNIDA'),
       };
     } catch (e) {
       return {};
@@ -147,10 +143,10 @@ class LoginRepository {
   static Future<void> clearUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('cdsNumber');
-      await prefs.remove('accountStatus');
+      await SecureStorage.remove('cdsNumber');
+      await SecureStorage.remove('accountStatus');
       await SecureStorage.remove('username');
-      await prefs.remove('userNIDA');
+      await SecureStorage.remove('userNIDA');
       await prefs.setBool('isLoggedIn', false);
     } catch (e) {
       throw Exception('Error clearing user data: $e');

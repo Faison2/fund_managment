@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 
 import '../../../constants/constants.dart';
 import '../../funds/model/model.dart';
@@ -193,20 +193,23 @@ class _DepositPageState extends State<DepositPage> {
   }
 
   Future<void> _bootstrap() async {
-    final prefs = await SharedPreferences.getInstance();
-    _cdsNumber  = prefs.getString('cdsNumber') ?? '';
-    _applyCached(prefs);
+    _cdsNumber = await SecureStorage.read('cdsNumber') ?? '';
+    await _applyCached();
     await Future.wait([_fetchUser(), _loadFunds()]);
   }
 
-  void _applyCached(SharedPreferences p) {
+  Future<void> _applyCached() async {
+    final names   = await SecureStorage.read('user_names')   ?? '';
+    final email   = await SecureStorage.read('user_email')   ?? '';
+    final mobile  = await SecureStorage.read('user_mobile')  ?? '';
+    final address = await SecureStorage.read('user_address') ?? '';
     setState(() {
-      _names   = p.getString('user_names')   ?? '';
-      _email   = p.getString('user_email')   ?? '';
-      _mobile  = p.getString('user_mobile')  ?? '';
-      _address = p.getString('user_address') ?? '';
+      _names   = names;
+      _email   = email;
+      _mobile  = mobile;
+      _address = address;
     });
-    if (_mobile.isNotEmpty) _mobileController.text = _mobile;
+    if (mobile.isNotEmpty) _mobileController.text = mobile;
   }
 
   Future<void> _fetchUser() async {
@@ -224,11 +227,10 @@ class _DepositPageState extends State<DepositPage> {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 200 && body['status'] == 'success') {
         final d = Map<String, dynamic>.from(body['data'] as Map);
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_names',   d['Names']  ?? '');
-        await prefs.setString('user_email',   d['Email']  ?? '');
-        await prefs.setString('user_mobile',  d['Mobile'] ?? '');
-        await prefs.setString('user_address', d['Add_1']  ?? '');
+        await SecureStorage.write('user_names',   d['Names']  ?? '');
+        await SecureStorage.write('user_email',   d['Email']  ?? '');
+        await SecureStorage.write('user_mobile',  d['Mobile'] ?? '');
+        await SecureStorage.write('user_address', d['Add_1']  ?? '');
         final mobile = d['Mobile'] ?? '';
         setState(() {
           _names   = d['Names']  ?? '';
@@ -290,8 +292,7 @@ class _DepositPageState extends State<DepositPage> {
       );
       final data = jsonDecode(res.body);
       if (res.statusCode == 200 && data['status'] == 'success') {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_mobile', _mobileController.text.trim());
+        await SecureStorage.write('user_mobile', _mobileController.text.trim());
         setState(() => _mobile = _mobileController.text.trim());
         _showSuccess(data['statusDesc'] ?? _s.depositInitiated);
       } else {

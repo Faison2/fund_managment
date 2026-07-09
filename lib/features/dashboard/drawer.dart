@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 import 'package:tsl/features/trade/auth/account_creation.dart';
 import 'package:tsl/features/trade/comingsoon.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -67,11 +68,12 @@ class _AppDrawerState extends State<AppDrawer>
   }
 
   Future<void> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
     if (mounted) {
+      final name = await SecureStorage.read('user_fullname') ?? '';
+      final cds  = await SecureStorage.read('cdsNumber') ?? '';
       setState(() {
-        _userName  = prefs.getString('user_fullname') ?? '';
-        _cdsNumber = prefs.getString('cdsNumber') ?? '';
+        _userName  = name;
+        _cdsNumber = cds;
       });
     }
   }

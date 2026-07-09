@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../constants/constants.dart';
 import '../../constants/secure_storage.dart';
@@ -211,10 +210,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       setState(() { _isLoading = true; _errorMessage = ''; });
       _fadeController.reset();
 
-      final prefs      = await SharedPreferences.getInstance();
-      final cdsNumber  = prefs.getString('cdsNumber');
-      final acctStatus = prefs.getString('accountStatus');
-      final nida       = prefs.getString('userNIDA');
+      final cdsNumber  = await SecureStorage.read('cdsNumber');
+      final acctStatus = await SecureStorage.read('accountStatus');
+      final nida       = await SecureStorage.read('userNIDA');
       setState(() {
         _accountStatus = acctStatus ?? 'Unknown';
         _nida = nida;

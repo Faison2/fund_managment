@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TSL BRAND PALETTE
@@ -108,8 +108,7 @@ class _OrdersApi {
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   static Future<String> _getNida() async {
-    final prefs = await SharedPreferences.getInstance();
-    final nida  = prefs.getString('nida_number') ?? '';
+    final nida = await SecureStorage.read('nida_number') ?? '';
     if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
     return nida;
   }

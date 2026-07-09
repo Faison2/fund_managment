@@ -9,7 +9,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
@@ -150,8 +150,8 @@ class _ClientStatementPageState extends State<ClientStatementPage>
   }
 
   Future<void> _init() async {
-    final p = await SharedPreferences.getInstance();
-    setState(() => _cdsNumber = p.getString('cdsNumber') ?? '');
+    final cds = await SecureStorage.read('cdsNumber') ?? '';
+    setState(() => _cdsNumber = cds);
     _loadFunds();
     _loadFundDetails();
   }

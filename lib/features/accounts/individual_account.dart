@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 import 'package:tsl/constants/constants.dart';
 import 'package:tsl/constants/password_policy.dart';
 import 'package:tsl/constants/app_logger.dart';
@@ -848,9 +848,8 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   Future<void> _prefillFromPrefs() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('saved_email') ?? '';
-      final phone = prefs.getString('saved_phone') ?? '';
+      final email = await SecureStorage.read('saved_email') ?? '';
+      final phone = await SecureStorage.read('saved_phone') ?? '';
       setState(() {
         if (email.isNotEmpty) _emailController.text = email;
         if (phone.isNotEmpty) _phoneController.text = phone;
@@ -862,12 +861,11 @@ class _IndividualAccountScreenState extends State<IndividualAccountScreen>
 
   Future<void> _saveCDSNumber(String cds) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('cds_number', cds);
-      await prefs.setString('user_email', _emailController.text);
-      await prefs.setString('user_phone', _phoneController.text);
-      await prefs.setString('user_first_name', _firstNameController.text);
-      await prefs.setString('user_surname', _lastNameController.text);
+      await SecureStorage.write('cds_number', cds);
+      await SecureStorage.write('user_email', _emailController.text);
+      await SecureStorage.write('user_phone', _phoneController.text);
+      await SecureStorage.write('user_first_name', _firstNameController.text);
+      await SecureStorage.write('user_surname', _lastNameController.text);
     } catch (_) {}
   }
 

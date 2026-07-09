@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 
 import '../auth/account_creation.dart';
 import '../dashboard/trade_dashboard.dart';
@@ -69,8 +69,7 @@ class _DseLandingPageState extends State<DseLandingPage>
 
   // ── Auto-verify using saved NIDA from login ──────────────────────────────
   Future<void> _autoVerifyFromPrefs() async {
-    final prefs     = await SharedPreferences.getInstance();
-    final savedNida = prefs.getString('userNIDA') ?? '';
+    final savedNida = await SecureStorage.read('userNIDA') ?? '';
 
     if (savedNida.isEmpty) {
       _showPage();
@@ -196,9 +195,8 @@ class _DseLandingPageState extends State<DseLandingPage>
     }
   }
 
-  // ── Save to SharedPreferences ────────────────────────────────────────────
+  // ── Save to SecureStorage ────────────────────────────────────────────────
   Future<void> _saveToPrefs(Map<String, dynamic> data, String nida) async {
-    final prefs    = await SharedPreferences.getInstance();
     final fullName = [
       data['firstName']  ?? '',
       data['middleName'] ?? '',
@@ -206,30 +204,30 @@ class _DseLandingPageState extends State<DseLandingPage>
     ].where((s) => s.isNotEmpty).join(' ');
 
     await Future.wait([
-      prefs.setString('nida_number',       nida),
-      prefs.setString('user_names',        fullName),
-      prefs.setString('first_name',        data['firstName']       ?? ''),
-      prefs.setString('middle_name',       data['middleName']      ?? ''),
-      prefs.setString('last_name',         data['lastName']        ?? ''),
-      prefs.setString('user_mobile',       data['phoneNumber']     ?? ''),
-      prefs.setString('user_email',        data['email']           ?? ''),
-      prefs.setString('broker_ref',        data['brokerRef']       ?? ''),
-      prefs.setString('broker_name',       data['brokerName']      ?? ''),
-      prefs.setString('cdsNumber',         data['csdAccount']      ?? ''),
-      prefs.setString('gender',            data['gender']          ?? ''),
-      prefs.setString('nationality',       data['nationality']     ?? ''),
-      prefs.setString('dob',               data['dob']             ?? ''),
-      prefs.setString('physical_address',  data['physicalAddress'] ?? ''),
-      prefs.setString('region',            data['region']          ?? ''),
-      prefs.setString('country',           data['country']         ?? ''),
-      prefs.setString('bank_name',         data['bankName']        ?? ''),
-      prefs.setString('bank_account_no',   data['bankAccountNo']   ?? ''),
-      prefs.setString('bank_branch_name',  data['bankBranchName']  ?? ''),
-      prefs.setString('resident_district', data['residentDistrict']?? ''),
-      prefs.setString('resident_region',   data['residentRegion']  ?? ''),
-      prefs.setString('resident_village',  data['residentVillage'] ?? ''),
-      prefs.setString('resident_postcode', data['residentPostCode']?? ''),
-      prefs.setString('resident_house_no', data['residentHouseNo'] ?? ''),
+      SecureStorage.write('nida_number',       nida),
+      SecureStorage.write('user_names',        fullName),
+      SecureStorage.write('first_name',        data['firstName']       ?? ''),
+      SecureStorage.write('middle_name',       data['middleName']      ?? ''),
+      SecureStorage.write('last_name',         data['lastName']        ?? ''),
+      SecureStorage.write('user_mobile',       data['phoneNumber']     ?? ''),
+      SecureStorage.write('user_email',        data['email']           ?? ''),
+      SecureStorage.write('broker_ref',        data['brokerRef']       ?? ''),
+      SecureStorage.write('broker_name',       data['brokerName']      ?? ''),
+      SecureStorage.write('cdsNumber',         data['csdAccount']      ?? ''),
+      SecureStorage.write('gender',            data['gender']          ?? ''),
+      SecureStorage.write('nationality',       data['nationality']     ?? ''),
+      SecureStorage.write('dob',               data['dob']             ?? ''),
+      SecureStorage.write('physical_address',  data['physicalAddress'] ?? ''),
+      SecureStorage.write('region',            data['region']          ?? ''),
+      SecureStorage.write('country',           data['country']         ?? ''),
+      SecureStorage.write('bank_name',         data['bankName']        ?? ''),
+      SecureStorage.write('bank_account_no',   data['bankAccountNo']   ?? ''),
+      SecureStorage.write('bank_branch_name',  data['bankBranchName']  ?? ''),
+      SecureStorage.write('resident_district', data['residentDistrict']?? ''),
+      SecureStorage.write('resident_region',   data['residentRegion']  ?? ''),
+      SecureStorage.write('resident_village',  data['residentVillage'] ?? ''),
+      SecureStorage.write('resident_postcode', data['residentPostCode']?? ''),
+      SecureStorage.write('resident_house_no', data['residentHouseNo'] ?? ''),
     ]);
   }
 

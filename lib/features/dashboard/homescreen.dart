@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 import 'package:tsl/features/trade/comingsoon.dart';
 import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
@@ -265,8 +265,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _fetchPortfolio() async {
     setState(() { _isLoadingFunds = true; _fundsError = null; });
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _cdsNumber  = prefs.getString('cdsNumber') ?? '';
+      _cdsNumber = await SecureStorage.read('cdsNumber') ?? '';
       final response = await http.post(
         Uri.parse('$cSharpApi/GetFundsDetailed'),
         headers: {'Content-Type': 'application/json'},

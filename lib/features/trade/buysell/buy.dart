@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TSL BRAND PALETTE  (official colors only)
@@ -49,8 +49,7 @@ class _MarketWatchApi {
   static const _url = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetMarketWatch';
 
   static Future<List<_Security>> fetch() async {
-    final prefs = await SharedPreferences.getInstance();
-    final nida  = prefs.getString('nida_number') ?? '';
+    final nida = await SecureStorage.read('nida_number') ?? '';
     if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
 
     final client = HttpClient();
@@ -93,8 +92,7 @@ class _BuyApi {
     required double price,
     required int    shares,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final nida  = prefs.getString('nida_number') ?? '';
+    final nida = await SecureStorage.read('nida_number') ?? '';
     if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
 
     final client = HttpClient();

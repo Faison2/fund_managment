@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
@@ -187,8 +187,7 @@ class _SMAPageState extends State<SMAPage>
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _cdsNumber  = prefs.getString('cdsNumber') ?? 'FC00318';
+      _cdsNumber = (await SecureStorage.read('cdsNumber')) ?? 'FC00318';
 
       final results = await Future.wait([
         http.post(Uri.parse('$cSharpApi/GetSMAInvestments'),

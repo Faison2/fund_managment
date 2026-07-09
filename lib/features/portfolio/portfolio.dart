@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 import '../../constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
@@ -181,8 +181,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   Future<void> _loadData() async {
     setState(() { _isLoading = true; _errorMessage = ''; });
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _cdsNumber = prefs.getString('cdsNumber') ?? '';
+      _cdsNumber = await SecureStorage.read('cdsNumber') ?? '';
 
       final response = await http.post(
         Uri.parse('$cSharpApi/GetFundsDetailed'),

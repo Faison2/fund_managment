@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 
 import '../../../provider/locale_provider.dart';
 import '../../../provider/theme_provider.dart';
@@ -103,16 +103,23 @@ class _BankingDetailsPageState extends State<BankingDetailsPage> {
 
   Future<void> _loadFromPrefs() async {
     setState(() => _loading = true);
-    final p = await SharedPreferences.getInstance();
+    final names   = await SecureStorage.read('user_names')       ?? '';
+    final email   = await SecureStorage.read('user_email')       ?? '';
+    final mobile  = await SecureStorage.read('user_mobile')      ?? '';
+    final address = await SecureStorage.read('user_address')     ?? '';
+    final bank    = await SecureStorage.read('user_bank')        ?? '';
+    final acctNo  = await SecureStorage.read('user_accountNo')   ?? '';
+    final acctName= await SecureStorage.read('user_accountName') ?? '';
+    final branch  = await SecureStorage.read('user_branch')      ?? '';
     setState(() {
-      _names       = p.getString('user_names')       ?? '';
-      _email       = p.getString('user_email')       ?? '';
-      _mobile      = p.getString('user_mobile')      ?? '';
-      _address     = p.getString('user_address')     ?? '';
-      _bank        = p.getString('user_bank')        ?? '';
-      _accountNo   = p.getString('user_accountNo')   ?? '';
-      _accountName = p.getString('user_accountName') ?? '';
-      _branch      = p.getString('user_branch')      ?? '';
+      _names       = names;
+      _email       = email;
+      _mobile      = mobile;
+      _address     = address;
+      _bank        = bank;
+      _accountNo   = acctNo;
+      _accountName = acctName;
+      _branch      = branch;
       _loading     = false;
     });
   }

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 import '../../../constants/constants.dart';
 import '../market_watch/market_watch.dart';
 
@@ -139,8 +139,7 @@ class _TradeDrawerState extends State<TradeDrawer>
     if (!mounted) return;
     setState(() => _loadingUser = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final cds   = prefs.getString('cdsNumber') ?? '';
+      final cds = await SecureStorage.read('cdsNumber') ?? '';
       if (cds.isEmpty) {
         if (mounted) setState(() => _loadingUser = false);
         return;

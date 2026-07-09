@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
 import '../../constants/constants.dart';
+import '../../constants/secure_storage.dart';
 import '../funds/view/fund.dart';
 import '../portfolio/portfolio.dart';
 import '../profile/profile.dart';
@@ -118,8 +118,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ── Data loading ───────────────────────────────────────────────────────────
   Future<void> _loadCDSNumber() async {
     try {
-      final prefs     = await SharedPreferences.getInstance();
-      final cdsNumber = prefs.getString('cdsNumber') ?? '';
+      final cdsNumber = await SecureStorage.read('cdsNumber') ?? '';
       setState(() => _cdsNumber = cdsNumber);
       if (cdsNumber.isNotEmpty) {
         await _fetchUserDetails(cdsNumber);
@@ -187,22 +186,23 @@ class _DashboardScreenState extends State<DashboardScreen>
       .map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
 
   Future<void> _saveUserDataLocally(Map<String, dynamic> userData) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_fullname', userData['Names']  ?? '');
-    await prefs.setString('user_email',    userData['Email']  ?? '');
-    await prefs.setString('user_mobile',   userData['Mobile'] ?? '');
-    await prefs.setString('user_address',  userData['Add_1']  ?? '');
+    await SecureStorage.write('user_fullname', userData['Names']  ?? '');
+    await SecureStorage.write('user_email',    userData['Email']  ?? '');
+    await SecureStorage.write('user_mobile',   userData['Mobile'] ?? '');
+    await SecureStorage.write('user_address',  userData['Add_1']  ?? '');
   }
 
   Future<void> _loadCachedUserData() async {
-    final prefs      = await SharedPreferences.getInstance();
-    final cachedName = prefs.getString('user_fullname');
+    final cachedName = await SecureStorage.read('user_fullname');
     if (cachedName != null && cachedName.isNotEmpty) {
+      final email   = await SecureStorage.read('user_email')   ?? '';
+      final mobile  = await SecureStorage.read('user_mobile')  ?? '';
+      final address = await SecureStorage.read('user_address') ?? '';
       setState(() {
         _userName    = _formatName(cachedName);
-        _userEmail   = prefs.getString('user_email')   ?? '';
-        _userMobile  = prefs.getString('user_mobile')  ?? '';
-        _userAddress = prefs.getString('user_address') ?? '';
+        _userEmail   = email;
+        _userMobile  = mobile;
+        _userAddress = address;
       });
     }
   }

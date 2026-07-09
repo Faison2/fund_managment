@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 
 import '../../../constants/constants.dart';
 import '../../funds/model/model.dart';
@@ -151,10 +151,11 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   }
 
   Future<void> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
+    final cdsNumber   = await SecureStorage.read('cdsNumber') ?? '';
+    final phoneNumber = await SecureStorage.read('user_mobile') ?? '';
     setState(() {
-      _cdsNumber   = prefs.getString('cdsNumber')   ?? '';
-      _phoneNumber = prefs.getString('user_mobile') ?? '';
+      _cdsNumber   = cdsNumber;
+      _phoneNumber = phoneNumber;
     });
   }
 

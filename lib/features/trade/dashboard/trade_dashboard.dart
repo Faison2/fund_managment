@@ -4,7 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsl/constants/secure_storage.dart';
 import '../buysell/buy.dart';
 import '../buysell/sell.dart';
 import '../market_watch/market_watch.dart';
@@ -68,8 +68,7 @@ class _HoldingsApi {
   static const _url = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetInvestorHoldings';
 
   static Future<List<Holding>> fetch() async {
-    final prefs = await SharedPreferences.getInstance();
-    final nida  = prefs.getString('nida_number') ?? '';
+    final nida = await SecureStorage.read('nida_number') ?? '';
     if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
 
     final client = HttpClient();
@@ -150,8 +149,7 @@ class _ChartApi {
   }
 
   static Future<List<_MonthPoint>> fetchMonthly(int year) async {
-    final prefs = await SharedPreferences.getInstance();
-    final nida  = prefs.getString('nida_number') ?? '';
+    final nida = await SecureStorage.read('nida_number') ?? '';
     if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
 
     final start = DateTime(year, 1, 1);
