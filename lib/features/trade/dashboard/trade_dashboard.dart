@@ -100,6 +100,160 @@ class _HoldingsApi {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PORTFOLIO MODEL
+// ─────────────────────────────────────────────────────────────────────────────
+class PortfolioPosition {
+  final String securityId;
+  final String securityName;
+  final String securityRef;
+  final String brokerName;
+  final String brokerReference;
+  final int    freeBalance;
+  final int    pledgedBalance;
+  final int    totalBalance;
+  final double marketPrice;
+  final double positionValue;
+  final double freeValue;
+  final double change;
+  final double percentageChange;
+  final bool   priceAvailable;
+
+  const PortfolioPosition({
+    required this.securityId,
+    required this.securityName,
+    required this.securityRef,
+    required this.brokerName,
+    required this.brokerReference,
+    required this.freeBalance,
+    required this.pledgedBalance,
+    required this.totalBalance,
+    required this.marketPrice,
+    required this.positionValue,
+    required this.freeValue,
+    required this.change,
+    required this.percentageChange,
+    required this.priceAvailable,
+  });
+
+  factory PortfolioPosition.fromJson(Map<String, dynamic> j) => PortfolioPosition(
+    securityId:       j['securityId']       as String? ?? '',
+    securityName:     j['securityName']     as String? ?? '',
+    securityRef:      j['securityRef']      as String? ?? '',
+    brokerName:       j['brokerName']       as String? ?? '',
+    brokerReference:  j['brokerReference']  as String? ?? '',
+    freeBalance:      (j['freeBalance']      as num?)?.toInt()    ?? 0,
+    pledgedBalance:   (j['pledgedBalance']   as num?)?.toInt()    ?? 0,
+    totalBalance:     (j['totalBalance']     as num?)?.toInt()    ?? 0,
+    marketPrice:      (j['marketPrice']      as num?)?.toDouble() ?? 0,
+    positionValue:    (j['positionValue']    as num?)?.toDouble() ?? 0,
+    freeValue:        (j['freeValue']        as num?)?.toDouble() ?? 0,
+    change:           (j['change']           as num?)?.toDouble() ?? 0,
+    percentageChange: (j['percentageChange'] as num?)?.toDouble() ?? 0,
+    priceAvailable:   j['priceAvailable'] as bool? ?? false,
+  );
+}
+
+class Portfolio {
+  final String nidaNumber;
+  final int    positionCount;
+  final int    totalShares;
+  final double portfolioValue;
+  final double freePortfolioValue;
+  final List<PortfolioPosition> positions;
+
+  const Portfolio({
+    required this.nidaNumber,
+    required this.positionCount,
+    required this.totalShares,
+    required this.portfolioValue,
+    required this.freePortfolioValue,
+    required this.positions,
+  });
+
+  factory Portfolio.fromJson(Map<String, dynamic> j) => Portfolio(
+    nidaNumber:         j['nidaNumber']          as String? ?? '',
+    positionCount:      (j['positionCount']      as num?)?.toInt()    ?? 0,
+    totalShares:        (j['totalShares']        as num?)?.toInt()    ?? 0,
+    portfolioValue:     (j['portfolioValue']     as num?)?.toDouble() ?? 0,
+    freePortfolioValue: (j['freePortfolioValue'] as num?)?.toDouble() ?? 0,
+    positions: ((j['positions'] as List?) ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(PortfolioPosition.fromJson)
+        .toList(),
+  );
+
+  // Weighted day-change %, using each priced position's percentageChange
+  // weighted by its position value. Positions without a live price
+  // (priceAvailable == false) are excluded from the weighting.
+  double get dayChangePercent {
+    final priced = positions.where((p) => p.priceAvailable && p.positionValue > 0);
+    if (priced.isEmpty) return 0;
+    final totalValue = priced.fold<double>(0, (s, p) => s + p.positionValue);
+    if (totalValue == 0) return 0;
+    final weighted = priced.fold<double>(
+        0, (s, p) => s + (p.percentageChange * p.positionValue));
+    return weighted / totalValue;
+  }
+
+  // Approximate absolute day-change in value: each position's per-share
+  // `change` times the shares held.
+  double get dayChangeValue =>
+      positions.fold<double>(0, (s, p) => s + (p.change * p.totalBalance));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PORTFOLIO API
+// ─────────────────────────────────────────────────────────────────────────────
+class _PortfolioApi {
+  static const _url = 'https://portaluat.tsl.co.tz/DSEAPI/Home/GetPortfolio';
+
+  // Same self-healing NIDA resolution used in Market Watch: prefer the
+  // verified 'nida_number', fall back to the session 'userNIDA' if the
+  // dashboard is reached before the user has completed DSE verification
+  // on this device, and backfill 'nida_number' so future calls (from any
+  // page) don't need to fall back again.
+  static Future<String> _resolveWorkingNida() async {
+    final saved = await SecureStorage.read('nida_number') ?? '';
+    if (saved.isNotEmpty) return saved;
+
+    final sessionNida = await SecureStorage.read('userNIDA') ?? '';
+    if (sessionNida.isNotEmpty) {
+      await SecureStorage.write('nida_number', sessionNida);
+      return sessionNida;
+    }
+    return '';
+  }
+
+  static Future<Portfolio> fetch() async {
+    final nida = await _resolveWorkingNida();
+    if (nida.isEmpty) throw Exception('NIDA number not set. Please log in again.');
+
+    final client = HttpClient();
+    client.badCertificateCallback = (_, __, ___) => true;
+    client.connectionTimeout = const Duration(seconds: 15);
+    try {
+      final req = await client.postUrl(Uri.parse(_url));
+      req.headers
+        ..set('Accept',       'application/json')
+        ..set('Content-Type', 'application/json')
+        ..set('User-Agent',   'DSEApp/1.0');
+      req.write(jsonEncode({
+        'payload':   {'nidaNumber': nida},
+        'signature': '',
+      }));
+      final res  = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      if ((json['code'] as int) != 9000) throw Exception(json['message']);
+      return Portfolio.fromJson(json['data'] as Map<String, dynamic>);
+    } finally {
+      client.close();
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CHART DATA MODEL
 // ─────────────────────────────────────────────────────────────────────────────
 class _MonthPoint {
@@ -987,37 +1141,6 @@ class _ChartError extends StatelessWidget {
     ]),
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// QUICK HOLDINGS PREVIEW STRIP (for dashboard)
-// ─────────────────────────────────────────────────────────────────────────────
-// class _HoldingsStrip extends StatefulWidget {
-//   final VoidCallback onViewAll;
-//   const _HoldingsStrip({required this.onViewAll});
-//   @override State<_HoldingsStrip> createState() => _HoldingsStripState();
-// }
-
-// class _HoldingsStripState extends State<_HoldingsStrip> {
-//   List<Holding> _holdings = [];
-//   bool    _loading = true;
-//   String? _error;
-//
-//   @override
-//   void initState() { super.initState(); _load(); }
-//
-//   Future<void> _load() async {
-//     setState(() { _loading = true; _error = null; });
-//     try {
-//       final h = await _HoldingsApi.fetch();
-//       setState(() { _holdings = h; _loading = false; });
-//     } catch (e) {
-//       setState(() { _loading = false; _error = e.toString(); });
-//     }
-//   }
-//
-//
-// }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // HOLDING CHIP (mini card for strip)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1107,15 +1230,30 @@ class _TradeDashboardState extends State<TradeDashboard> with SingleTickerProvid
   late AnimationController _pageAnim;
   late Animation<double>   _pageFade;
 
+  Portfolio? _portfolio;
+  bool       _portfolioLoading = true;
+  String?    _portfolioError;
+
   @override
   void initState() {
     super.initState();
     _pageAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))..forward();
     _pageFade = CurvedAnimation(parent: _pageAnim, curve: Curves.easeOut);
+    _loadPortfolio();
   }
 
   @override
   void dispose() { _pageAnim.dispose(); super.dispose(); }
+
+  Future<void> _loadPortfolio() async {
+    setState(() { _portfolioLoading = true; _portfolioError = null; });
+    try {
+      final p = await _PortfolioApi.fetch();
+      setState(() { _portfolio = p; _portfolioLoading = false; });
+    } catch (e) {
+      setState(() { _portfolioLoading = false; _portfolioError = e.toString(); });
+    }
+  }
 
   void _push(Widget page) {
     HapticFeedback.mediumImpact();
@@ -1142,53 +1280,58 @@ class _TradeDashboardState extends State<TradeDashboard> with SingleTickerProvid
         drawer: TradeDrawer(onSwitchToFms: () { Navigator.pop(context); Navigator.pop(context); }),
         body: FadeTransition(
           opacity: _pageFade,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildSliverAppBar(),
-              SliverToBoxAdapter(
-                child: Column(children: [
-                  _buildPortfolioCard(),
-                  const SizedBox(height: 22),
-                  _buildActionGrid(),
-                  const SizedBox(height: 24),
-                  _buildFmsShortcut(),
-                  const SizedBox(height: 28),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                    child: Row(children: [
-                      Container(
-                        width: 28, height: 28,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: _C.heroGrad, begin: Alignment.topLeft, end: Alignment.bottomRight),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.analytics_rounded, color: _C.white, size: 14),
-                      ),
-                      const SizedBox(width: 10),
-                      const Text('Order Analytics',
-                          style: TextStyle(color: _C.black, fontSize: 15, fontWeight: FontWeight.w900)),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => _push(const OrdersPage()),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          child: RefreshIndicator(
+            color: _C.teal,
+            backgroundColor: _C.white,
+            onRefresh: _loadPortfolio,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              slivers: [
+                _buildSliverAppBar(),
+                SliverToBoxAdapter(
+                  child: Column(children: [
+                    _buildPortfolioCard(),
+                    const SizedBox(height: 22),
+                    _buildActionGrid(),
+                    const SizedBox(height: 24),
+                    _buildFmsShortcut(),
+                    const SizedBox(height: 28),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                      child: Row(children: [
+                        Container(
+                          width: 28, height: 28,
                           decoration: BoxDecoration(
-                            color: _C.teal.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: _C.teal.withOpacity(0.3)),
+                            gradient: const LinearGradient(colors: _C.heroGrad, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Text('View All →',
-                              style: TextStyle(color: _C.teal, fontSize: 11, fontWeight: FontWeight.w700)),
+                          child: const Icon(Icons.analytics_rounded, color: _C.white, size: 14),
                         ),
-                      ),
-                    ]),
-                  ),
-                  const _OrdersChartCard(),
-                  const SizedBox(height: 40),
-                ]),
-              ),
-            ],
+                        const SizedBox(width: 10),
+                        const Text('Order Analytics',
+                            style: TextStyle(color: _C.black, fontSize: 15, fontWeight: FontWeight.w900)),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => _push(const OrdersPage()),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: _C.teal.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: _C.teal.withOpacity(0.3)),
+                            ),
+                            child: const Text('View All →',
+                                style: TextStyle(color: _C.teal, fontSize: 11, fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                      ]),
+                    ),
+                    const _OrdersChartCard(),
+                    const SizedBox(height: 40),
+                  ]),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1249,6 +1392,15 @@ class _TradeDashboardState extends State<TradeDashboard> with SingleTickerProvid
   );
 
   Widget _buildPortfolioCard() {
+    final loading = _portfolioLoading;
+    final error   = _portfolioError;
+    final p       = _portfolio;
+    final ready   = !loading && error == null && p != null;
+
+    final changePercent = ready ? p.dayChangePercent : 0.0;
+    final changeValue   = ready ? p.dayChangeValue   : 0.0;
+    final isPositive    = changePercent >= 0;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Container(
@@ -1290,30 +1442,79 @@ class _TradeDashboardState extends State<TradeDashboard> with SingleTickerProvid
                   const SizedBox(width: 10),
                   const Text('Portfolio', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
                 ]),
-                _changeChip('+5.8% today'),
+                if (loading)
+                  const SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: _C.white),
+                  )
+                else if (error != null)
+                  GestureDetector(
+                    onTap: _loadPortfolio,
+                    child: _changeChip('Retry'),
+                  )
+                else
+                  _changeChip('${isPositive ? '+' : ''}${changePercent.toStringAsFixed(2)}% today'),
               ]),
               const SizedBox(height: 18),
-              const Text('TZS 00,0',
-                  style: TextStyle(color: _C.white, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1.0)),
+              Text(
+                ready ? 'TZS ${_fmtMoney(p.portfolioValue)}' : 'TZS —',
+                style: const TextStyle(color: _C.white, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1.0),
+              ),
               const SizedBox(height: 6),
-              const Row(children: [
-                Icon(Icons.trending_up_rounded, size: 14, color: Colors.white70),
-                SizedBox(width: 4),
-                Text('+TZS 000 this month', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              Row(children: [
+                Icon(
+                  !ready
+                      ? Icons.remove_rounded
+                      : isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                  size: 14, color: Colors.white70,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  loading
+                      ? 'Loading your portfolio…'
+                      : error != null
+                      ? 'Unable to load portfolio'
+                      : '${changeValue >= 0 ? '+' : ''}TZS ${_fmtMoney(changeValue)} today',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
               ]),
               const SizedBox(height: 20),
               Row(children: [
-                _MiniStat(label: 'Unrealised P&L', value: '+0.0%', positive: true),
+                _MiniStat(
+                  label: 'Total Shares',
+                  value: ready ? '${p.totalShares}' : '—',
+                  positive: null,
+                ),
                 Container(width: 1, height: 28, color: _C.white.withOpacity(0.25), margin: const EdgeInsets.symmetric(horizontal: 16)),
-                _MiniStat(label: 'Day Change',     value: '+0.0%', positive: true),
+                _MiniStat(
+                  label: 'Positions',
+                  value: ready ? '${p.positionCount}' : '—',
+                  positive: null,
+                ),
                 Container(width: 1, height: 28, color: _C.white.withOpacity(0.25), margin: const EdgeInsets.symmetric(horizontal: 16)),
-                _MiniStat(label: 'Open Orders',    value: '0',     positive: null),
+                _MiniStat(
+                  label: 'Free Value',
+                  value: ready ? 'TZS ${_fmtMoney(p.freePortfolioValue)}' : '—',
+                  positive: null,
+                ),
               ]),
             ]),
           ),
         ]),
       ),
     );
+  }
+
+  // Formats a double as a comma-grouped whole-number string, e.g. 37300.0 -> "37,300".
+  String _fmtMoney(double v) {
+    final s = v.round().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      final posFromEnd = s.length - i;
+      buf.write(s[i]);
+      if (posFromEnd > 1 && posFromEnd % 3 == 1) buf.write(',');
+    }
+    return buf.toString();
   }
 
   Widget _changeChip(String label) => Container(
