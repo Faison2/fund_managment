@@ -55,7 +55,7 @@ class _DseLandingPageState extends State<DseLandingPage>
       begin: const Offset(0, 0.12), end: Offset.zero,
     ).animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
 
-    // Try silent auto-verify first; show page only if it fails
+    // Register fms_id silently first; show page only if we can't auto-continue
     _autoVerifyFromPrefs();
   }
 
@@ -67,52 +67,72 @@ class _DseLandingPageState extends State<DseLandingPage>
     super.dispose();
   }
 
-  // ── Auto-verify using saved NIDA from login ──────────────────────────────
+  // ── Step 1: check fms_id on every visit ──────────────────────────────────
+  // fms_id == the NIDA saved in session at login. This endpoint can return
+  // two different shapes:
+  //   • First time / not yet linked:
+  //       { "status": "success", "statusDesc": "FMS ID saved to database", "data": null }
+  //   • Already linked to a real account:
+  //       { "code": 9000, "message": "Success", "data": { ...full account..., "canTrade": bool } }
+  // We only auto-continue to the dashboard when canTrade == true. Otherwise
+  // we fall through to the manual NIDA entry screen so the user can keep
+  // trying / the account can be actioned by the broker.
   Future<void> _autoVerifyFromPrefs() async {
-    final savedNida = await SecureStorage.read('userNIDA') ?? '';
+    final sessionNida = await SecureStorage.read('userNIDA') ?? '';
 
-    if (savedNida.isEmpty) {
+    if (sessionNida.isEmpty) {
       _showPage();
       return;
     }
 
-    // Pre-fill the field (visible if the page ends up showing)
-    _nidaCtrl.text = savedNida;
-
     try {
       final uri = Uri.parse(
-          'https://portaluat.tsl.co.tz/DSEAPI/Home/GetAccountDetails');
-      final res = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'payload': {'nidaNumber': savedNida},
-          'signature': '',
-        }),
-      ).timeout(const Duration(seconds: 15));
+          'https://portaluat.tsl.co.tz/DSEAPI/Home/CheckUserExistsByFmsId'
+              '?fms_id=$sessionNida');
+      final res = await http.get(uri).timeout(const Duration(seconds: 15));
 
       if (!mounted) return;
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
-        if (body['code'] == 9000) {
-          final data = body['data'] as Map<String, dynamic>;
-          await _saveToPrefs(data, savedNida);
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const TradeDashboard()),
-            );
+
+        // Already linked — full account data comes back with code 9000
+        if (body['code'] == 9000 && body['data'] is Map<String, dynamic>) {
+          final data     = body['data'] as Map<String, dynamic>;
+          final nida     = data['nidaNumber'] as String? ?? sessionNida;
+          final fmsId    = data['fmsID'] as String? ?? sessionNida;
+          final canTrade = data['canTrade'] == true;
+
+          await _saveToPrefs(data, nida, fmsId);
+
+          if (canTrade) {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const TradeDashboard()),
+              );
+            }
+            return;
+          } else {
+            // Linked but not yet cleared to trade — show the manual entry
+            // form with an explanatory message instead of navigating.
+            _nidaError = 'Your account is not yet enabled for trading. '
+                'Please verify your NIDA number to continue.';
+            _showPage();
+            return;
           }
-          return;
+        }
+
+        // First time — just registered, no account linked yet
+        if (body['status'] == 'success') {
+          await SecureStorage.write('fms_id', sessionNida);
         }
       }
-
-      // 9051 USER NOT FOUND or any other response — show the page
-      _showPage();
     } catch (_) {
-      if (mounted) _showPage();
+      // fall through to manual entry screen
     }
+
+    _showPage();
   }
 
   // ── Show page with animations ────────────────────────────────────────────
@@ -145,6 +165,20 @@ class _DseLandingPageState extends State<DseLandingPage>
       _nidaSuccess = false;
     });
 
+    // fmsID is the NIDA already sitting in session (saved at login),
+    // NOT the nidaNumber the user just typed above.
+    final fmsId = await SecureStorage.read('fms_id') ??
+        await SecureStorage.read('userNIDA') ??
+        '';
+
+    if (fmsId.isEmpty) {
+      setState(() {
+        _nidaError   = 'No FMS ID found in session. Please log in again.';
+        _isVerifying = false;
+      });
+      return;
+    }
+
     try {
       final uri = Uri.parse(
           'https://portaluat.tsl.co.tz/DSEAPI/Home/GetAccountDetails');
@@ -152,7 +186,10 @@ class _DseLandingPageState extends State<DseLandingPage>
         uri,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'payload': {'nidaNumber': nida},
+          'payload': {
+            'nidaNumber': nida,
+            'fmsID': fmsId,
+          },
           'signature': '',
         }),
       ).timeout(const Duration(seconds: 15));
@@ -162,16 +199,31 @@ class _DseLandingPageState extends State<DseLandingPage>
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         if (body['code'] == 9000) {
-          final data = body['data'] as Map<String, dynamic>;
-          await _saveToPrefs(data, nida);
-          setState(() { _nidaSuccess = true; _isVerifying = false; });
+          final data     = body['data'] as Map<String, dynamic>;
+          final canTrade = data['canTrade'] == true;
 
-          await Future.delayed(const Duration(milliseconds: 600));
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const TradeDashboard()),
-            );
+          await _saveToPrefs(data, nida, fmsId);
+
+          if (canTrade) {
+            setState(() { _nidaSuccess = true; _isVerifying = false; });
+
+            await Future.delayed(const Duration(milliseconds: 600));
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const TradeDashboard()),
+              );
+            }
+          } else {
+            // Account found but not cleared to trade — keep user on this
+            // screen so they can re-check with a correct NIDA number.
+            setState(() {
+              _nidaSuccess = false;
+              _isVerifying = false;
+              _nidaError   = 'This account is not yet enabled for trading. '
+                  'Please confirm your NIDA number is correct, or contact '
+                  'your broker.';
+            });
           }
         } else {
           setState(() {
@@ -196,7 +248,9 @@ class _DseLandingPageState extends State<DseLandingPage>
   }
 
   // ── Save to SecureStorage ────────────────────────────────────────────────
-  Future<void> _saveToPrefs(Map<String, dynamic> data, String nida) async {
+  // Persists the real nidaNumber alongside the fmsID it was verified with.
+  Future<void> _saveToPrefs(
+      Map<String, dynamic> data, String nida, String fmsId) async {
     final fullName = [
       data['firstName']  ?? '',
       data['middleName'] ?? '',
@@ -205,6 +259,7 @@ class _DseLandingPageState extends State<DseLandingPage>
 
     await Future.wait([
       SecureStorage.write('nida_number',       nida),
+      SecureStorage.write('fms_id',            fmsId),
       SecureStorage.write('user_names',        fullName),
       SecureStorage.write('first_name',        data['firstName']       ?? ''),
       SecureStorage.write('middle_name',       data['middleName']      ?? ''),
@@ -228,6 +283,7 @@ class _DseLandingPageState extends State<DseLandingPage>
       SecureStorage.write('resident_village',  data['residentVillage'] ?? ''),
       SecureStorage.write('resident_postcode', data['residentPostCode']?? ''),
       SecureStorage.write('resident_house_no', data['residentHouseNo'] ?? ''),
+      SecureStorage.write('can_trade',         (data['canTrade'] == true).toString()),
     ]);
   }
 

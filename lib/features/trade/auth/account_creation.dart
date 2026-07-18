@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:tsl/constants/secure_storage.dart';
 
 class AppColors {
   static const Color blue = Color(0xFF329AD6);
@@ -26,6 +27,9 @@ class _DseOpenAccountPageState extends State<DseOpenAccountPage> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
   bool _isLoading = false;
+
+  // fmsID — sourced from NIDA value stored in SharedPreferences, not user-editable
+  String _fmsID = '';
 
   // Client Type
   ClientType _clientType = ClientType.INDIVIDUAL;
@@ -76,6 +80,19 @@ class _DseOpenAccountPageState extends State<DseOpenAccountPage> {
     'Contact & Address',
     'Bank Details',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFmsID();
+  }
+
+  Future<void> _loadFmsID() async {
+    final nida = await SecureStorage.read('nida_number') ??
+        await SecureStorage.read('userNIDA') ??
+        '';
+    setState(() => _fmsID = nida);
+  }
 
   @override
   void dispose() {
@@ -131,6 +148,7 @@ class _DseOpenAccountPageState extends State<DseOpenAccountPage> {
     setState(() => _isLoading = true);
 
     final payload = {
+      'fmsID': _fmsID,
       'clientType': _clientType.name,
       'brokerRef': _brokerRef,
       'firstName': _firstNameCtrl.text.trim(),
@@ -890,6 +908,20 @@ class _DseOpenAccountPageState extends State<DseOpenAccountPage> {
         child: Column(
           children: [
             _buildStepIndicator(),
+            // TEMP DEBUG — remove once fmsID is confirmed working
+            Container(
+              width: double.infinity,
+              color: AppColors.teal.withOpacity(0.08),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text(
+                'fmsID: $_fmsID',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.teal,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
             Expanded(
               child: PageView(
                 controller: _pageController,
