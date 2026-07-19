@@ -50,7 +50,8 @@ class _DS {
       confirmDeposit, confirmDetails, cancel, confirm,
       depositInitiated, done, phone, amount,
       failedLoadFunds, failedLoadUser, retry, noFunds, networkError,
-      free, notSet, loadingUser, selectNetwork, walletProvider, comingSoon;
+      free, notSet, loadingUser, selectNetwork, walletProvider, comingSoon,
+      investingFor;
   const _DS({
     required this.depositFunds,    required this.chooseFund,
     required this.selectFund,      required this.enterAmount,
@@ -67,6 +68,7 @@ class _DS {
     required this.free,            required this.notSet,
     required this.loadingUser,     required this.selectNetwork,
     required this.walletProvider,  required this.comingSoon,
+    required this.investingFor,
   });
 }
 
@@ -101,6 +103,7 @@ const _dsEn = _DS(
   selectNetwork:   'Select Network',
   walletProvider:  'Wallet Provider',
   comingSoon:      'Soon',
+  investingFor:    'Investing for',
 );
 
 const _dsSw = _DS(
@@ -134,11 +137,24 @@ const _dsSw = _DS(
   selectNetwork:   'Chagua Mtandao',
   walletProvider:  'Mtoa Huduma wa Pochi',
   comingSoon:      'Hivi Karibuni',
+  investingFor:    'Unawekeza kwa ajili ya',
 );
 
 // ── DepositPage ───────────────────────────────────────────────────────────────
 class DepositPage extends StatefulWidget {
-  const DepositPage({Key? key}) : super(key: key);
+  // When set, the deposit is made against this CDS number instead of the
+  // logged-in guardian's own — used for investing into a linked minor
+  // account. `investeeName`, if provided, is shown under the header so it's
+  // always clear whose account is being funded.
+  final String? overrideCdsNumber;
+  final String? investeeName;
+
+  const DepositPage({
+    Key? key,
+    this.overrideCdsNumber,
+    this.investeeName,
+  }) : super(key: key);
+
   @override State<DepositPage> createState() => _DepositPageState();
 }
 
@@ -165,6 +181,11 @@ class _DepositPageState extends State<DepositPage> {
   bool _isSubmitting = false;
 
   final List<String> _currencies = ['TZS', 'USD'];
+
+  // True when investing into a linked minor account rather than the
+  // logged-in guardian's own account.
+  bool get _isMinorContext =>
+      widget.overrideCdsNumber != null && widget.overrideCdsNumber!.isNotEmpty;
 
   // ── Quick amounts updated: 1K→100K, 5K→200K ──────────────────────────────
   final List<Map<String, String>> _quickAmounts = [
@@ -193,12 +214,17 @@ class _DepositPageState extends State<DepositPage> {
   }
 
   Future<void> _bootstrap() async {
-    _cdsNumber = await SecureStorage.read('cdsNumber') ?? '';
+    _cdsNumber = _isMinorContext
+        ? widget.overrideCdsNumber!
+        : await SecureStorage.read('cdsNumber') ?? '';
     await _applyCached();
     await Future.wait([_fetchUser(), _loadFunds()]);
   }
 
   Future<void> _applyCached() async {
+    // The guardian's cached name/email/address/mobile are still the right
+    // "who is paying" context even when investing for a minor, so this
+    // stays unchanged — only the target `_cdsNumber` differs.
     final names   = await SecureStorage.read('user_names')   ?? '';
     final email   = await SecureStorage.read('user_email')   ?? '';
     final mobile  = await SecureStorage.read('user_mobile')  ?? '';
@@ -227,19 +253,33 @@ class _DepositPageState extends State<DepositPage> {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 200 && body['status'] == 'success') {
         final d = Map<String, dynamic>.from(body['data'] as Map);
-        await SecureStorage.write('user_names',   d['Names']  ?? '');
-        await SecureStorage.write('user_email',   d['Email']  ?? '');
-        await SecureStorage.write('user_mobile',  d['Mobile'] ?? '');
-        await SecureStorage.write('user_address', d['Add_1']  ?? '');
+
+        // IMPORTANT: only persist to the shared SecureStorage cache when
+        // this is the guardian's own investment flow. When investing for
+        // a minor, `_cdsNumber` is the minor's, and writing these shared
+        // 'user_*' keys here would overwrite the guardian's own cached
+        // profile with the minor's details.
+        if (!_isMinorContext) {
+          await SecureStorage.write('user_names',   d['Names']  ?? '');
+          await SecureStorage.write('user_email',   d['Email']  ?? '');
+          await SecureStorage.write('user_mobile',  d['Mobile'] ?? '');
+          await SecureStorage.write('user_address', d['Add_1']  ?? '');
+        }
+
         final mobile = d['Mobile'] ?? '';
         setState(() {
-          _names   = d['Names']  ?? '';
-          _email   = d['Email']  ?? '';
-          _mobile  = mobile;
-          _address = d['Add_1']  ?? '';
+          _names = d['Names'] ?? '';
+          _email = d['Email'] ?? '';
+          // Keep the guardian's own (already-cached) phone pre-filled when
+          // investing for a minor, rather than overwriting it with the
+          // minor's (likely empty) mobile field.
+          _mobile = _isMinorContext ? _mobile : mobile;
+          _address = d['Add_1'] ?? '';
           _isLoadingUser = false;
         });
-        if (mobile.isNotEmpty) _mobileController.text = mobile;
+        if (!_isMinorContext && mobile.isNotEmpty) {
+          _mobileController.text = mobile;
+        }
       } else {
         setState(() {
           _userError     = body['statusDesc'] ?? _s.failedLoadUser;
@@ -292,7 +332,12 @@ class _DepositPageState extends State<DepositPage> {
       );
       final data = jsonDecode(res.body);
       if (res.statusCode == 200 && data['status'] == 'success') {
-        await SecureStorage.write('user_mobile', _mobileController.text.trim());
+        // Only cache the mobile number back when it's the guardian's own
+        // investment — never for a minor's flow.
+        if (!_isMinorContext) {
+          await SecureStorage.write(
+              'user_mobile', _mobileController.text.trim());
+        }
         setState(() => _mobile = _mobileController.text.trim());
         _showSuccess(data['statusDesc'] ?? _s.depositInitiated);
       } else {
@@ -345,6 +390,12 @@ class _DepositPageState extends State<DepositPage> {
                           fontWeight: FontWeight.w800, color: txtP))),
                 ]),
                 const SizedBox(height: 20),
+                if (_isMinorContext && (widget.investeeName ?? '').isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _dRow(s.investingFor, widget.investeeName!,
+                        txtP, txtS, border),
+                  ),
                 _dRow(s.fund,           fund,   txtP, txtS, border),
                 _dRow(s.amount,         amt,    txtP, txtS, border),
                 _dRow(s.phone,
@@ -547,6 +598,30 @@ class _DepositPageState extends State<DepositPage> {
                 const SizedBox(height: 2),
                 Text(s.chooseFund, style: TextStyle(
                     color: _TSL.white.withOpacity(0.65), fontSize: 12)),
+                if (_isMinorContext &&
+                    (widget.investeeName ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _TSL.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.family_restroom_rounded,
+                          color: _TSL.white, size: 13),
+                      const SizedBox(width: 5),
+                      Flexible(child: Text(
+                          '${s.investingFor} ${widget.investeeName}',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: _TSL.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700))),
+                    ]),
+                  ),
+                ],
               ])),
             ]),
           )),
@@ -776,6 +851,12 @@ class _DepositPageState extends State<DepositPage> {
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: border)),
                       child: Column(children: [
+                        if (_isMinorContext &&
+                            (widget.investeeName ?? '').isNotEmpty) ...[
+                          _sRow(s.investingFor, widget.investeeName!,
+                              txtP, txtS),
+                          _sDiv(border),
+                        ],
                         _sRow(s.fund,
                             _selectedFund?.fundingName ?? '—', txtP, txtS),
                         _sDiv(border),

@@ -75,7 +75,18 @@ enum _Filter { both, deposits, withdrawals }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 class ClientStatementPage extends StatefulWidget {
-  const ClientStatementPage({Key? key}) : super(key: key);
+  // When set, the statement is pulled for this CDS number instead of the
+  // logged-in guardian's own — used for viewing a linked minor account's
+  // transactions. `investeeName`, if provided, is shown under the header.
+  final String? overrideCdsNumber;
+  final String? investeeName;
+
+  const ClientStatementPage({
+    Key? key,
+    this.overrideCdsNumber,
+    this.investeeName,
+  }) : super(key: key);
+
   @override State<ClientStatementPage> createState() => _ClientStatementPageState();
 }
 
@@ -100,6 +111,11 @@ class _ClientStatementPageState extends State<ClientStatementPage>
   late AnimationController _headerCtrl;
   late Animation<double> _listFade;
   late Animation<Offset> _headerSlide;
+
+  // True when viewing a linked minor account's statement rather than the
+  // logged-in guardian's own.
+  bool get _isMinorContext =>
+      widget.overrideCdsNumber != null && widget.overrideCdsNumber!.isNotEmpty;
 
   // ── Palette ───────────────────────────────────────────────────────────────
   bool get _dark => context.watch<ThemeProvider>().isDark;
@@ -150,8 +166,10 @@ class _ClientStatementPageState extends State<ClientStatementPage>
   }
 
   Future<void> _init() async {
-    final cds = await SecureStorage.read('cdsNumber') ?? '';
-    setState(() => _cdsNumber = cds);
+    _cdsNumber = _isMinorContext
+        ? widget.overrideCdsNumber!
+        : await SecureStorage.read('cdsNumber') ?? '';
+    setState(() {});
     _loadFunds();
     _loadFundDetails();
   }
@@ -289,6 +307,11 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                 pw.SizedBox(height: 4),
                 pw.Text(fundName,
                     style: const pw.TextStyle(color: PdfColors.grey, fontSize: 11)),
+                if (_isMinorContext && (widget.investeeName ?? '').isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text('For: ${widget.investeeName}',
+                      style: const pw.TextStyle(color: PdfColors.grey, fontSize: 10)),
+                ],
               ]),
             ],
           ),
@@ -373,8 +396,11 @@ class _ClientStatementPageState extends State<ClientStatementPage>
 
     try {
       final bytes    = await pdf.save();
-      final fileName = 'TSL_Statement_${fundName.replaceAll(' ', '_')}_'
-          '${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf';
+      final namePart = _isMinorContext && (widget.investeeName ?? '').isNotEmpty
+          ? '_${widget.investeeName!.replaceAll(' ', '_')}'
+          : '';
+      final fileName = 'TSL_Statement_${fundName.replaceAll(' ', '_')}$namePart'
+          '_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf';
 
       Directory dir;
       if (Platform.isAndroid) {
@@ -507,16 +533,42 @@ class _ClientStatementPageState extends State<ClientStatementPage>
                     ),
                   ),
                   const SizedBox(width: 14),
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(_s.clientStatement,
-                        style: TextStyle(
-                            color: _TSL.white, fontSize: 24,
-                            fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                    const SizedBox(height: 4),
-                    Text(_s.statementSubtitle,
-                        style: TextStyle(
-                            color: _TSL.white.withOpacity(0.68), fontSize: 12)),
-                  ]),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(_s.clientStatement,
+                          style: TextStyle(
+                              color: _TSL.white, fontSize: 24,
+                              fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                      const SizedBox(height: 4),
+                      Text(_s.statementSubtitle,
+                          style: TextStyle(
+                              color: _TSL.white.withOpacity(0.68), fontSize: 12)),
+                      if (_isMinorContext &&
+                          (widget.investeeName ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: _TSL.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.family_restroom_rounded,
+                                color: _TSL.white, size: 13),
+                            const SizedBox(width: 5),
+                            Flexible(child: Text(
+                                widget.investeeName!,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: _TSL.white,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700))),
+                          ]),
+                        ),
+                      ],
+                    ]),
+                  ),
                 ]),
 
                 if (_hasFetched && _txnsError == null) ...[

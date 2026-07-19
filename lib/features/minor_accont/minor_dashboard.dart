@@ -8,7 +8,10 @@ import 'package:tsl/constants/constants.dart';
 
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
+import '../deposits/view/deposits.dart';
+import '../withdrawal/view/withdrawal_page.dart';
 import 'minor_profile.dart';
+import '../statement/client_statement.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────
 class _TSL {
@@ -819,30 +822,69 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
   // Minor accounts only support Invest / Redeem / Transactions.
   Widget _buildQuickActions() {
     final items = [
-      (Icons.wallet_outlined, _sw ? 'Wekeza' : 'Invest'),
-      (Icons.trending_down_rounded, _sw ? 'Toa' : 'Redeem'),
-      (Icons.swap_horiz_rounded, _sw ? 'Miamala' : 'Transactions'),
+      (
+      Icons.wallet_outlined,
+      _sw ? 'Wekeza' : 'Invest',
+          () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DepositPage(
+              overrideCdsNumber: widget.minor.cdsNumber,
+              investeeName: widget.minor.fullName,
+            ),
+          ),
+        );
+      },
+      ),
+      (
+      Icons.trending_down_rounded,
+      _sw ? 'Toa' : 'Redeem',
+          () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => WithdrawalPage(
+              overrideCdsNumber: widget.minor.cdsNumber,
+              investeeName: widget.minor.fullName,
+            ),
+          ),
+        );
+      },
+      ),
+      (
+      Icons.swap_horiz_rounded,
+      _sw ? 'Miamala' : 'Transactions',
+          () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ClientStatementPage(
+              overrideCdsNumber: widget.minor.cdsNumber,
+              investeeName: widget.minor.fullName,
+            ),
+          ),
+        );
+      },
+      ),
     ];
     return Row(
       children: items
           .map((it) => Expanded(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: _quickActionTile(it.$1, it.$2),
+          child: _quickActionTile(it.$1, it.$2, it.$3),
         ),
       ))
           .toList(),
     );
   }
 
-  Widget _quickActionTile(IconData icon, String label) {
+  Widget _quickActionTile(IconData icon, String label, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          // TODO: route to the respective minor-account flow,
-          // passing widget.minor.cdsNumber as the sub-account identifier
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),

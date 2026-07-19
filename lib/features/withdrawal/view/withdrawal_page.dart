@@ -29,7 +29,7 @@ class _WS {
       cancel, confirm, withdrawalRequested, requestFailed,
       done, tryAgain, fund, amount, phone,
       failedLoadFunds, retry, networkError,
-      noFunds, notSet;
+      noFunds, notSet, redeemingFor;
   const _WS({
     required this.withdrawFunds,     required this.withdrawSubtitle,
     required this.selectFund,        required this.enterAmount,
@@ -43,7 +43,7 @@ class _WS {
     required this.amount,            required this.phone,
     required this.failedLoadFunds,   required this.retry,
     required this.networkError,      required this.noFunds,
-    required this.notSet,
+    required this.notSet,            required this.redeemingFor,
   });
 }
 
@@ -72,6 +72,7 @@ const _wsEn = _WS(
   networkError:        'Network error',
   noFunds:             'No funds available',
   notSet:              'Not set',
+  redeemingFor:        'Redeeming for',
 );
 
 const _wsSw = _WS(
@@ -99,11 +100,24 @@ const _wsSw = _WS(
   networkError:        'Hitilafu ya mtandao',
   noFunds:             'Hakuna fedha zinazopatikana',
   notSet:              'Haijawekwa',
+  redeemingFor:        'Unatoa kwa ajili ya',
 );
 
 // ── WithdrawalPage ────────────────────────────────────────────────────────────
 class WithdrawalPage extends StatefulWidget {
-  const WithdrawalPage({Key? key}) : super(key: key);
+  // When set, the withdrawal is made against this CDS number instead of the
+  // logged-in guardian's own — used for redeeming from a linked minor
+  // account. `investeeName`, if provided, is shown under the header and in
+  // the confirmation dialog so it's always clear whose account is affected.
+  final String? overrideCdsNumber;
+  final String? investeeName;
+
+  const WithdrawalPage({
+    Key? key,
+    this.overrideCdsNumber,
+    this.investeeName,
+  }) : super(key: key);
+
   @override State<WithdrawalPage> createState() => _WithdrawalPageState();
 }
 
@@ -124,6 +138,11 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   bool    _isLoadingBalance = false;
 
   bool _isSubmitting = false;
+
+  // True when redeeming from a linked minor account rather than the
+  // logged-in guardian's own account.
+  bool get _isMinorContext =>
+      widget.overrideCdsNumber != null && widget.overrideCdsNumber!.isNotEmpty;
 
   final List<String> _currencies = ['TZS', 'USD'];
   final List<Map<String, String>> _quickAmounts = [
@@ -151,10 +170,13 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   }
 
   Future<void> _loadUserData() async {
-    final cdsNumber   = await SecureStorage.read('cdsNumber') ?? '';
+    // The guardian's own phone stays the contact number for the withdrawal
+    // request regardless of whose account is being redeemed from — only
+    // the target `cdsNumber` changes for a minor's withdrawal.
+    final storedCds   = await SecureStorage.read('cdsNumber') ?? '';
     final phoneNumber = await SecureStorage.read('user_mobile') ?? '';
     setState(() {
-      _cdsNumber   = cdsNumber;
+      _cdsNumber   = _isMinorContext ? widget.overrideCdsNumber! : storedCds;
       _phoneNumber = phoneNumber;
     });
   }
@@ -276,6 +298,12 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                           fontWeight: FontWeight.w800, color: txtP))),
                 ]),
                 const SizedBox(height: 20),
+                if (_isMinorContext && (widget.investeeName ?? '').isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _dRow(s.redeemingFor, widget.investeeName!,
+                        txtP, txtS, border),
+                  ),
                 _dRow(s.fund,   fund,  txtP, txtS, border),
                 _dRow(s.amount, amt,   txtP, txtS, border),
                 _dRow(s.phone,  phone, txtP, txtS, border),
@@ -483,6 +511,30 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                 const SizedBox(height: 2),
                 Text(s.withdrawSubtitle, style: TextStyle(
                     color: _TSL.white.withOpacity(0.65), fontSize: 12)),
+                if (_isMinorContext &&
+                    (widget.investeeName ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _TSL.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.family_restroom_rounded,
+                          color: _TSL.white, size: 13),
+                      const SizedBox(width: 5),
+                      Flexible(child: Text(
+                          '${s.redeemingFor} ${widget.investeeName}',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: _TSL.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700))),
+                    ]),
+                  ),
+                ],
               ])),
             ]),
           )),
