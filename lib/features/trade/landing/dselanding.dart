@@ -379,7 +379,7 @@ class _DseLandingPageState extends State<DseLandingPage>
               ]),
               const SizedBox(height: 20),
               Text(
-                'Dar es Salaam Stock Exchange — trade shares,\nbonds, and funds directly from your phone.',
+                'Dar es Salaam Stock Exchange — trade shares,\nBy using this service, you accept TSL as your broker.',
                 style: TextStyle(
                   color: _C.white.withOpacity(0.72),
                   fontSize: 13,

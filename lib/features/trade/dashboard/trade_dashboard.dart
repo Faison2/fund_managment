@@ -1564,9 +1564,9 @@ class _TradeDashboardState extends State<TradeDashboard> with SingleTickerProvid
           const SizedBox(width: 10),
           Expanded(child: _secondaryBtn(
             label: 'Holdings', sublabel: 'Portfolio',
-            icon: Icons.pie_chart_rounded, iconColor: const Color(0xFF9B59B6),
-            iconBg: const Color(0xFF9B59B6).withOpacity(0.10),
-            borderColor: const Color(0xFF9B59B6).withOpacity(0.28),
+            icon: Icons.pie_chart_rounded, iconColor: const Color(0xFF329AD6),
+            iconBg: const Color(0xFF329AD6).withOpacity(0.10),
+            borderColor: const Color(0xFF329AD6).withOpacity(0.28),
             onTap: () => _push(const HoldingsPage()),
           )),
         ]),
