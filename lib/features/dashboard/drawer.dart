@@ -12,6 +12,7 @@ import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../auth/login/view/login.dart';
 import '../contact_us/contact.dart';
+import '../minor_accont/minor_dashboard.dart';
 import '../payments/view/payment.dart';
 import '../trade/dashboard/trade_dashboard.dart';
 import '../trade/landing/dselanding.dart';
@@ -42,6 +43,9 @@ class _AppDrawerState extends State<AppDrawer>
     with SingleTickerProviderStateMixin {
   String _userName = '', _cdsNumber = '';
   bool _isTradeMode = false;
+  bool _loadingMinors = false;
+
+  final MinorAccountsRepository _minorAccountsRepo = MinorAccountsRepository();
 
   late AnimationController _headerAnim;
   late Animation<double> _headerFade;
@@ -129,18 +133,84 @@ class _AppDrawerState extends State<AppDrawer>
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open Privacy Policy',
-                style: TextStyle(color: _TSL.white)),
-            backgroundColor: _TSL.blue,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
+        _showSnack('Could not open Privacy Policy');
+      }
+    }
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: TextStyle(color: _TSL.white)),
+        backgroundColor: _TSL.blue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  // ── Fetch linked minors, then route to the dashboard or the picker ───────
+  Future<void> _openMinorAccounts(BuildContext drawerContext) async {
+    final navigator = Navigator.of(drawerContext);
+    navigator.pop(); // close the drawer first
+
+    if (_cdsNumber.isEmpty) {
+      _showSnack('Could not find your CDS number. Please log in again.');
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _loadingMinors = true);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: CircularProgressIndicator(color: _TSL.teal),
+      ),
+    );
+
+    final result =
+    await _minorAccountsRepo.getLinkedMinors(cdsNumber: _cdsNumber);
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+    setState(() => _loadingMinors = false);
+
+    if (result['success'] == true) {
+      final minors = (result['minors'] as List).cast<LinkedMinorAccount>();
+
+      if (minors.isEmpty) {
+        _showSnack('No linked minor accounts found.');
+        return;
+      }
+
+      if (minors.length == 1) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MinorDashboardScreen(
+              minor: minors.first,
+              guardianName: _formattedName,
+            ),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SelectMinorAccountScreen(
+              minors: minors,
+              guardianName: _formattedName,
+            ),
           ),
         );
       }
+    } else {
+      _showSnack(
+          result['message'] as String? ?? 'Could not load minor accounts.');
     }
   }
 
@@ -313,6 +383,23 @@ class _AppDrawerState extends State<AppDrawer>
                         MaterialPageRoute(
                             builder: (_) => const ClientStatementPage()));
                   },
+                ),
+                _item(
+                  icon:  Icons.child_care_outlined,
+                  label: s.minorAccount,
+                  color: _TSL.teal,
+                  delay: 75,
+                  trailing: _loadingMinors
+                      ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: _TSL.teal,
+                    ),
+                  )
+                      : null,
+                  onTap: () => _openMinorAccounts(context),
                 ),
                 const SizedBox(height: 16),
                 _sectionLabel('GENERAL'),
@@ -671,6 +758,7 @@ class _AppDrawerState extends State<AppDrawer>
     required VoidCallback onTap,
     required int delay,
     int? index,
+    Widget? trailing,
   }) {
     final selected = index != null && widget.currentIndex == index;
     return TweenAnimationBuilder<double>(
@@ -727,7 +815,9 @@ class _AppDrawerState extends State<AppDrawer>
                       ),
                     ),
                   ),
-                  if (selected)
+                  if (trailing != null)
+                    trailing
+                  else if (selected)
                     Container(
                       width: 6, height: 6,
                       decoration: BoxDecoration(
@@ -802,14 +892,15 @@ class _AppDrawerState extends State<AppDrawer>
 // ── String tables ──────────────────────────────────────────────────────────────
 class _DS {
   final String goodMorning, goodAfternoon, goodEvening,
-      accountNumber, home, paymentMethods, clientStatement,
+      accountNumber, home, paymentMethods, clientStatement, minorAccount,
       settings, privacyPolicy, contactUs,
       logout, logoutTitle, logoutMsg, cancel;
   const _DS({
     required this.goodMorning,    required this.goodAfternoon,
     required this.goodEvening,    required this.accountNumber,
     required this.home,           required this.paymentMethods,
-    required this.clientStatement,required this.settings,
+    required this.clientStatement,required this.minorAccount,
+    required this.settings,
     required this.privacyPolicy,  required this.contactUs,
     required this.logout,         required this.logoutTitle,
     required this.logoutMsg,      required this.cancel,
@@ -824,6 +915,7 @@ const _en = _DS(
   home:             'Home',
   paymentMethods:   'Banking Details',
   clientStatement:  'Client Statement',
+  minorAccount:     'View Minor Account',
   settings:         'Settings',
   privacyPolicy:    'Privacy Policy',
   contactUs:        'Contact Us',
@@ -841,6 +933,7 @@ const _sw = _DS(
   home:             'Nyumbani',
   paymentMethods:   'Maelezo ya Benki',
   clientStatement:  'Taarifa ya Mteja',
+  minorAccount:     'Angalia Akaunti ya Mtoto',
   settings:         'Mipangilio',
   privacyPolicy:    'Sera ya Faragha',
   contactUs:        'Wasiliana Nasi',

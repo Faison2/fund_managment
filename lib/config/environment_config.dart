@@ -1,8 +1,8 @@
 enum Environment { uat, production }
 
 class EnvironmentConfig {
-  static const Environment currentEnvironment = Environment.production;
-  //static const Environment currentEnvironment = Environment.uat;
+  //static const Environment currentEnvironment = Environment.production;
+  static const Environment currentEnvironment = Environment.uat;
 
   static const Map<Environment, String> apiBaseUrls = {
   Environment.uat: 'https://portaluat.tsl.co.tz/FMSAPI/Home',
