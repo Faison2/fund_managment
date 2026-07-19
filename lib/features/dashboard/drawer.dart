@@ -152,31 +152,46 @@ class _AppDrawerState extends State<AppDrawer>
   }
 
   // ── Fetch linked minors, then route to the dashboard or the picker ───────
-  Future<void> _openMinorAccounts(BuildContext drawerContext) async {
-    final navigator = Navigator.of(drawerContext);
-    navigator.pop(); // close the drawer first
+  // IMPORTANT: the drawer stays open (with just the inline spinner on the
+  // menu item) for the whole network call. We only pop/push AFTER the
+  // await resolves, in one synchronous block — the same pattern the other
+  // drawer items use. Popping the drawer *before* an async gap and then
+  // reusing that context afterward (as the previous version did with
+  // showDialog) is what caused the screen to hang: once the drawer
+  // finished its close animation, the context could become invalid,
+  // silently aborting everything after it — no dialog dismissal, no
+  // navigation, looks exactly like infinite loading even though the API
+  // call itself succeeded.
+  Future<void> _openMinorAccounts(BuildContext context) async {
+    if (_loadingMinors) return; // ignore repeat taps while a request is in flight
 
     if (_cdsNumber.isEmpty) {
       _showSnack('Could not find your CDS number. Please log in again.');
       return;
     }
 
-    if (!mounted) return;
     setState(() => _loadingMinors = true);
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Center(
-        child: CircularProgressIndicator(color: _TSL.teal),
-      ),
-    );
-
-    final result =
-    await _minorAccountsRepo.getLinkedMinors(cdsNumber: _cdsNumber);
+    Map<String, dynamic> result;
+    try {
+      result = await _minorAccountsRepo
+          .getLinkedMinors(cdsNumber: _cdsNumber)
+          .timeout(
+        const Duration(seconds: 20),
+        onTimeout: () => {
+          'success': false,
+          'message':
+          'Request timed out. Please check your connection and try again.',
+        },
+      );
+    } catch (e) {
+      result = {
+        'success': false,
+        'message': 'Something went wrong. Please try again.',
+      };
+    }
 
     if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
     setState(() => _loadingMinors = false);
 
     if (result['success'] == true) {
@@ -186,6 +201,10 @@ class _AppDrawerState extends State<AppDrawer>
         _showSnack('No linked minor accounts found.');
         return;
       }
+
+      // Close the drawer now, immediately followed by the navigation —
+      // no async gap between pop() and push() here.
+      Navigator.pop(context);
 
       if (minors.length == 1) {
         Navigator.push(

@@ -8,6 +8,7 @@ import 'package:tsl/constants/constants.dart';
 
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
+import 'minor_profile.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────
 class _TSL {
@@ -170,7 +171,9 @@ class MinorAccountsRepository {
       final requestBody = {
         'APIUsername': apiUsername,
         'APIPassword': apiPassword,
-        'cdsNumber': cdsNumber,
+        // TODO: hardcoded for testing against UAT — swap back to `cdsNumber`
+        // (the real, logged-in guardian's CDS number) before release.
+        'cdsNumber': 'FC00000000956',
       };
 
       final ioClient = HttpClient()
@@ -499,21 +502,35 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
             ),
           ),
         ),
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: _cardBg,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: _TSL.black.withOpacity(0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+        InkWell(
+          borderRadius: BorderRadius.circular(21),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MinorProfileScreen(
+                  minor: widget.minor,
+                  guardianName: widget.guardianName,
+                ),
               ),
-            ],
+            );
+          },
+          child: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _cardBg,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: _TSL.black.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(Icons.person, color: _txtPrim, size: 22),
           ),
-          child: Icon(Icons.person, color: _txtPrim, size: 22),
         ),
       ],
     );
