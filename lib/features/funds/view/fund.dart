@@ -27,7 +27,8 @@ class _FS {
       units, noFunds, welcome, retry, error, subscribe,
       confirmTitle, confirmBody, cancel, confirm,
       subscribedTitle, accountNumber,
-      statusActive, statusPending, statusClosed, statusPaused, statusUnknown;
+      statusActive, statusPending, statusClosed, statusPaused, statusUnknown,
+      subscribingFor;
 
   const _FS({
     required this.availableFunds, required this.code,
@@ -40,7 +41,7 @@ class _FS {
     required this.subscribedTitle,required this.accountNumber,
     required this.statusActive,   required this.statusPending,
     required this.statusClosed,   required this.statusPaused,
-    required this.statusUnknown,
+    required this.statusUnknown,  required this.subscribingFor,
   });
 }
 
@@ -66,6 +67,7 @@ const _fsEn = _FS(
   statusClosed:    'Closed',
   statusPaused:    'Paused',
   statusUnknown:   'Unknown',
+  subscribingFor:  'Subscribing for',
 );
 
 const _fsSw = _FS(
@@ -90,11 +92,26 @@ const _fsSw = _FS(
   statusClosed:    'Imefungwa',
   statusPaused:    'Imesimamishwa',
   statusUnknown:   'Haijulikani',
+  subscribingFor:  'Unajiandikisha kwa ajili ya',
 );
 
 // ── FundsScreen ───────────────────────────────────────────────────────────────
 class FundsScreen extends StatelessWidget {
-  const FundsScreen({Key? key}) : super(key: key);
+  // When set, any subscription made on this screen creates the sub account
+  // under this CDS number instead of the logged-in guardian's own — used
+  // for subscribing a linked minor account to a new fund. `investeeName`,
+  // if provided, is shown under the header and in the confirmation dialog.
+  final String? overrideCdsNumber;
+  final String? investeeName;
+
+  const FundsScreen({
+    Key? key,
+    this.overrideCdsNumber,
+    this.investeeName,
+  }) : super(key: key);
+
+  bool get _isMinorContext =>
+      overrideCdsNumber != null && overrideCdsNumber!.isNotEmpty;
 
   static const List<Color> _fundAccents = [
     Color(0xFF2ECC71), Color(0xFF3498DB), Color(0xFFE67E22),
@@ -152,6 +169,27 @@ class FundsScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800,
                     color: txtP)),
             const SizedBox(height: 10),
+            if (_isMinorContext && (investeeName ?? '').isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _TSL.blue.withOpacity(dark ? 0.18 : 0.10),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.family_restroom_rounded,
+                      color: _TSL.blue, size: 14),
+                  const SizedBox(width: 6),
+                  Text('${s.subscribingFor} $investeeName',
+                      style: TextStyle(
+                          color: _TSL.blue,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            ],
             Text(
               '${s.confirmBody} "${fund.fundingName ?? fund.fundingCode}".',
               textAlign: TextAlign.center,
@@ -277,6 +315,7 @@ class FundsScreen extends StatelessWidget {
             _Header(
               dark: dark, s: s, teal: teal,
               txtP: txtP, txtS: txtS, bg: bg,
+              investeeName: _isMinorContext ? investeeName : null,
             ),
 
             // ── Body ──────────────────────────────────────────────────────
@@ -342,8 +381,18 @@ class FundsScreen extends StatelessWidget {
                               final confirmed = await _confirm(context, fund, s, dark);
                               if (confirmed && context.mounted) {
                                 HapticFeedback.mediumImpact();
-                                final userData = await LoginRepository.getUserData();
-                                final cdsNo = userData['cdsNumber'] ?? '';
+                                // Use the override CDS number (minor's) when
+                                // subscribing on behalf of a linked minor
+                                // account; otherwise fall back to the
+                                // logged-in guardian's own CDS number.
+                                String cdsNo;
+                                if (_isMinorContext) {
+                                  cdsNo = overrideCdsNumber!;
+                                } else {
+                                  final userData =
+                                  await LoginRepository.getUserData();
+                                  cdsNo = userData['cdsNumber'] ?? '';
+                                }
                                 if (!context.mounted) return;
                                 context.read<FundsBloc>().add(
                                   SubscribeToFund(fund: fund, cdsNo: cdsNo),
@@ -372,10 +421,12 @@ class _Header extends StatelessWidget {
   final bool dark;
   final _FS s;
   final Color teal, txtP, txtS, bg;
+  final String? investeeName;
 
   const _Header({
     required this.dark, required this.s,    required this.teal,
     required this.txtP, required this.txtS, required this.bg,
+    this.investeeName,
   });
 
   @override
@@ -403,6 +454,29 @@ class _Header extends StatelessWidget {
                 Text('● Live Market Data',
                     style: TextStyle(
                         color: _TSL.white.withOpacity(0.6), fontSize: 12)),
+                if ((investeeName ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _TSL.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.family_restroom_rounded,
+                          color: _TSL.white, size: 13),
+                      const SizedBox(width: 5),
+                      Flexible(child: Text(
+                          investeeName!,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: _TSL.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700))),
+                    ]),
+                  ),
+                ],
               ],
             )),
             // Refresh button

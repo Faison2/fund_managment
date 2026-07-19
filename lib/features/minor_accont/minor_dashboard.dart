@@ -9,9 +9,11 @@ import 'package:tsl/constants/constants.dart';
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
 import '../deposits/view/deposits.dart';
+import '../funds/view/fund.dart';
+import '../statement/client_statement.dart';
 import '../withdrawal/view/withdrawal_page.dart';
 import 'minor_profile.dart';
-import '../statement/client_statement.dart';
+
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────
 class _TSL {
@@ -466,6 +468,8 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
               _buildGuardianStrip(),
               const SizedBox(height: 18),
               _buildFundCard(),
+              const SizedBox(height: 14),
+              _buildAddFundButton(),
               const SizedBox(height: 20),
               _buildQuickActions(),
               const SizedBox(height: 26),
@@ -814,6 +818,54 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Add Fund button ─────────────────────────────────────────────────────
+  // Subscribes the minor to a NEW fund (creates a sub account) — distinct
+  // from "Invest", which deposits more into a fund already subscribed to.
+  Widget _buildAddFundButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => FundsScreen(
+                overrideCdsNumber: widget.minor.cdsNumber,
+                investeeName: widget.minor.fullName,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: _cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _TSL.teal.withOpacity(0.4), width: 1.5),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add_circle_outline_rounded,
+                  color: _TSL.teal, size: 19),
+              const SizedBox(width: 8),
+              Text(
+                _sw ? 'Ongeza Fedha' : 'Add Fund',
+                style: TextStyle(
+                  color: _TSL.teal,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
