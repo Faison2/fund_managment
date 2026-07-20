@@ -163,7 +163,7 @@ class MinorProfileScreen extends StatelessWidget {
               icon: Icons.fingerprint_rounded,
               txtSec: txtSec,
               rows: [
-                _row('CDS ${sw ? "Namba" : "Number"}', minor.cdsNumber,
+                _row('Account ${sw ? "Namba" : "Number"}', minor.cdsNumber,
                     txtPrim, txtSec),
                 _row(sw ? 'Msimbo wa Wakala' : 'Broker Code',
                     minor.brokerCode, txtPrim, txtSec),

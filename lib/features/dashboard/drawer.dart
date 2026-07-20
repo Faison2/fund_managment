@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsl/constants/secure_storage.dart';
 import 'package:tsl/features/trade/auth/account_creation.dart';
-import 'package:tsl/features/trade/comingsoon.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:tsl/features/settings/settings.dart';
 import 'package:tsl/features/statement/client_statement.dart';
@@ -14,8 +13,7 @@ import '../auth/login/view/login.dart';
 import '../contact_us/contact.dart';
 import '../minor_accont/minor_dashboard.dart';
 import '../payments/view/payment.dart';
-import '../trade/dashboard/trade_dashboard.dart';
-import '../trade/landing/dselanding.dart';
+
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────────
 class _TSL {

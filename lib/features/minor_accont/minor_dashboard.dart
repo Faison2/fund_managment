@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:provider/provider.dart';
 import 'package:tsl/constants/constants.dart';
+import 'package:tsl/constants/secure_storage.dart';
 
 import '../../provider/locale_provider.dart';
 import '../../provider/theme_provider.dart';
@@ -17,11 +18,14 @@ import 'minor_profile.dart';
 
 // ── TSL Brand colours ──────────────────────────────────────────────────────
 class _TSL {
-  static const Color blue  = Color(0xFF329AD6);
-  static const Color teal  = Color(0xFF00A79D);
-  static const Color grey  = Color(0xFF939598);
-  static const Color white = Color(0xFFFFFFFF);
-  static const Color black = Color(0xFF231F20);
+  static const Color blue    = Color(0xFF329AD6);
+  static const Color teal    = Color(0xFF00A79D);
+  static const Color grey    = Color(0xFF939598);
+  static const Color white   = Color(0xFFFFFFFF);
+  static const Color black   = Color(0xFF231F20);
+  static const Color amber   = Color(0xFFE8A33D);
+  static const Color danger  = Color(0xFFEF4444);
+  static const Color mint    = Color(0xFFB9F6CA);
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -138,7 +142,7 @@ class MinorFundSummary {
   final String fundName;      // e.g. "IMARA FUND"
   final String fundType;      // e.g. "LIQUID FUND"
   final bool active;
-  final double? totalPortfolio; // null => "Not invested yet"
+  final double? totalPortfolio; // null => treated as 0.00
 
   const MinorFundSummary({
     required this.fundCode,
@@ -173,12 +177,25 @@ class MinorAccountsRepository {
     required String cdsNumber,
   }) async {
     try {
+      // Pull the logged-in guardian's CDS number from secure storage —
+      // same key ('cdsNumber') that LoginRepository writes on login.
+      // The `cdsNumber` param is kept only as a fallback in case storage
+      // hasn't been populated yet.
+      final storedCds = await SecureStorage.read('cdsNumber');
+      final resolvedCds =
+      (storedCds != null && storedCds.isNotEmpty) ? storedCds : cdsNumber;
+
+      if (resolvedCds.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Could not find your Account number. Please log in again.',
+        };
+      }
+
       final requestBody = {
         'APIUsername': apiUsername,
         'APIPassword': apiPassword,
-        // TODO: hardcoded for testing against UAT — swap back to `cdsNumber`
-        // (the real, logged-in guardian's CDS number) before release.
-        'cdsNumber': 'FC00000000956',
+        'cdsNumber': resolvedCds,
       };
 
       final ioClient = HttpClient()
@@ -384,7 +401,7 @@ class SelectMinorAccountScreen extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         '${sw ? "Tarehe ya kuzaliwa" : "DOB"}: '
-                            '${minor.formattedDob}  •  CDS: ${minor.cdsNumber}',
+                            '${minor.formattedDob}  •  Account: ${minor.cdsNumber}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12, color: txtSec),
@@ -436,6 +453,10 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
   Color get _cardBg      => _dark ? const Color(0xFF1B2321) : _TSL.white;
 
   String _fmt(double v) => v.toStringAsFixed(2);
+
+  /// Currently returns 0.00 by default until a real fund/portfolio balance
+  /// endpoint exists for minor accounts — always shown as "Total Investment".
+  double get _totalInvestment => widget.fund?.totalPortfolio ?? 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -550,12 +571,19 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: _cardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: _dark
               ? _TSL.white.withOpacity(0.08)
               : _TSL.grey.withOpacity(0.15),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: _TSL.black.withOpacity(_dark ? 0 : 0.035),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,11 +591,15 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: _TSL.teal.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: LinearGradient(
+                    colors: [_TSL.teal.withOpacity(0.18), _TSL.blue.withOpacity(0.10)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(Icons.family_restroom_rounded,
                     color: _TSL.teal, size: 20),
@@ -642,7 +674,7 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
               Expanded(
                 child: _detailChip(
                   icon: Icons.badge_outlined,
-                  label: 'CDS ${_sw ? "Namba" : "Number"}',
+                  label: 'Account ${_sw ? "Namba" : "Number"}',
                   value: m.cdsNumber,
                 ),
               ),
@@ -688,136 +720,228 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
   }
 
   // ── Fund summary card ──────────────────────────────────────────────────
-  // Single "Total Portfolio" figure — no Subscribe action, since minor
-  // accounts only support Invest / Redeem / Transactions.
+  // Always shows "Total Investment" (defaults to 0.00 until a real balance
+  // endpoint exists for minor accounts). Layered decorative background for
+  // a more premium, fintech-app feel.
   Widget _buildFundCard() {
     final f = widget.fund;
+    final fundName = (f?.fundName.isNotEmpty ?? false)
+        ? f!.fundName
+        : (_sw ? 'Akaunti ya Uwekezaji' : 'Investment Account');
+    final fundType = f?.fundType ?? '';
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [_TSL.teal, _TSL.blue],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: _TSL.teal.withOpacity(0.28),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+            color: _TSL.teal.withOpacity(0.30),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26),
+        child: Stack(
+          children: [
+            // ── decorative layered circles ──
+            Positioned(
+              right: -40,
+              top: -50,
+              child: Container(
+                width: 160,
+                height: 160,
                 decoration: BoxDecoration(
-                  color: _TSL.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  f?.fundCode ?? '—',
-                  style: TextStyle(
-                    color: _TSL.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12.5,
-                  ),
+                  shape: BoxShape.circle,
+                  color: _TSL.white.withOpacity(0.06),
                 ),
               ),
-              const Spacer(),
-              if (f?.active ?? false)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: _TSL.white.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+            ),
+            Positioned(
+              right: 10,
+              top: -10,
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _TSL.white.withOpacity(0.06),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -30,
+              bottom: -40,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _TSL.black.withOpacity(0.05),
+                ),
+              ),
+            ),
+            // ── content ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      const Icon(Icons.check_circle_rounded,
-                          color: Color(0xFFB9F6CA), size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        _sw ? 'Hai' : 'Active',
-                        style: const TextStyle(
-                          color: Color(0xFFB9F6CA),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _TSL.white.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.savings_rounded,
+                                color: _TSL.white, size: 13),
+                            const SizedBox(width: 5),
+                            Text(
+                              f?.fundCode ?? (_sw ? 'MFUKO' : 'FUND'),
+                              style: const TextStyle(
+                                color: _TSL.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _TSL.white.withOpacity(0.16),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              (f?.active ?? true)
+                                  ? Icons.check_circle_rounded
+                                  : Icons.pause_circle_outline_rounded,
+                              color: _TSL.mint,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              (f?.active ?? true)
+                                  ? (_sw ? 'Hai' : 'Active')
+                                  : (_sw ? 'Imesitishwa' : 'Paused'),
+                              style: const TextStyle(
+                                color: _TSL.mint,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () =>
+                            setState(() => _balanceHidden = !_balanceHidden),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(2.0),
+                          child: Icon(
+                            _balanceHidden
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: _TSL.white.withOpacity(0.9),
+                            size: 20,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => setState(() => _balanceHidden = !_balanceHidden),
-                borderRadius: BorderRadius.circular(20),
-                child: Icon(
-                  _balanceHidden
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: _TSL.white.withOpacity(0.85),
-                  size: 20,
-                ),
+                  const SizedBox(height: 16),
+                  Text(
+                    fundName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _TSL.white,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  if (fundType.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      fundType,
+                      style: TextStyle(
+                        color: _TSL.white.withOpacity(0.75),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 26),
+                  Container(
+                    height: 1,
+                    color: _TSL.white.withOpacity(0.14),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    _sw ? 'Jumla ya Uwekezaji' : 'Total Investment',
+                    style: TextStyle(
+                      color: _TSL.white.withOpacity(0.75),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        'USD ',
+                        style: TextStyle(
+                          color: _TSL.white.withOpacity(0.7),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Text(
+                          _balanceHidden ? '••••••' : _fmt(_totalInvestment),
+                          key: ValueKey(_balanceHidden),
+                          style: const TextStyle(
+                            color: _TSL.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            f?.fundName ?? (_sw ? 'Hakuna Mfuko' : 'No Fund Linked'),
-            style: TextStyle(
-              color: _TSL.white,
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.2,
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            f?.fundType ?? '',
-            style: TextStyle(
-              color: _TSL.white.withOpacity(0.75),
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 28),
-          Text(
-            _sw ? 'Jumla ya Mfuko' : 'Total Portfolio',
-            style: TextStyle(
-              color: _TSL.white.withOpacity(0.72),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _balanceHidden
-                ? '••••••'
-                : (f?.totalPortfolio == null
-                ? (_sw ? 'Bado hujawekeza' : 'Not invested yet')
-                : _fmt(f!.totalPortfolio!)),
-            style: TextStyle(
-              color: _TSL.white,
-              fontSize: 30,
-              fontWeight: FontWeight.w800,
-              fontStyle: f?.totalPortfolio == null
-                  ? FontStyle.italic
-                  : FontStyle.normal,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -871,12 +995,14 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
   }
 
   // ── Quick actions grid ─────────────────────────────────────────────────
-  // Minor accounts only support Invest / Redeem / Transactions.
+  // Minor accounts only support Invest / Redeem / Transactions. Each action
+  // now carries its own accent colour for quicker visual scanning.
   Widget _buildQuickActions() {
     final items = [
       (
       Icons.wallet_outlined,
       _sw ? 'Wekeza' : 'Invest',
+      _TSL.teal,
           () {
         Navigator.push(
           context,
@@ -892,6 +1018,7 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
       (
       Icons.trending_down_rounded,
       _sw ? 'Toa' : 'Redeem',
+      _TSL.amber,
           () {
         Navigator.push(
           context,
@@ -907,6 +1034,7 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
       (
       Icons.swap_horiz_rounded,
       _sw ? 'Miamala' : 'Transactions',
+      _TSL.blue,
           () {
         Navigator.push(
           context,
@@ -925,14 +1053,15 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
           .map((it) => Expanded(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: _quickActionTile(it.$1, it.$2, it.$3),
+          child: _quickActionTile(it.$1, it.$2, it.$3, it.$4),
         ),
       ))
           .toList(),
     );
   }
 
-  Widget _quickActionTile(IconData icon, String label, VoidCallback onTap) {
+  Widget _quickActionTile(
+      IconData icon, String label, Color accent, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -948,6 +1077,13 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
                   ? _TSL.white.withOpacity(0.07)
                   : _TSL.grey.withOpacity(0.15),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: _TSL.black.withOpacity(_dark ? 0 : 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             children: [
@@ -955,10 +1091,10 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: _TSL.teal.withOpacity(_dark ? 0.16 : 0.10),
+                  color: accent.withOpacity(_dark ? 0.18 : 0.10),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: _TSL.teal, size: 20),
+                child: Icon(icon, color: accent, size: 20),
               ),
               const SizedBox(height: 8),
               Text(
@@ -1085,7 +1221,7 @@ class _MinorDashboardScreenState extends State<MinorDashboardScreen> {
   }
 
   Widget _transactionTile(MinorTransaction t) {
-    final color = t.isCredit ? _TSL.teal : const Color(0xFFEF4444);
+    final color = t.isCredit ? _TSL.teal : _TSL.danger;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
